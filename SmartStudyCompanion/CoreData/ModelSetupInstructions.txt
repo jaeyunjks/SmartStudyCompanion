@@ -1,0 +1,62 @@
+//
+//  SmartStudyCompanion.xcdatamodeld
+//  SmartStudyCompanion
+//
+//  This file defines the Core Data model for offline caching
+//  Generated on 14/3/2026
+//
+//  To use this: Create a new Data Model file named "SmartStudyCompanion.xcdatamodeld"
+//  in Xcode and add the following entities:
+//
+//  Entity: CDSummary
+//  - id: String (Primary Key)
+//  - userId: String
+//  - pdfFileId: String
+//  - title: String
+//  - content: String (Transformable)
+//  - keyPoints: [String] (Transformable)
+//  - generatedAt: Date
+//  - wordCount: Int32
+//  - readingTime: Int32
+//
+//  Entity: CDFlashcard
+//  - id: String (Primary Key)
+//  - userId: String
+//  - pdfFileId: String
+//  - setId: String (Optional)
+//  - front: String
+//  - back: String
+//  - difficulty: String
+//  - createdAt: Date
+//  - lastReviewedAt: Date (Optional)
+//  - reviewCount: Int32
+//  - correctCount: Int32
+//
+//  Entity: CDQuiz
+//  - id: String (Primary Key)
+//  - userId: String
+//  - pdfFileId: String
+//  - title: String
+//  - createdAt: Date
+//  - timeLimit: Int32
+//  - passingScore: Int32
+//
+//  Entity: CDProgress
+//  - id: String (Primary Key)
+//  - userId: String
+//  - pdfFileId: String
+//  - totalTimeSpent: Int32
+//  - cardsStudied: Int32
+//  - cardsRemaining: Int32
+//  - quizzesCompleted: Int32
+//  - averageScore: Double
+//  - lastStudyDate: Date (Optional)
+//  - studyStreak: Int32
+//  - totalCards: Int32
+//  - masteredCards: Int32
+//
+// Note: In Xcode, you'll need to:
+// 1. Go to File > New > Data Model
+// 2. Name it "SmartStudyCompanion"
+// 3. Add the entities and attributes as shown above
+// 4. Set the class for each entity to match CDSummary, CDFlashcard, etc.

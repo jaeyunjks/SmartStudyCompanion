@@ -1,0 +1,67 @@
+# Xcode
+build/
+.build/
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+.DS_Store
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+
+# Swift Package Manager
+.swiftpm/
+.build/
+*.xcframework
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/
+Cartfile.resolved
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Environment
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# App-specific
+.env.development
+.env.production
+SmartStudyCompanion.db
+*.sqlite
+*.sqlite3
+
+# Test files
+.code-coverage/
+coverage/
+.coverage
+
+# Build artifacts
+*.app/
+*.ipa/
+*.xcarchive/
+
+# Backup files
+*.backup
+*.bak
+*.orig

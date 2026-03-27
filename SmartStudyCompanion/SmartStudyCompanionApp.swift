@@ -12,24 +12,33 @@ struct SmartStudyCompanionApp: App {
     // MARK: - Properties
     @StateObject private var authViewModel = AuthViewModel()
     @State private var coreDataManager = CoreDataManager.shared
+    @State private var hasSeenOnboarding = false
     
     var body: some Scene {
         WindowGroup {
             Group {
                 if authViewModel.isAuthenticated {
+                    // User is logged in → Show main app with tabs
                     MainTabView()
                         .environmentObject(authViewModel)
-                } else {
-                    LoginView()
+                } else if hasSeenOnboarding {
+                    // User has seen onboarding → Show login/signup
+                    AuthenticationFlowView()
                         .environmentObject(authViewModel)
+                } else {
+                    // First time → Show onboarding carousel
+                    OnboardingView(hasSeenOnboarding: $hasSeenOnboarding)
                 }
             }
             .onAppear {
                 // Initialize CoreData
                 _ = coreDataManager
                 
-                // Check for existing authentication tokens
-                // This would load from secure storage in a real app
+                // Check if user has seen onboarding before
+                hasSeenOnboarding = UserDefaults.standard.bool(forKey: "hasSeenOnboarding")
+                
+                // In production: Check for existing authentication tokens from KeyChain
+                // authViewModel.checkAuthStatus()
             }
         }
     }

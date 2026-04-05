@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum HomeNavItem: String, CaseIterable, Identifiable {
+enum LibraryNavItem: String, CaseIterable, Identifiable {
     case home = "Home"
     case library = "Library"
     case profile = "Profile"
@@ -19,13 +19,13 @@ enum HomeNavItem: String, CaseIterable, Identifiable {
     }
 }
 
-struct HomeBottomNavBarView: View {
-    let selected: HomeNavItem
-    let onSelect: (HomeNavItem) -> Void
+struct LibraryBottomNavBarView: View {
+    let selected: LibraryNavItem
+    let onSelect: (LibraryNavItem) -> Void
 
     var body: some View {
         HStack(spacing: 24) {
-            ForEach(HomeNavItem.allCases) { item in
+            ForEach(LibraryNavItem.allCases) { item in
                 Button(action: { onSelect(item) }) {
                     VStack(spacing: 4) {
                         Image(systemName: item.systemImage)
@@ -33,25 +33,23 @@ struct HomeBottomNavBarView: View {
                         Text(item.rawValue)
                             .font(.caption.weight(.semibold))
                     }
-                    .foregroundStyle(selected == item ? HomeTheme.accent : HomeTheme.accent.opacity(0.4))
+                    .foregroundStyle(selected == item ? LibraryTheme.accent : LibraryTheme.accent.opacity(0.4))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(
-                        selected == item ? HomeTheme.accentSoft : Color.clear
-                    )
+                    .background(selected == item ? LibraryTheme.accentSoft : Color.clear)
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, HomeTheme.horizontalPadding)
+        .padding(.horizontal, LibraryTheme.horizontalPadding)
         .padding(.top, 10)
         .padding(.bottom, 16)
         .frame(maxWidth: .infinity)
         .background(.ultraThinMaterial)
         .overlay(
             Rectangle()
-                .fill(HomeTheme.accent.opacity(0.08))
+                .fill(LibraryTheme.accent.opacity(0.08))
                 .frame(height: 1),
             alignment: .top
         )
@@ -59,5 +57,5 @@ struct HomeBottomNavBarView: View {
 }
 
 #Preview {
-    HomeBottomNavBarView(selected: .home, onSelect: { _ in })
+    LibraryBottomNavBarView(selected: .library, onSelect: { _ in })
 }

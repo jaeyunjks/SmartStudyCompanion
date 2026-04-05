@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HeroSectionView: View {
+    let onCreateStudySpace: () -> Void
+
     var body: some View {
         HStack(alignment: .bottom, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
@@ -18,7 +20,7 @@ struct HeroSectionView: View {
 
             Spacer(minLength: 8)
 
-            Button(action: {}) {
+            Button(action: onCreateStudySpace) {
                 HStack(spacing: 8) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 16, weight: .semibold))
@@ -51,7 +53,7 @@ struct HeroSectionView: View {
 }
 
 #Preview {
-    HeroSectionView()
+    HeroSectionView(onCreateStudySpace: {})
         .padding()
         .background(HomeTheme.background)
 }

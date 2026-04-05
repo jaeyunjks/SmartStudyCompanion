@@ -1,24 +1,8 @@
 import SwiftUI
 
 struct ContinueLearningSectionView: View {
-    private let items: [ContinueLearningItem] = [
-        .init(
-            title: "41001 Cloud Computing",
-            subtitle: "Infrastructure, Serverless Architectures, and Security Protocols.",
-            progress: 0.74,
-            status: "In Progress",
-            icon: "cloud",
-            accent: HomeTheme.accent
-        ),
-        .init(
-            title: "Advanced AI Ethics",
-            subtitle: "Algorithmic Bias, Regulatory Frameworks, and Future Safety.",
-            progress: 0.42,
-            status: "Priority",
-            icon: "brain.head.profile",
-            accent: Color(red: 0.20, green: 0.53, blue: 0.56)
-        )
-    ]
+    let spaces: [StudySpace]
+    let onSelect: (StudySpace) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -34,55 +18,61 @@ struct ContinueLearningSectionView: View {
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16)], spacing: 16) {
-                ForEach(items) { item in
-                    ContinueLearningCardView(item: item)
+                ForEach(spaces) { space in
+                    Button(action: { onSelect(space) }) {
+                        ContinueLearningCardView(space: space)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
     }
 }
 
-private struct ContinueLearningItem: Identifiable {
-    let id = UUID()
-    let title: String
-    let subtitle: String
-    let progress: Double
-    let status: String
-    let icon: String
-    let accent: Color
-}
-
 private struct ContinueLearningCardView: View {
-    let item: ContinueLearningItem
+    let space: StudySpace
+
+    private var accent: Color {
+        switch space.status {
+        case "In Progress", "Active", "Priority":
+            return HomeTheme.accent
+        case "Review":
+            return Color(red: 0.20, green: 0.53, blue: 0.56)
+        case "Completed":
+            return Color.gray
+        default:
+            return HomeTheme.accent
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(item.accent.opacity(0.12))
-                    Image(systemName: item.icon)
-                        .foregroundStyle(item.accent)
+                        .fill(accent.opacity(0.12))
+                    Image(systemName: space.iconName)
+                        .foregroundStyle(accent)
                         .font(.system(size: 18, weight: .semibold))
                 }
                 .frame(width: 44, height: 44)
 
                 Spacer()
 
-                Text(item.status)
+                Text(space.status)
                     .font(.caption2.weight(.bold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(item.accent.opacity(0.12))
+                    .background(accent.opacity(0.12))
                     .clipShape(Capsule())
-                    .foregroundStyle(item.accent)
+                    .foregroundStyle(accent)
             }
 
-            Text(item.title)
+            Text(space.title)
                 .font(.headline)
                 .foregroundStyle(.primary)
 
-            Text(item.subtitle)
+            Text(space.description)
                 .font(.footnote)
                 .foregroundStyle(HomeTheme.mutedText)
                 .lineLimit(3)
@@ -91,18 +81,18 @@ private struct ContinueLearningCardView: View {
                 HStack {
                     Text("Progress")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(item.accent)
+                        .foregroundStyle(accent)
 
                     Spacer()
 
-                    Text("\(Int(item.progress * 100))%")
+                    Text("\(Int(space.progress * 100))%")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(item.accent)
+                        .foregroundStyle(accent)
                 }
 
-                ProgressView(value: item.progress)
-                    .tint(item.accent)
-                    .background(item.accent.opacity(0.12))
+                ProgressView(value: space.progress)
+                    .tint(accent)
+                    .background(accent.opacity(0.12))
                     .clipShape(Capsule())
             }
         }
@@ -112,14 +102,14 @@ private struct ContinueLearningCardView: View {
         .clipShape(RoundedRectangle(cornerRadius: HomeTheme.cardCornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: HomeTheme.cardCornerRadius, style: .continuous)
-                .stroke(item.accent.opacity(0.08), lineWidth: 1)
+                .stroke(accent.opacity(0.08), lineWidth: 1)
         )
-        .shadow(color: item.accent.opacity(0.06), radius: 10, x: 0, y: 6)
+        .shadow(color: accent.opacity(0.06), radius: 10, x: 0, y: 6)
     }
 }
 
 #Preview {
-    ContinueLearningSectionView()
+    ContinueLearningSectionView(spaces: Array(StudySpace.sampleData.prefix(2)), onSelect: { _ in })
         .padding()
         .background(HomeTheme.background)
 }

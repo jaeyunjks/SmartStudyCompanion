@@ -1,487 +1,196 @@
 import SwiftUI
 
-/// Enhanced Onboarding with iOS 26 real glassmorphism and cute illustrations
+struct OnboardingPageModel: Identifiable, Hashable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
+    let imageName: String
+    let backgroundColor: Color
+}
+
+private enum OnboardingTheme {
+    static let outline = Color(red: 0.17, green: 0.19, blue: 0.22)
+    static let ctaGradient = LinearGradient(
+        colors: [Color(red: 0.44, green: 0.80, blue: 0.74), Color(red: 0.43, green: 0.71, blue: 0.92)],
+        startPoint: .leading,
+        endPoint: .trailing
+    )
+    static let card = Color.white.opacity(0.92)
+
+    static let backgrounds: [Color] = [
+        Color(red: 0.92, green: 0.96, blue: 0.99),
+        Color(red: 0.90, green: 0.97, blue: 0.95),
+        Color(red: 0.96, green: 0.97, blue: 0.94)
+    ]
+}
+
 struct OnboardingView: View {
     @Binding var hasSeenOnboarding: Bool
-    @State private var currentPage = 0
-    @State private var hoveredCard: Int? = nil
-    
+    @State private var selectedPage = 0
+
+    private let pages: [OnboardingPageModel] = [
+        .init(
+            title: "Build Better Study Habits",
+            subtitle: "Organise notes, tasks, and ideas in one playful workspace.",
+            imageName: "onboard1",
+            backgroundColor: OnboardingTheme.backgrounds[0]
+        ),
+        .init(
+            title: "Ask Anything, Learn Faster",
+            subtitle: "Get quick AI-powered help when your lessons feel tricky.",
+            imageName: "onboard2",
+            backgroundColor: OnboardingTheme.backgrounds[1]
+        ),
+        .init(
+            title: "Stay Focused, Finish Strong",
+            subtitle: "Track your wins and keep momentum every single day.",
+            imageName: "onboard3",
+            backgroundColor: OnboardingTheme.backgrounds[2]
+        )
+    ]
+
     var body: some View {
         ZStack {
-            // Multi-layer gradient background with depth
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 0.85, green: 0.90, blue: 0.98),    // Light periwinkle
-                    Color(red: 0.75, green: 0.85, blue: 0.95),    // Soft blue-purple
-                    Color(red: 0.80, green: 0.88, blue: 0.96)     // Misty blue
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
-            // Animated background orbs for depth
-            VStack(spacing: 0) {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color(red: 0.90, green: 0.95, blue: 1.0).opacity(0.4),
-                                Color(red: 0.85, green: 0.92, blue: 0.98).opacity(0.1)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 400, height: 400)
-                    .offset(x: -150, y: -150)
-                    .blur(radius: 80)
-                
-                Spacer()
-                
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color(red: 0.88, green: 0.93, blue: 0.99).opacity(0.3),
-                                Color(red: 0.82, green: 0.90, blue: 0.97).opacity(0.05)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 350, height: 350)
-                    .offset(x: 120, y: 80)
-                    .blur(radius: 70)
-            }
-            .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                // Navigation Bar
-                HStack {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            if currentPage > 0 {
-                                currentPage -= 1
-                            }
-                        }
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Back")
-                                .font(.system(size: 14, weight: .medium))
-                        }
-                        .foregroundColor(Color(red: 0.35, green: 0.60, blue: 0.95))
-                        .opacity(currentPage == 0 ? 0.3 : 1.0)
-                    }
-                    .disabled(currentPage == 0)
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
-                        hasSeenOnboarding = true
-                    }) {
-                        Text("Skip")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(Color(red: 0.35, green: 0.60, blue: 0.95))
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                
-                // Header with glassmorphic icon
-                VStack(spacing: 12) {
-                    // Glassmorphic bubble for logo
-                    ZStack {
-                        // Real glassmorphism effect
-                        RoundedRectangle(cornerRadius: 32)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.white.opacity(0.25),
-                                        Color.white.opacity(0.10)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        
-                        // Glassmorphic border
-                        RoundedRectangle(cornerRadius: 32)
-                            .stroke(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.white.opacity(0.60),
-                                        Color.white.opacity(0.15)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1.5
-                            )
-                        
-                        // Inner shadow effect
-                        RoundedRectangle(cornerRadius: 32)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.white.opacity(0.1),
-                                        Color.clear
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        
-                        // Logo icon - using book symbol
-                        Image(systemName: "book.circle.fill")
-                            .font(.system(size: 56))
-                            .foregroundColor(Color(red: 0.30, green: 0.60, blue: 0.95))
-                    }
-                    .frame(width: 110, height: 110)
-                    .background(
-                        RoundedRectangle(cornerRadius: 32)
-                            .fill(Color.white.opacity(0.05))
-                            .blur(radius: 20)
-                    )
-                    
-                    Text("Smart Study Companion")
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundColor(Color(red: 0.20, green: 0.35, blue: 0.65))
-                }
-                .padding(.top, 20)
-                .padding(.bottom, 30)
-                
-                // TabView with pages
-                TabView(selection: $currentPage) {
-                    OnboardingPage1(hoveredCard: $hoveredCard, pageIndex: 0)
-                        .tag(0)
-                    
-                    OnboardingPage2(hoveredCard: $hoveredCard, pageIndex: 1)
-                        .tag(1)
-                    
-                    OnboardingPage3(hoveredCard: $hoveredCard, pageIndex: 2)
-                        .tag(2)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .always))
-                .indexViewStyle(.page(backgroundDisplayMode: .always))
-                .frame(maxHeight: .infinity)
-                
-                // Action Buttons
-                VStack(spacing: 12) {
-                    Button(action: {
-                        if currentPage < 2 {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                currentPage += 1
-                            }
-                        } else {
-                            UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
-                            hasSeenOnboarding = true
-                        }
-                    }) {
-                        Text(currentPage < 2 ? "Next" : "Get Started")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color(red: 0.40, green: 0.70, blue: 0.99),
-                                        Color(red: 0.30, green: 0.60, blue: 0.95)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .cornerRadius(16)
-                            .shadow(color: Color(red: 0.30, green: 0.60, blue: 0.95).opacity(0.4), radius: 16, x: 0, y: 10)
-                    }
-                    
-                    Button(action: {
-                        UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
-                        hasSeenOnboarding = true
-                    }) {
-                        Text(currentPage < 2 ? "Skip Tutorial" : "I have an account")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(Color(red: 0.35, green: 0.60, blue: 0.95))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(Color.white.opacity(0.3))
-                                    .backdrop()
-                            )
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 30)
-            }
-        }
-        .navigationBarHidden(true)
-    }
-}
+            pages[selectedPage].backgroundColor
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.35), value: selectedPage)
 
-/// Page 1 - Create & Organize Notes
-struct OnboardingPage1: View {
-    @Binding var hoveredCard: Int?
-    let pageIndex: Int
-    
-    var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            // Glassmorphic card with illustration
-            ZStack {
-                GlassmorphicCard(isHovered: hoveredCard == pageIndex)
-                
-                VStack(spacing: 20) {
-                    // Illustration placeholder - book/notes
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color(red: 0.95, green: 0.75, blue: 0.85).opacity(0.6),
-                                        Color(red: 0.90, green: 0.70, blue: 0.80).opacity(0.4)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        
-                        VStack(spacing: 12) {
-                            Image(systemName: "doc.text")
-                                .font(.system(size: 40, weight: .semibold))
-                                .foregroundColor(Color(red: 0.85, green: 0.50, blue: 0.70))
-                            
-                            Text("Notes")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(Color(red: 0.70, green: 0.35, blue: 0.55))
-                        }
-                    }
-                    .frame(height: 120)
-                    
-                    // Text content
-                    VStack(spacing: 8) {
-                        Text("Create & Organize Your Notes")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(Color(red: 0.15, green: 0.30, blue: 0.60))
-                        
-                        Text("Write and organize your study materials. Attach PDFs, images, and information. Everything syncs seamlessly in one place.")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(Color(red: 0.40, green: 0.50, blue: 0.70))
-                            .lineSpacing(2)
-                    }
-                }
-                .padding(.vertical, 28)
-                .padding(.horizontal, 24)
-            }
-            .padding(.horizontal, 20)
-            .frame(height: 380)
-            .scaleEffect(hoveredCard == pageIndex ? 1.02 : 1.0)
-            .animation(.easeInOut(duration: 0.3), value: hoveredCard)
-            
-            Spacer()
-        }
-        .padding(.horizontal, 8)
-    }
-}
-
-/// Page 2 - Chat with AI Assistant
-struct OnboardingPage2: View {
-    @Binding var hoveredCard: Int?
-    let pageIndex: Int
-    
-    var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            ZStack {
-                GlassmorphicCard(isHovered: hoveredCard == pageIndex)
-                
-                VStack(spacing: 20) {
-                    // Chat illustration
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color(red: 0.85, green: 0.95, blue: 0.90).opacity(0.6),
-                                        Color(red: 0.80, green: 0.92, blue: 0.85).opacity(0.4)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        
-                        VStack(spacing: 12) {
-                            Image(systemName: "bubble.right")
-                                .font(.system(size: 40, weight: .semibold))
-                                .foregroundColor(Color(red: 0.30, green: 0.75, blue: 0.60))
-                            
-                            Text("AI Chat")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(Color(red: 0.20, green: 0.65, blue: 0.50))
-                        }
-                    }
-                    .frame(height: 120)
-                    
-                    VStack(spacing: 8) {
-                        Text("Chat with Your AI Assistant")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(Color(red: 0.15, green: 0.30, blue: 0.60))
-                        
-                        Text("Ask questions, get summaries, create study plans, generate quizzes, and flashcards. Your AI assistant learns your study style and adapts.")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(Color(red: 0.40, green: 0.50, blue: 0.70))
-                            .lineSpacing(2)
-                    }
-                }
-                .padding(.vertical, 28)
-                .padding(.horizontal, 24)
-            }
-            .padding(.horizontal, 20)
-            .frame(height: 380)
-            .scaleEffect(hoveredCard == pageIndex ? 1.02 : 1.0)
-            .animation(.easeInOut(duration: 0.3), value: hoveredCard)
-            
-            Spacer()
-        }
-        .padding(.horizontal, 8)
-    }
-}
-
-/// Page 3 - Achieve Study Goals
-struct OnboardingPage3: View {
-    @Binding var hoveredCard: Int?
-    let pageIndex: Int
-    
-    var body: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            ZStack {
-                GlassmorphicCard(isHovered: hoveredCard == pageIndex)
-                
-                VStack(spacing: 20) {
-                    // Achievement illustration
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color(red: 0.99, green: 0.90, blue: 0.75).opacity(0.6),
-                                        Color(red: 0.96, green: 0.85, blue: 0.70).opacity(0.4)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                        
-                        VStack(spacing: 12) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 40, weight: .semibold))
-                                .foregroundColor(Color(red: 0.95, green: 0.70, blue: 0.20))
-                            
-                            Text("Goals")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(Color(red: 0.85, green: 0.60, blue: 0.10))
-                        }
-                    }
-                    .frame(height: 120)
-                    
-                    VStack(spacing: 8) {
-                        Text("Achieve Your Study Goals")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(Color(red: 0.15, green: 0.30, blue: 0.60))
-                        
-                        Text("Generate personalized action plans, create flashcards, take adaptive quizzes, and track your progress. Achieve more in less time.")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(Color(red: 0.40, green: 0.50, blue: 0.70))
-                            .lineSpacing(2)
-                    }
-                }
-                .padding(.vertical, 28)
-                .padding(.horizontal, 24)
-            }
-            .padding(.horizontal, 20)
-            .frame(height: 380)
-            .scaleEffect(hoveredCard == pageIndex ? 1.02 : 1.0)
-            .animation(.easeInOut(duration: 0.3), value: hoveredCard)
-            
-            Spacer()
-        }
-        .padding(.horizontal, 8)
-    }
-}
-
-/// Glassmorphic card component
-struct GlassmorphicCard: View {
-    let isHovered: Bool
-    
-    var body: some View {
-        ZStack {
-            // Back blur layer
-            RoundedRectangle(cornerRadius: 32)
-                .fill(Color.white.opacity(isHovered ? 0.35 : 0.25))
-                .backdrop()
-            
-            // Top glossy shine
-            RoundedRectangle(cornerRadius: 32)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.white.opacity(isHovered ? 0.45 : 0.35),
-                            Color.white.opacity(0.05)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+            VStack(spacing: 18) {
+                ProgressHeaderView(
+                    currentPage: selectedPage,
+                    pageCount: pages.count,
+                    onSkip: completeOnboarding
                 )
-                .frame(height: 100)
-                .blur(radius: 2)
-            
-            // Border
-            RoundedRectangle(cornerRadius: 32)
-                .stroke(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.white.opacity(isHovered ? 0.70 : 0.50),
-                            Color.white.opacity(0.20)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1.5
-                )
-            
-            // Shadow effect
-            if isHovered {
-                RoundedRectangle(cornerRadius: 32)
-                    .fill(
-                        RadialGradient(
-                            gradient: Gradient(colors: [
-                                Color(red: 0.35, green: 0.65, blue: 0.98).opacity(0.15),
-                                Color.clear
-                            ]),
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 200
-                        )
+
+                TabView(selection: $selectedPage) {
+                    ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
+                        OnboardingCardView(page: page)
+                            .tag(index)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                            .padding(.bottom, 4)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .animation(.easeInOut(duration: 0.28), value: selectedPage)
+
+                Button(action: nextOrFinish) {
+                    HStack(spacing: 10) {
+                        Text(selectedPage == pages.count - 1 ? "Get Started" : "Next")
+                            .font(.system(size: 19, weight: .semibold, design: .default))
+
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 62)
+                    .background(OnboardingTheme.ctaGradient)
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule().stroke(OnboardingTheme.outline.opacity(0.18), lineWidth: 1.3)
                     )
-                    .blur(radius: 8)
+                    .shadow(color: Color(red: 0.60, green: 0.74, blue: 0.88).opacity(0.25), radius: 8, x: 0, y: 4)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 18)
             }
+            .padding(.top, 12)
         }
+    }
+
+    private func nextOrFinish() {
+        if selectedPage < pages.count - 1 {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) {
+                selectedPage += 1
+            }
+        } else {
+            completeOnboarding()
+        }
+    }
+
+    private func completeOnboarding() {
+        UserDefaults.standard.set(true, forKey: "hasSeenOnboarding")
+        hasSeenOnboarding = true
     }
 }
 
-/// Custom backdrop blur extension
-extension View {
-    func backdrop() -> some View {
-        self.background(.ultraThinMaterial)
+struct ProgressHeaderView: View {
+    let currentPage: Int
+    let pageCount: Int
+    let onSkip: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center) {
+            HStack(spacing: 8) {
+                ForEach(0..<pageCount, id: \.self) { index in
+                    Capsule()
+                        .fill(index <= currentPage ? OnboardingTheme.outline : OnboardingTheme.outline.opacity(0.18))
+                        .frame(width: index == currentPage ? 36 : 24, height: 8)
+                        .animation(.easeInOut(duration: 0.25), value: currentPage)
+                }
+            }
+
+            Spacer()
+
+            Button("Skip", action: onSkip)
+                .font(.system(size: 14, weight: .semibold, design: .default))
+                .foregroundStyle(OnboardingTheme.outline.opacity(0.75))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Color.white.opacity(0.56))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(OnboardingTheme.outline, lineWidth: 2))
+        }
+        .padding(.horizontal, 24)
+    }
+}
+
+struct OnboardingCardView: View {
+    let page: OnboardingPageModel
+
+    var body: some View {
+        VStack(spacing: 22) {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color.white.opacity(0.72))
+                .overlay(
+                    Image(page.imageName)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(24)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(OnboardingTheme.outline, lineWidth: 4)
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 340)
+                .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
+
+            VStack(spacing: 10) {
+                Text(page.title)
+                    .font(.system(size: 33, weight: .bold, design: .default))
+                    .foregroundStyle(OnboardingTheme.outline)
+                    .multilineTextAlignment(.center)
+
+                Text(page.subtitle)
+                    .font(.system(size: 17, weight: .regular, design: .default))
+                    .foregroundStyle(OnboardingTheme.outline.opacity(0.72))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+            }
+            .padding(.horizontal, 10)
+
+            Spacer(minLength: 0)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(OnboardingTheme.card)
+        .clipShape(RoundedRectangle(cornerRadius: 34, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 34, style: .continuous)
+                .stroke(OnboardingTheme.outline, lineWidth: 4)
+        )
     }
 }
 

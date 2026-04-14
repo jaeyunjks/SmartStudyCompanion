@@ -41,6 +41,14 @@ export class UserController {
         const viewer = req.user; // This will be undefined if the user is not authenticated
         const profile = await this.userService.getUserByUsername(username);
 
+        if (!viewer) {
+            throw new UnauthorizedException("User not found");
+        }
+
+        if(!profile) {
+            throw new NotFoundException("Profile not found");
+        }
+
         if (viewer.userId != profile.id) {
             throw new UnauthorizedException("Not allowed to edit other user's profile.");
         }

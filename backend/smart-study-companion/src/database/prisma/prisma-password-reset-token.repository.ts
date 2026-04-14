@@ -11,6 +11,8 @@ export class PrismaPasswordResetTokenRepository implements PasswordResetTokenRep
         const passwordResetToken = await this.prisma.passwordResetToken.create({
             data: { userId: userId, token: token, expiresAt: expiresAt}
         });
+
+        return passwordResetToken;
     }
 
     async getToken(rawToken: string){

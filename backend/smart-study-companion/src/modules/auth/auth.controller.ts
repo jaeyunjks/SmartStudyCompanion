@@ -24,10 +24,10 @@ export class AuthController {
     }
 
     @Post('reset-password')
-    async changePassoword(
-        @Body() changePassowordDto: ChangePasswordDto
+    async changePassword(
+        @Body() changePasswordDto: ChangePasswordDto
     ) {
-        return this.authService.changePassword(changePassowordDto.email);
+        return this.authService.changePassword(changePasswordDto.email);
     }
 
     @Get('reset-password')

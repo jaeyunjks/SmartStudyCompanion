@@ -29,6 +29,7 @@ struct ActiveWorkspaceView: View {
     @State private var showAddSheet = false
     @State private var showSummaryDetail = false
     @State private var showAIChat = false
+    @State private var showKnowledgeQuiz = false
 
     private let activityItems: [ActivityItem] = [
         .init(iconName: "doc.text", title: "Key Concepts of Serverless", timestamp: "2h ago", detail: "Exploration of FaaS, cold starts, and event-driven architectures."),
@@ -79,6 +80,9 @@ struct ActiveWorkspaceView: View {
         .navigationDestination(isPresented: $showAIChat) {
             AIChatView(viewModel: AIChatViewModel(selectedContext: chatContext))
         }
+        .navigationDestination(isPresented: $showKnowledgeQuiz) {
+            QuizQuestionView(workspaceTitle: studySpace.title)
+        }
         .alert("Action", isPresented: $showActionAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -112,6 +116,10 @@ struct ActiveWorkspaceView: View {
         }
         if title == "Ask AI" {
             showAIChat = true
+            return
+        }
+        if title == "Quiz" {
+            showKnowledgeQuiz = true
             return
         }
         selectedActionTitle = title

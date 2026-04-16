@@ -27,6 +27,8 @@ struct ActiveWorkspaceView: View {
     @State private var showActionAlert = false
     @State private var selectedActionTitle = ""
     @State private var showAddSheet = false
+    @State private var showSummaryDetail = false
+    @State private var showAIChat = false
 
     private let activityItems: [ActivityItem] = [
         .init(iconName: "doc.text", title: "Key Concepts of Serverless", timestamp: "2h ago", detail: "Exploration of FaaS, cold starts, and event-driven architectures."),
@@ -71,6 +73,12 @@ struct ActiveWorkspaceView: View {
         .sheet(isPresented: $showAddSheet) {
             WorkspacePlaceholderSheetView(title: "Add to Workspace")
         }
+        .navigationDestination(isPresented: $showSummaryDetail) {
+            SummaryDetailView(summary: initialSummary)
+        }
+        .navigationDestination(isPresented: $showAIChat) {
+            AIChatView(viewModel: AIChatViewModel(selectedContext: chatContext))
+        }
         .alert("Action", isPresented: $showActionAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -79,7 +87,33 @@ struct ActiveWorkspaceView: View {
         .toolbar(.hidden, for: .navigationBar)
     }
 
+    private var initialSummary: StudySummary {
+        if studySpace.title.localizedCaseInsensitiveContains("cloud") {
+            return StudySummary.mockSummaries[0]
+        }
+        return StudySummary.mockSummaries[1]
+    }
+
+    private var chatContext: WorkspaceContext {
+        WorkspaceContext(
+            workspaceTitle: studySpace.title,
+            sourceTitle: "Comparison Table",
+            sourceType: "PDF",
+            description: "Reference extracted from your latest uploaded material.",
+            visualLabel: "Context: \(studySpace.title) notes and reference table",
+            previewSystemImage: studySpace.iconName
+        )
+    }
+
     private func handleAction(_ title: String) {
+        if title == "Summarise Knowledge" {
+            showSummaryDetail = true
+            return
+        }
+        if title == "Ask AI" {
+            showAIChat = true
+            return
+        }
         selectedActionTitle = title
         showActionAlert = true
     }

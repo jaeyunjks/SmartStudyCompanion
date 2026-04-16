@@ -26,6 +26,7 @@ model User {
     studySpace              StudySpace[]
     files                   File[]
     images                  Image[]
+    notes                   Note[]
     
     @@map("user")
 }
@@ -65,11 +66,13 @@ model Note {
     id                      String                  @id @default(uuid())
     title                   String
     spaceId                 String
+    userId                  String
     content                 Json                    @default("{}")
 
     createdAt               DateTime                @default(now())
 
     studySpace              StudySpace              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([spaceId])
     @@unique([title, spaceId])
@@ -91,6 +94,7 @@ model File {
 
     @@index([spaceId])
     @@unique([name, spaceId])
+
     @@map("file")
 }
 

@@ -8,12 +8,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PasswordResetTokenModule } from './modules/password-reset-token/password-reset-token.module';
 import { StudySpaceModule } from './modules/study-space/study-space.module';
 import { NoteModule } from './modules/note/note.module';
-import { DocumentController } from './modules/document/document.controller';
-import { DocumentService } from './modules/document/document.service';
-import { DocumentModule } from './modules/document/document.module';
 import { ImageModule } from './modules/image/image.module';
-import { FileController } from './modules/file/file.controller';
-import { FileService } from './modules/file/file.service';
 import { FileModule } from './modules/file/file.module';
 
 @Module({
@@ -40,11 +35,14 @@ import { FileModule } from './modules/file/file.module';
         PasswordResetTokenModule,
         StudySpaceModule,
         NoteModule,
-        DocumentModule,
         ImageModule,
         FileModule,
     ],
-    controllers: [AppController, DocumentController, FileController],
-    providers: [AppService, DocumentService, FileService],
+    controllers: [
+        AppController
+    ],
+    providers: [
+        AppService
+    ],
 })
 export class AppModule {}

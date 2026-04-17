@@ -36,17 +36,17 @@ export class FileController {
             throw new NotFoundException("User not found", "User not found");
         }
 
-        const files = await this.fileService.getFileById(id);
+        const file = await this.fileService.getFileById(id);
 
-        if (!files) {
+        if (!file) {
             throw new NotFoundException("File not found", "File not found");
         }
 
-        const isOwner = (userId === files.file.userId);
+        const isOwner = (userId === file.file.userId);
 
         return {
             isOwner,
-            files,
+            file,
         }
     }
 
@@ -63,17 +63,17 @@ export class FileController {
             throw new NotFoundException("User not found", "User not found");
         }
 
-        const file = await this.fileService.getFilesBySpaceId(id);
+        const files = await this.fileService.getFilesBySpaceId(id);
 
-        if (!file) {
+        if (!files) {
             throw new NotFoundException("File not found", "File not found");
         }
 
-        const isOwner = (userId === file[0].file.userId);
+        const isOwner = (userId === files[0].file.userId);
 
         return {
             isOwner,
-            file,
+            files,
         }
     }
 

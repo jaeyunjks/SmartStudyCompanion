@@ -9,7 +9,7 @@ export class PrismaNoteRepository implements NoteRepository {
     ) {}
 
     async create(title: string, spaceId: string, userId: string, content?: any): Promise<any> {
-        const note = await this.prisma.note.create({
+        return this.prisma.note.create({
             data: {
                 title,
                 spaceId,

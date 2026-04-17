@@ -43,4 +43,12 @@ export class PrismaStudySpaceRepository implements StudySpaceRepository {
             },
         });
     }
+
+    async getByUserId(userId: string): Promise<any> {
+        return this.prisma.studySpace.findMany({
+            where: {
+                userId,
+            },
+        });
+    }
 }

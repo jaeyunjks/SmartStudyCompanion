@@ -48,6 +48,33 @@ export class StudySpaceController {
     }
 
     @UseGuards(JwtAuthGuard)
+    @Get('user/:id')
+    async getStudySpaces (
+        @Param('id') id: string,
+        @Request() req: any,
+    ) {
+        const user = req.user;
+        const userId = user?.userId;
+
+        if (!userId) {
+            throw new NotFoundException("User not found", "User not found");
+        }
+
+        const studySpaces = await this.studySpaceService.getStudySpacesByUserId(id);
+
+        if (!studySpaces) {
+            throw new NotFoundException("Study spaces not found", "Study spaces not found");
+        }
+
+        const isOwner = (userId === id);
+
+        return {
+            isOwner,
+            studySpaces,
+        };
+    }
+
+    @UseGuards(JwtAuthGuard)
     @Post('add')
     async addStudySpace (
         @Body() addStudySpaceDto: AddStudySpaceDto,

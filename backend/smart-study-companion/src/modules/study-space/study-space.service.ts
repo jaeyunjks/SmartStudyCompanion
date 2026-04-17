@@ -47,4 +47,14 @@ export class StudySpaceService {
 
         return studySpace; 
     }
+
+    async getStudySpacesByUserId (userId: string) {
+        const studySpaces = await this.studySpaceRepo.getByUserId(userId);
+
+        if (!studySpaces) {
+            throw new NotFoundException("Study spaces not found", "Study spaces not found");
+        }
+
+        return studySpaces; 
+    }
 }

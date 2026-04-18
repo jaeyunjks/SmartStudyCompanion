@@ -30,6 +30,7 @@ struct ActiveWorkspaceView: View {
     @State private var showSummaryDetail = false
     @State private var showAIChat = false
     @State private var showKnowledgeQuiz = false
+    @State private var showFlashcardSession = false
 
     private let activityItems: [ActivityItem] = [
         .init(iconName: "doc.text", title: "Key Concepts of Serverless", timestamp: "2h ago", detail: "Exploration of FaaS, cold starts, and event-driven architectures."),
@@ -83,6 +84,9 @@ struct ActiveWorkspaceView: View {
         .navigationDestination(isPresented: $showKnowledgeQuiz) {
             QuizQuestionView(workspaceTitle: studySpace.title)
         }
+        .navigationDestination(isPresented: $showFlashcardSession) {
+            FlashcardSessionView(workspaceTitle: studySpace.title)
+        }
         .alert("Action", isPresented: $showActionAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -120,6 +124,10 @@ struct ActiveWorkspaceView: View {
         }
         if title == "Quiz" {
             showKnowledgeQuiz = true
+            return
+        }
+        if title == "Flashcards" {
+            showFlashcardSession = true
             return
         }
         selectedActionTitle = title

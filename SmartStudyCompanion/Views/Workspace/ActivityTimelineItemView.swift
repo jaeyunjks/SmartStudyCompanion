@@ -4,17 +4,14 @@ struct ActivityTimelineItemView: View {
     let item: ActivityItem
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 10) {
             Circle()
-                .fill(WorkspaceTheme.cardBackground)
-                .frame(width: 36, height: 36)
+                .fill(WorkspaceTheme.accentSoft.opacity(0.85))
+                .frame(width: 32, height: 32)
                 .overlay(
                     Image(systemName: item.iconName)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(WorkspaceTheme.accent)
-                )
-                .overlay(
-                    Circle().stroke(WorkspaceTheme.accent.opacity(0.15), lineWidth: 1)
                 )
 
             VStack(alignment: .leading, spacing: 8) {
@@ -32,14 +29,10 @@ struct ActivityTimelineItemView: View {
                     .foregroundStyle(WorkspaceTheme.mutedText)
                     .lineLimit(3)
             }
-            .padding(14)
+            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                    .stroke(WorkspaceTheme.accent.opacity(0.08), lineWidth: 1)
-            )
+            .background(WorkspaceTheme.secondaryBackground.opacity(0.65))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
     }
 }

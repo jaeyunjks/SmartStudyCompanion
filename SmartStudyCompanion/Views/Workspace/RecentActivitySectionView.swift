@@ -4,25 +4,23 @@ struct RecentActivitySectionView: View {
     let items: [ActivityItem]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Recent Activity")
-                .font(.title2.weight(.bold))
+                .font(.title3.weight(.bold))
 
-            ZStack(alignment: .leading) {
-                Rectangle()
-                    .fill(WorkspaceTheme.accent.opacity(0.12))
-                    .frame(width: 1)
-                    .padding(.leading, 18)
-                    .padding(.top, 12)
-                    .padding(.bottom, 12)
-
-                VStack(spacing: 16) {
-                    ForEach(items) { item in
-                        ActivityTimelineItemView(item: item)
-                    }
+            VStack(spacing: 10) {
+                ForEach(items) { item in
+                    ActivityTimelineItemView(item: item)
                 }
             }
         }
+        .padding(16)
+        .background(.ultraThinMaterial.opacity(0.6))
+        .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
+                .stroke(WorkspaceTheme.accent.opacity(0.08), lineWidth: 1)
+        )
     }
 }
 

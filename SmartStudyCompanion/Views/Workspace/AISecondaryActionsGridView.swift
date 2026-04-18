@@ -12,11 +12,11 @@ struct AISecondaryActionsGridView: View {
                 Button(action: { onSelect(action) }) {
                     VStack(alignment: .leading, spacing: 10) {
                         Circle()
-                            .fill(WorkspaceTheme.accentSoft)
-                            .frame(width: 36, height: 36)
+                            .fill(WorkspaceTheme.accentSoft.opacity(0.95))
+                            .frame(width: 34, height: 34)
                             .overlay(
                                 Image(systemName: action.iconName)
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(WorkspaceTheme.accent)
                             )
 
@@ -24,13 +24,13 @@ struct AISecondaryActionsGridView: View {
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(.primary)
                     }
-                    .padding(14)
+                    .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.ultraThinMaterial)
+                    .background(WorkspaceTheme.secondaryBackground.opacity(0.75))
                     .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                            .stroke(WorkspaceTheme.accent.opacity(0.08), lineWidth: 1)
+                        .stroke(WorkspaceTheme.accent.opacity(0.08), lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)

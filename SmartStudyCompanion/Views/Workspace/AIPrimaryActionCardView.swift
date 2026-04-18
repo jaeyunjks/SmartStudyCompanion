@@ -7,14 +7,32 @@ struct AIPrimaryActionCardView: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(spacing: 8) {
-                Text(title)
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(.white)
-                Text(subtitle)
-                    .font(.footnote)
-                    .foregroundStyle(Color.white.opacity(0.8))
-                    .multilineTextAlignment(.center)
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(Color.white.opacity(0.22))
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                    )
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(Color.white.opacity(0.9))
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.9))
             }
             .padding(18)
             .frame(maxWidth: .infinity)

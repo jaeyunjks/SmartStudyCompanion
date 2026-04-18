@@ -6,36 +6,39 @@ struct WorkspaceTopBarView: View {
     let onMore: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(WorkspaceTheme.accent)
-                    .frame(width: 36, height: 36)
-                    .background(WorkspaceTheme.accentSoft)
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-
+        ZStack {
             Text(title)
                 .font(.headline.weight(.bold))
                 .foregroundStyle(WorkspaceTheme.accent)
+                .lineLimit(1)
 
-            Spacer()
+            HStack {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(WorkspaceTheme.accent)
+                        .frame(width: 36, height: 36)
+                        .background(WorkspaceTheme.accentSoft.opacity(0.9))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
 
-            Button(action: onMore) {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(WorkspaceTheme.accent)
-                    .frame(width: 36, height: 36)
-                    .background(WorkspaceTheme.secondaryBackground)
-                    .clipShape(Circle())
+                Spacer()
+
+                Button(action: onMore) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(WorkspaceTheme.accent)
+                        .frame(width: 36, height: 36)
+                        .background(WorkspaceTheme.secondaryBackground)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial.opacity(0.92))
     }
 }
 

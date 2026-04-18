@@ -8,35 +8,44 @@ struct WorkspaceMaterialCardView: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
                 thumbnail
 
-                Text(material.title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(material.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
 
-                HStack(spacing: 6) {
-                    Text(material.type.displayName)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(WorkspaceTheme.accent)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(WorkspaceTheme.accentSoft.opacity(0.85))
-                        .clipShape(Capsule())
-
-                    Spacer()
-
-                    Button(action: onToggleAISelection) {
-                        Image(systemName: material.isSelectedForAIContext ? "sparkles" : "sparkles.slash")
-                            .font(.system(size: 13, weight: .semibold))
+                    HStack(spacing: 6) {
+                        Text(material.type.displayName)
+                            .font(.caption2.weight(.bold))
                             .foregroundStyle(WorkspaceTheme.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(WorkspaceTheme.accentSoft.opacity(0.85))
+                            .clipShape(Capsule())
+
+                        Text(material.createdAt, style: .date)
+                            .font(.caption2)
+                            .foregroundStyle(WorkspaceTheme.mutedText)
                     }
-                    .buttonStyle(.plain)
                 }
+
+                Spacer()
+
+                Button(action: onToggleAISelection) {
+                    Image(systemName: material.isSelectedForAIContext ? "sparkles" : "sparkles.slash")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(WorkspaceTheme.accent)
+                        .frame(width: 30, height: 30)
+                        .background(WorkspaceTheme.accentSoft.opacity(0.7))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
             }
             .padding(12)
-            .background(.ultraThinMaterial)
+            .background(WorkspaceTheme.secondaryBackground.opacity(0.72))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -50,17 +59,17 @@ struct WorkspaceMaterialCardView: View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(WorkspaceTheme.accentSoft.opacity(0.4))
-                .frame(height: 80)
+                .frame(width: 56, height: 56)
 
             if material.type == .image, let image = UIImage(contentsOfFile: material.storedPath) {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-                    .frame(height: 80)
+                    .frame(width: 56, height: 56)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             } else {
                 Image(systemName: material.type.systemIconName)
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(WorkspaceTheme.accent)
             }
         }

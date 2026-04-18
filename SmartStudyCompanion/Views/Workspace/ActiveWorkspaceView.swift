@@ -52,48 +52,55 @@ struct ActiveWorkspaceView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: WorkspaceTheme.sectionSpacing) {
-                    WorkspaceHeaderView(studySpace: studySpace, accent: WorkspaceTheme.accent)
+        GeometryReader { geometry in
+            let topInset = geometry.safeAreaInsets.top
+            let bottomInset = geometry.safeAreaInsets.bottom
 
-                    WorkspaceProgressCardView(progress: studySpace.progress, accent: WorkspaceTheme.accent)
+            ZStack(alignment: .bottomTrailing) {
+                WorkspaceTheme.background.ignoresSafeArea()
 
-                    AICompanionSectionView(
-                        onPrimaryAction: { handleAction("Summarise Knowledge") },
-                        onSecondaryAction: { handleAction($0) }
+                VStack(spacing: 0) {
+                    WorkspaceTopBarView(
+                        title: "Active Study Workspace",
+                        onBack: { dismiss() },
+                        onMore: { handleAction("More Options") }
                     )
+                    .padding(.top, topInset + 2)
 
-                    WorkspaceMaterialsSectionView(
-                        materials: viewModel.materials,
-                        onTapMaterial: { material in
-                            viewModel.openPreview(for: material)
-                        },
-                        onToggleAISelection: { material in
-                            viewModel.toggleMaterialSelectionForAI(material.id)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: WorkspaceTheme.sectionSpacing) {
+                            WorkspaceOverviewCardView(studySpace: studySpace)
+
+                            AICompanionSectionView(
+                                onPrimaryAction: { handleAction("Summarise Knowledge") },
+                                onSecondaryAction: { handleAction($0) }
+                            )
+
+                            WorkspaceMaterialsSectionView(
+                                materials: viewModel.materials,
+                                onTapMaterial: { material in
+                                    viewModel.openPreview(for: material)
+                                },
+                                onToggleAISelection: { material in
+                                    viewModel.toggleMaterialSelectionForAI(material.id)
+                                }
+                            )
+
+                            RecentActivitySectionView(items: activityItems)
                         }
-                    )
-
-                    RecentActivitySectionView(items: activityItems)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
+                        .padding(.bottom, 110 + bottomInset)
+                    }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 80)
-            }
-            .background(WorkspaceTheme.background.ignoresSafeArea())
-            .safeAreaInset(edge: .top) {
-                WorkspaceTopBarView(
-                    title: "Active Study Workspace",
-                    onBack: { dismiss() },
-                    onMore: { handleAction("More Options") }
-                )
-            }
 
-            WorkspaceFloatingAddButtonView {
-                showImportOptions = true
+                WorkspaceFloatingAddButtonView {
+                    showImportOptions = true
+                }
+                .padding(.trailing, 22)
+                .padding(.bottom, max(bottomInset, 8) + 14)
             }
-            .padding(.trailing, 24)
-            .padding(.bottom, 24)
+            .ignoresSafeArea(edges: [.top, .bottom])
         }
         .photosPicker(
             isPresented: $showPhotoPicker,

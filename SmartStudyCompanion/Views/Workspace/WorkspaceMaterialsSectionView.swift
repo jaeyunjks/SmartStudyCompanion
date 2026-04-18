@@ -5,16 +5,11 @@ struct WorkspaceMaterialsSectionView: View {
     let onTapMaterial: (StudyMaterial) -> Void
     let onToggleAISelection: (StudyMaterial) -> Void
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
-    ]
-
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("Workspace Materials")
-                    .font(.title2.weight(.bold))
+                    .font(.title3.weight(.bold))
 
                 Spacer()
 
@@ -33,10 +28,10 @@ struct WorkspaceMaterialsSectionView: View {
                     .foregroundStyle(WorkspaceTheme.mutedText)
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.ultraThinMaterial)
+                    .background(WorkspaceTheme.secondaryBackground.opacity(0.7))
                     .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
             } else {
-                LazyVGrid(columns: columns, spacing: 12) {
+                VStack(spacing: 10) {
                     ForEach(materials) { material in
                         WorkspaceMaterialCardView(
                             material: material,
@@ -47,6 +42,13 @@ struct WorkspaceMaterialsSectionView: View {
                 }
             }
         }
+        .padding(16)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
+                .stroke(WorkspaceTheme.accent.opacity(0.1), lineWidth: 1)
+        )
     }
 }
 

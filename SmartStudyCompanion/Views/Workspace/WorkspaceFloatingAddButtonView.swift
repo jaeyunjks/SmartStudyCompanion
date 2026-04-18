@@ -8,12 +8,17 @@ struct WorkspaceFloatingAddButtonView: View {
             Image(systemName: "plus")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
+                .frame(width: 58, height: 58)
                 .background(WorkspaceTheme.accent)
                 .clipShape(Circle())
-                .shadow(color: WorkspaceTheme.accent.opacity(0.25), radius: 12, x: 0, y: 8)
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                )
+                .shadow(color: WorkspaceTheme.accent.opacity(0.25), radius: 14, x: 0, y: 9)
         }
         .buttonStyle(.plain)
+        .scaleEffect(1)
         .accessibilityLabel("Add to workspace")
     }
 }

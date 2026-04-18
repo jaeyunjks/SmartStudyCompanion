@@ -17,14 +17,14 @@ struct StudySpaceCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
-                Circle()
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(accent.opacity(0.12))
-                    .frame(width: 52, height: 52)
+                    .frame(width: 46, height: 46)
                     .overlay(
                         Image(systemName: space.iconName)
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(accent)
                     )
 
@@ -32,44 +32,56 @@ struct StudySpaceCardView: View {
 
                 Text(space.status)
                     .font(.caption2.weight(.bold))
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, 9)
                     .padding(.vertical, 4)
-                    .background(accent.opacity(0.16))
+                    .background(accent.opacity(0.14))
                     .clipShape(Capsule())
                     .foregroundStyle(accent)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(space.title)
-                    .font(.headline)
+                    .font(.headline.weight(.semibold))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
 
                 Text(space.description)
                     .font(.subheadline)
                     .foregroundStyle(LibraryTheme.mutedText)
-                    .lineLimit(3)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
             }
 
             HStack(spacing: 12) {
-                Label("\(space.documentCount) documents", systemImage: "doc.text")
-                Label("\(space.noteCount) notes", systemImage: "note.text")
-
+                Label("\(space.documentCount)", systemImage: "doc.text")
+                Label("\(space.noteCount)", systemImage: "note.text")
                 Spacer()
-
                 Text(space.lastUpdated)
                     .font(.caption)
                     .foregroundStyle(LibraryTheme.mutedText)
             }
             .font(.caption.weight(.medium))
             .foregroundStyle(LibraryTheme.mutedText)
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text("Progress")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(accent)
+                    Spacer()
+                    Text("\(Int(space.progress * 100))%")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(accent)
+                }
+
+                ProgressView(value: space.progress)
+                    .tint(accent)
+                    .background(accent.opacity(0.10))
+                    .clipShape(Capsule())
+            }
         }
         .padding(16)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: LibraryTheme.cardCornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: LibraryTheme.cardCornerRadius, style: .continuous)
-                .stroke(Color.white.opacity(0.4), lineWidth: 1)
-        )
-        .shadow(color: accent.opacity(0.08), radius: 10, x: 0, y: 6)
+        .libraryGlass(cornerRadius: LibraryTheme.cardCornerRadius)
     }
 }
 

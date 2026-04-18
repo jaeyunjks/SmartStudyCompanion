@@ -24,35 +24,31 @@ struct LibraryBottomNavBarView: View {
     let onSelect: (LibraryNavItem) -> Void
 
     var body: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: 18) {
             ForEach(LibraryNavItem.allCases) { item in
                 Button(action: { onSelect(item) }) {
                     VStack(spacing: 4) {
                         Image(systemName: item.systemImage)
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 17, weight: .semibold))
                         Text(item.rawValue)
-                            .font(.caption.weight(.semibold))
+                            .font(.caption2.weight(.semibold))
                     }
-                    .foregroundStyle(selected == item ? LibraryTheme.accent : LibraryTheme.accent.opacity(0.4))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(selected == item ? LibraryTheme.accentSoft : Color.clear)
+                    .foregroundStyle(selected == item ? LibraryTheme.accent : LibraryTheme.accent.opacity(0.45))
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 7)
+                    .background(selected == item ? LibraryTheme.accentSoft.opacity(0.9) : Color.clear)
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .libraryGlass(cornerRadius: 24)
         .padding(.horizontal, LibraryTheme.horizontalPadding)
-        .padding(.top, 10)
-        .padding(.bottom, 16)
-        .frame(maxWidth: .infinity)
-        .background(.ultraThinMaterial)
-        .overlay(
-            Rectangle()
-                .fill(LibraryTheme.accent.opacity(0.08))
-                .frame(height: 1),
-            alignment: .top
-        )
+        .padding(.top, 2)
+        .padding(.bottom, 2)
     }
 }
 

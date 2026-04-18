@@ -7,11 +7,10 @@ struct StudySpacesSectionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("My Study Spaces")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(LibraryTheme.mutedText)
-                .textCase(.uppercase)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(LibraryTheme.accent)
 
-            VStack(spacing: 16) {
+            VStack(spacing: 14) {
                 ForEach(spaces) { space in
                     Button(action: { onSelect(space) }) {
                         StudySpaceCardView(space: space)

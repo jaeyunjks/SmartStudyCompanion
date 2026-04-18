@@ -4,7 +4,9 @@ import Combine
 final class LibraryViewModel: ObservableObject {
     @Published var studySpaces: [StudySpace]
     @Published var searchText: String
-    @Published var selectedFilter: String
+    @Published var selectedSort: String
+    @Published var selectedStatus: String
+    @Published var selectedCategory: String
 
     private let store: StudySpaceStore
     private var cancellables = Set<AnyCancellable>()
@@ -13,7 +15,9 @@ final class LibraryViewModel: ObservableObject {
         self.store = store
         studySpaces = store.studySpaces
         searchText = ""
-        selectedFilter = "Recently Updated"
+        selectedSort = "Recently Updated"
+        selectedStatus = "All"
+        selectedCategory = "All"
 
         store.$studySpaces
             .sink { [weak self] spaces in
@@ -24,21 +28,36 @@ final class LibraryViewModel: ObservableObject {
 
     var filteredStudySpaces: [StudySpace] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let filtered = query.isEmpty
+        let queryFiltered = query.isEmpty
             ? studySpaces
             : studySpaces.filter {
                 $0.title.localizedCaseInsensitiveContains(query) ||
                 $0.description.localizedCaseInsensitiveContains(query)
             }
 
-        if selectedFilter == "Alphabetical" {
-            return filtered.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        let statusFiltered = selectedStatus == "All"
+            ? queryFiltered
+            : queryFiltered.filter { $0.status == selectedStatus }
+
+        let categoryFiltered = selectedCategory == "All"
+            ? statusFiltered
+            : statusFiltered.filter { space in
+                space.title.localizedCaseInsensitiveContains(selectedCategory) ||
+                space.description.localizedCaseInsensitiveContains(selectedCategory)
+            }
+
+        if selectedSort == "Alphabetical" {
+            return categoryFiltered.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         }
 
-        return filtered
+        return categoryFiltered
     }
 
     func addStudySpace(title: String, iconName: String, category: String, description: String) {
         store.addStudySpace(title: title, iconName: iconName, category: category, description: description)
+    }
+
+    var hasActiveAdvancedFilters: Bool {
+        selectedStatus != "All" || selectedCategory != "All"
     }
 }

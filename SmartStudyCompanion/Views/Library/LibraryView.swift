@@ -9,10 +9,12 @@ enum LibraryTheme {
     static let secondaryBackground = Color(.secondarySystemBackground)
 
     static let horizontalPadding: CGFloat = 20
-    static let sectionSpacing: CGFloat = 22
-    static let cardCornerRadius: CGFloat = 20
+    static let sectionSpacing: CGFloat = 24
+    static let cardCornerRadius: CGFloat = 22
     static let chipCornerRadius: CGFloat = 18
-    static let smallCornerRadius: CGFloat = 14
+    static let smallCornerRadius: CGFloat = 16
+    static let glassBorder = accent.opacity(0.10)
+    static let glassShadow = accent.opacity(0.08)
 }
 
 /// Home/Library screen showing recent documents and quick actions
@@ -26,39 +28,53 @@ struct LibraryView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottomTrailing) {
+                LibraryTheme.background.ignoresSafeArea()
+
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: LibraryTheme.sectionSpacing) {
                         LibraryHeroHeaderView()
                         LibrarySearchBarView(query: $viewModel.searchText)
-                        LibraryFilterChipsView(selectedFilter: $viewModel.selectedFilter, onFilterTap: {
-                            showFilterSheet = true
-                        })
+                        LibraryFilterChipsView(
+                            selectedSort: $viewModel.selectedSort,
+                            hasActiveAdvancedFilters: viewModel.hasActiveAdvancedFilters,
+                            onFilterTap: { showFilterSheet = true }
+                        )
                         StudySpacesSectionView(spaces: viewModel.filteredStudySpaces) { space in
                             selectedStudySpace = space
                         }
                     }
                     .padding(.horizontal, LibraryTheme.horizontalPadding)
-                    .padding(.top, 12)
-                    .padding(.bottom, 90)
+                    .padding(.top, 14)
+                    .padding(.bottom, 22)
                 }
-                .background(LibraryTheme.background.ignoresSafeArea())
                 .safeAreaInset(edge: .top) {
                     LibraryTopBarView()
                 }
                 .safeAreaInset(edge: .bottom) {
                     LibraryBottomNavBarView(selected: selectedTab) { tab in
-                        selectedTab = tab
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            selectedTab = tab
+                        }
                     }
+                    .padding(.bottom, 2)
                 }
 
                 LibraryFloatingAddButtonView {
                     showCreateStudySpaceSheet = true
                 }
                 .padding(.trailing, LibraryTheme.horizontalPadding)
-                .padding(.bottom, 92)
+                .padding(.bottom, 84)
             }
             .sheet(isPresented: $showFilterSheet) {
-                LibraryPlaceholderSheetView(title: "Advanced Filters")
+                LibraryAdvancedFilterSheetView(
+                    selectedStatus: $viewModel.selectedStatus,
+                    selectedSort: $viewModel.selectedSort,
+                    selectedCategory: $viewModel.selectedCategory,
+                    statuses: ["All", "Active", "In Progress", "Priority", "Review", "Completed"],
+                    sorts: ["Recently Updated", "Alphabetical"],
+                    categories: ["All", "Cloud", "AI", "Data", "Ethics", "Neuroscience"]
+                )
+                .presentationDetents([.fraction(0.45), .medium])
             }
             .sheet(isPresented: $showCreateStudySpaceSheet) {
                 CreateStudySpaceView(onCreate: { title, icon, category, description in
@@ -71,21 +87,6 @@ struct LibraryView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
         }
-    }
-}
-
-private struct LibraryPlaceholderSheetView: View {
-    let title: String
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text(title)
-                .font(.title2.weight(.bold))
-            Text("This is a placeholder screen.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
     }
 }
 

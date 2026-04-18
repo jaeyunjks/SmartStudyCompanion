@@ -2,8 +2,8 @@ import SwiftUI
 
 struct LibraryHeroHeaderView: View {
     private var titleText: AttributedString {
-        var text = AttributedString("Your Knowledge Pavilion")
-        if let range = text.range(of: "Pavilion") {
+        var text = AttributedString("Organise Your Study Library")
+        if let range = text.range(of: "Library") {
             text[range].foregroundColor = LibraryTheme.accent
         }
         return text
@@ -12,26 +12,22 @@ struct LibraryHeroHeaderView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Knowledge Space")
-                .font(.caption)
-                .fontWeight(.semibold)
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(LibraryTheme.accent)
                 .textCase(.uppercase)
+                .tracking(1.1)
 
             Text(titleText)
-                .font(.system(size: 32, weight: .bold))
+                .font(.system(size: 30, weight: .bold, design: .rounded))
 
-            Text("Manage your AI-powered study spaces and documents in one place.")
+            Text("Search, filter, and manage all study spaces and materials in one calm workspace.")
                 .font(.subheadline)
                 .foregroundStyle(LibraryTheme.mutedText)
+                .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
-        .background(LibraryTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: LibraryTheme.cardCornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: LibraryTheme.cardCornerRadius, style: .continuous)
-                .stroke(LibraryTheme.accent.opacity(0.08), lineWidth: 1)
-        )
+        .padding(18)
+        .libraryGlass(cornerRadius: LibraryTheme.cardCornerRadius)
     }
 }
 

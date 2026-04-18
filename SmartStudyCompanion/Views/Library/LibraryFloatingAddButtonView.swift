@@ -11,7 +11,10 @@ struct LibraryFloatingAddButtonView: View {
                 .frame(width: 56, height: 56)
                 .background(LibraryTheme.accent)
                 .clipShape(Circle())
-                .shadow(color: LibraryTheme.accent.opacity(0.25), radius: 12, x: 0, y: 8)
+                .overlay(
+                    Circle().stroke(Color.white.opacity(0.28), lineWidth: 1)
+                )
+                .shadow(color: LibraryTheme.accent.opacity(0.24), radius: 11, x: 0, y: 7)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Add new study space")

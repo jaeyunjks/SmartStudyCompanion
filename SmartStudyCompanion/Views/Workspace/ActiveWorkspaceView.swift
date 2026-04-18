@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
 
 enum WorkspaceTheme {
     static let accent = Color(red: 0.22, green: 0.53, blue: 0.40)
@@ -24,19 +26,30 @@ struct ActiveWorkspaceView: View {
 
     let studySpace: StudySpace
 
+    @StateObject private var viewModel: ActiveWorkspaceViewModel
+
     @State private var showActionAlert = false
     @State private var selectedActionTitle = ""
-    @State private var showAddSheet = false
     @State private var showSummaryDetail = false
     @State private var showAIChat = false
     @State private var showKnowledgeQuiz = false
     @State private var showFlashcardSession = false
+    @State private var showStudyPlan = false
+    @State private var showImportOptions = false
+    @State private var showPhotoPicker = false
+    @State private var showFileImporter = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
 
     private let activityItems: [ActivityItem] = [
         .init(iconName: "doc.text", title: "Key Concepts of Serverless", timestamp: "2h ago", detail: "Exploration of FaaS, cold starts, and event-driven architectures."),
         .init(iconName: "photo", title: "Architecture Diagram", timestamp: "3d ago", detail: "Updated system diagram for scalable compute clusters."),
         .init(iconName: "doc.richtext", title: "Distributed Systems Syllabus", timestamp: "1d ago", detail: "2.4 MB • PDF Document • Core curriculum")
     ]
+
+    init(studySpace: StudySpace) {
+        self.studySpace = studySpace
+        _viewModel = StateObject(wrappedValue: ActiveWorkspaceViewModel(studySpace: studySpace))
+    }
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -49,6 +62,16 @@ struct ActiveWorkspaceView: View {
                     AICompanionSectionView(
                         onPrimaryAction: { handleAction("Summarise Knowledge") },
                         onSecondaryAction: { handleAction($0) }
+                    )
+
+                    WorkspaceMaterialsSectionView(
+                        materials: viewModel.materials,
+                        onTapMaterial: { material in
+                            viewModel.openPreview(for: material)
+                        },
+                        onToggleAISelection: { material in
+                            viewModel.toggleMaterialSelectionForAI(material.id)
+                        }
                     )
 
                     RecentActivitySectionView(items: activityItems)
@@ -67,13 +90,57 @@ struct ActiveWorkspaceView: View {
             }
 
             WorkspaceFloatingAddButtonView {
-                showAddSheet = true
+                showImportOptions = true
             }
             .padding(.trailing, 24)
             .padding(.bottom, 24)
         }
-        .sheet(isPresented: $showAddSheet) {
-            WorkspacePlaceholderSheetView(title: "Add to Workspace")
+        .photosPicker(
+            isPresented: $showPhotoPicker,
+            selection: $selectedPhotoItem,
+            matching: .images,
+            preferredItemEncoding: .automatic
+        )
+        .onChange(of: selectedPhotoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self) {
+                    await viewModel.importPhoto(data: data, fileName: nil)
+                } else {
+                    viewModel.importErrorMessage = "Could not load the selected photo."
+                }
+            }
+        }
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: supportedDocumentTypes,
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                Task { await viewModel.importDocument(from: url) }
+            case .failure:
+                viewModel.importErrorMessage = "File import was cancelled or failed."
+            }
+        }
+        .confirmationDialog("Import Study Material", isPresented: $showImportOptions, titleVisibility: .visible) {
+            Button("Photo Library") { showPhotoPicker = true }
+            Button("Files") { showFileImporter = true }
+            Button("Cancel", role: .cancel) {}
+        }
+        .sheet(item: $viewModel.selectedMaterialForPreview) { material in
+            WorkspaceMaterialPreviewView(material: material)
+        }
+        .alert("Import Error", isPresented: Binding(
+            get: { viewModel.importErrorMessage != nil },
+            set: { newValue in
+                if !newValue { viewModel.importErrorMessage = nil }
+            }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.importErrorMessage ?? "")
         }
         .navigationDestination(isPresented: $showSummaryDetail) {
             SummaryDetailView(summary: initialSummary)
@@ -87,10 +154,24 @@ struct ActiveWorkspaceView: View {
         .navigationDestination(isPresented: $showFlashcardSession) {
             FlashcardSessionView(workspaceTitle: studySpace.title)
         }
+        .navigationDestination(isPresented: $showStudyPlan) {
+            StudyPlanView(workspaceTitle: studySpace.title)
+        }
         .alert("Action", isPresented: $showActionAlert) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(selectedActionTitle)
+        }
+        .overlay {
+            if viewModel.isImporting {
+                ZStack {
+                    Color.black.opacity(0.08).ignoresSafeArea()
+                    ProgressView("Importing material...")
+                        .padding(16)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+            }
         }
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -109,8 +190,21 @@ struct ActiveWorkspaceView: View {
             sourceType: "PDF",
             description: "Reference extracted from your latest uploaded material.",
             visualLabel: "Context: \(studySpace.title) notes and reference table",
-            previewSystemImage: studySpace.iconName
+            previewSystemImage: studySpace.iconName,
+            referencedMaterials: viewModel.referencedMaterials,
+            aiContextSource: viewModel.aiContextSource
         )
+    }
+
+    private var supportedDocumentTypes: [UTType] {
+        [
+            .pdf,
+            .plainText,
+            .text,
+            UTType(filenameExtension: "doc"),
+            UTType(filenameExtension: "docx"),
+            .rtf
+        ].compactMap { $0 }
     }
 
     private func handleAction(_ title: String) {
@@ -130,23 +224,12 @@ struct ActiveWorkspaceView: View {
             showFlashcardSession = true
             return
         }
+        if title == "Action Plan" {
+            showStudyPlan = true
+            return
+        }
         selectedActionTitle = title
         showActionAlert = true
-    }
-}
-
-private struct WorkspacePlaceholderSheetView: View {
-    let title: String
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text(title)
-                .font(.title2.weight(.bold))
-            Text("This is a placeholder screen.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
     }
 }
 

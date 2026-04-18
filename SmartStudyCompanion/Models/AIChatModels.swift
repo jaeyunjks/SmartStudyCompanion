@@ -65,6 +65,8 @@ struct WorkspaceContext: Identifiable, Codable, Equatable {
     let description: String
     let visualLabel: String
     let previewSystemImage: String
+    let referencedMaterials: [ReferencedMaterial]
+    let aiContextSource: AIContextSource?
 
     init(
         id: UUID = UUID(),
@@ -73,7 +75,9 @@ struct WorkspaceContext: Identifiable, Codable, Equatable {
         sourceType: String,
         description: String,
         visualLabel: String,
-        previewSystemImage: String
+        previewSystemImage: String,
+        referencedMaterials: [ReferencedMaterial] = [],
+        aiContextSource: AIContextSource? = nil
     ) {
         self.id = id
         self.workspaceTitle = workspaceTitle
@@ -82,6 +86,8 @@ struct WorkspaceContext: Identifiable, Codable, Equatable {
         self.description = description
         self.visualLabel = visualLabel
         self.previewSystemImage = previewSystemImage
+        self.referencedMaterials = referencedMaterials
+        self.aiContextSource = aiContextSource
     }
 }
 

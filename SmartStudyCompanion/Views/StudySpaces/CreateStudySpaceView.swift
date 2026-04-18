@@ -6,10 +6,10 @@ enum CreateStudySpaceTheme {
     static let background = Color(.systemBackground)
     static let secondaryBackground = Color(.secondarySystemBackground)
     static let mutedText = Color(.secondaryLabel)
-    static let cornerRadius: CGFloat = 24
+    static let cornerRadius: CGFloat = 26
     static let cardMaxWidth: CGFloat = 560
-    static let cardPadding: CGFloat = 28
-    static let sectionSpacing: CGFloat = 22
+    static let cardPadding: CGFloat = 24
+    static let sectionSpacing: CGFloat = 20
     static let fieldCornerRadius: CGFloat = 16
 }
 
@@ -20,20 +20,31 @@ struct CreateStudySpaceView: View {
     @State private var selectedIconName = "cloud"
     @State private var selectedCategory = "IT"
     @State private var descriptionText = ""
-    @State private var selectedColor = CreateStudySpaceTheme.accent
-    @State private var showMoreIconsSheet = false
-    @State private var showAddCategorySheet = false
-    @State private var customCategoryText = ""
-    @State private var categoryOptions = ["IT", "AI", "Math", "Design"]
 
-    private let iconOptions = ["cloud", "brain.head.profile", "book.closed", "sparkles", "leaf"]
-    private let colorOptions: [StudySpaceColorOption] = [
-        .init(name: "Green", color: CreateStudySpaceTheme.accent),
-        .init(name: "Blue", color: Color(red: 0.30, green: 0.52, blue: 0.92)),
-        .init(name: "Purple", color: Color(red: 0.55, green: 0.42, blue: 0.85)),
-        .init(name: "Orange", color: Color(red: 0.95, green: 0.58, blue: 0.22)),
-        .init(name: "Pink", color: Color(red: 0.92, green: 0.44, blue: 0.66))
+    @State private var customIcons: [String] = []
+    @State private var customCategories: [String] = []
+    @State private var colorOptions: [StudySpaceColorOption] = [
+        .init(id: "green", name: "Green", color: CreateStudySpaceTheme.accent),
+        .init(id: "blue", name: "Blue", color: Color(red: 0.30, green: 0.52, blue: 0.92)),
+        .init(id: "purple", name: "Purple", color: Color(red: 0.55, green: 0.42, blue: 0.85)),
+        .init(id: "orange", name: "Orange", color: Color(red: 0.95, green: 0.58, blue: 0.22)),
+        .init(id: "pink", name: "Pink", color: Color(red: 0.92, green: 0.44, blue: 0.66))
     ]
+    @State private var selectedColorID = "green"
+
+    @State private var showAddIconSheet = false
+    @State private var showAddCategorySheet = false
+    @State private var showCustomColorSheet = false
+
+    @State private var iconToDelete: String?
+    @State private var categoryToDelete: String?
+    @State private var colorToDelete: StudySpaceColorOption?
+
+    private let builtInIcons = ["cloud", "brain.head.profile", "book.closed", "sparkles", "leaf"]
+    private let addableIconOptions = [
+        "atom", "bolt", "cpu", "network", "chart.bar", "graduationcap", "lightbulb", "doc.text", "pencil", "target"
+    ]
+    private let builtInCategories = ["IT", "AI", "Math", "Design"]
 
     let onCreate: ((String, String, String, String) -> Void)?
 
@@ -41,143 +52,181 @@ struct CreateStudySpaceView: View {
         self.onCreate = onCreate
     }
 
+    private var allIcons: [String] {
+        builtInIcons + customIcons
+    }
+
+    private var allCategories: [String] {
+        builtInCategories + customCategories
+    }
+
+    private var selectedColor: Color {
+        colorOptions.first(where: { $0.id == selectedColorID })?.color ?? CreateStudySpaceTheme.accent
+    }
+
+    private var canCreate: Bool {
+        !spaceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
-        ZStack {
-            Color.black.opacity(0.22).ignoresSafeArea()
+        ScrollView {
+            VStack(spacing: CreateStudySpaceTheme.sectionSpacing) {
+                CreateStudySpaceHeaderView(
+                    title: "Create Study Space",
+                    subtitle: "Design your digital sanctuary for focused learning.",
+                    onClose: { dismiss() }
+                )
 
-            ScrollView {
-                VStack(spacing: CreateStudySpaceTheme.sectionSpacing) {
-                    VStack(spacing: CreateStudySpaceTheme.sectionSpacing) {
-                        CreateStudySpaceHeaderView(
-                            title: "Create Study Space",
-                            subtitle: "Design your digital sanctuary for focused learning.",
-                            onClose: { dismiss() }
-                        )
+                StudySpaceNameInputView(text: $spaceName)
 
-                        StudySpaceNameInputView(text: $spaceName)
+                StudySpaceIconPickerView(
+                    icons: allIcons,
+                    selectedIconName: $selectedIconName,
+                    selectedColor: selectedColor,
+                    onAdd: { showAddIconSheet = true },
+                    isCustomIcon: { customIcons.contains($0) },
+                    onLongPressIcon: { iconToDelete = $0 }
+                )
 
-                        StudySpaceIconPickerView(
-                            icons: iconOptions,
-                            selectedIconName: $selectedIconName,
-                            selectedColor: selectedColor,
-                            onAdd: { showMoreIconsSheet = true }
-                        )
+                StudySpaceCategoryPickerView(
+                    categories: allCategories,
+                    selectedCategory: $selectedCategory,
+                    selectedColor: selectedColor,
+                    onAddCategory: { showAddCategorySheet = true },
+                    isCustomCategory: { customCategories.contains($0) },
+                    onLongPressCategory: { categoryToDelete = $0 }
+                )
 
-                        StudySpaceCategoryPickerView(
-                            categories: categoryOptions,
-                            selectedCategory: $selectedCategory,
-                            selectedColor: selectedColor,
-                            onAddCategory: { showAddCategorySheet = true }
-                        )
+                StudySpaceColorPickerView(
+                    colors: colorOptions,
+                    selectedColorID: $selectedColorID,
+                    onAddCustomColor: { showCustomColorSheet = true },
+                    onLongPressColor: { colorToDelete = $0 }
+                )
 
-                        StudySpaceColorPickerView(
-                            colors: colorOptions,
-                            selectedColor: $selectedColor
-                        )
+                StudySpaceDescriptionInputView(text: $descriptionText)
 
-                        StudySpaceDescriptionInputView(text: $descriptionText)
-
-                        Button(action: handleCreate) {
-                            Text("Create")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(selectedColor)
-                                .clipShape(Capsule())
-                                .shadow(color: selectedColor.opacity(0.25), radius: 14, x: 0, y: 8)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.top, 4)
-                    }
-                    .padding(CreateStudySpaceTheme.cardPadding)
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: CreateStudySpaceTheme.cornerRadius, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: CreateStudySpaceTheme.cornerRadius, style: .continuous)
-                            .stroke(Color.white.opacity(0.35), lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.08), radius: 24, x: 0, y: 16)
-                    .overlay(
-                        Circle()
-                            .fill(CreateStudySpaceTheme.accentSoft.opacity(0.5))
-                            .frame(width: 140, height: 140)
-                            .blur(radius: 44)
-                            .offset(x: 130, y: -130),
-                        alignment: .topTrailing
-                    )
+                Button(action: handleCreate) {
+                    Text("Create")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(canCreate ? selectedColor : Color.gray.opacity(0.45))
+                        .clipShape(Capsule())
+                        .shadow(color: selectedColor.opacity(canCreate ? 0.24 : 0), radius: 14, x: 0, y: 8)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 24)
-                .frame(maxWidth: CreateStudySpaceTheme.cardMaxWidth)
-                .frame(maxWidth: .infinity)
+                .buttonStyle(.plain)
+                .disabled(!canCreate)
+                .padding(.top, 2)
             }
+            .padding(CreateStudySpaceTheme.cardPadding)
+            .frame(maxWidth: CreateStudySpaceTheme.cardMaxWidth)
+            .frame(maxWidth: .infinity)
         }
-        .sheet(isPresented: $showMoreIconsSheet) {
-            CreateStudySpacePlaceholderSheetView(title: "More Icons")
-        }
-        .sheet(isPresented: $showAddCategorySheet) {
-            CreateStudySpaceAddCategorySheetView(
-                text: $customCategoryText,
-                onAdd: {
-                    let trimmed = customCategoryText.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty {
-                        categoryOptions.append(trimmed)
-                        selectedCategory = trimmed
+        .sheet(isPresented: $showAddIconSheet) {
+            AddCustomIconSheet(
+                availableIcons: addableIconOptions,
+                alreadyAddedIcons: Set(customIcons),
+                onSelect: { symbol in
+                    guard !customIcons.contains(symbol) else {
+                        selectedIconName = symbol
+                        return
                     }
-                    customCategoryText = ""
-                    showAddCategorySheet = false
+                    customIcons.append(symbol)
+                    selectedIconName = symbol
                 }
             )
         }
+        .sheet(isPresented: $showAddCategorySheet) {
+            AddCustomCategorySheet(
+                existingCategories: Set(allCategories),
+                onAdd: { category in
+                    guard !customCategories.contains(category) else {
+                        selectedCategory = category
+                        return
+                    }
+                    customCategories.append(category)
+                    selectedCategory = category
+                }
+            )
+        }
+        .sheet(isPresented: $showCustomColorSheet) {
+            CustomColorPickerSheet { color in
+                let id = "custom-\(UUID().uuidString)"
+                colorOptions.append(.init(id: id, name: "Custom", color: color, isCustom: true))
+                selectedColorID = id
+            }
+        }
+        .confirmationDialog(
+            "Remove custom icon?",
+            isPresented: Binding(
+                get: { iconToDelete != nil },
+                set: { if !$0 { iconToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                guard let icon = iconToDelete else { return }
+                customIcons.removeAll { $0 == icon }
+                if selectedIconName == icon {
+                    selectedIconName = builtInIcons.first ?? "cloud"
+                }
+                iconToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                iconToDelete = nil
+            }
+        }
+        .confirmationDialog(
+            "Remove custom category?",
+            isPresented: Binding(
+                get: { categoryToDelete != nil },
+                set: { if !$0 { categoryToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                guard let category = categoryToDelete else { return }
+                customCategories.removeAll { $0 == category }
+                if selectedCategory == category {
+                    selectedCategory = builtInCategories.first ?? "IT"
+                }
+                categoryToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                categoryToDelete = nil
+            }
+        }
+        .confirmationDialog(
+            "Remove custom color?",
+            isPresented: Binding(
+                get: { colorToDelete != nil },
+                set: { if !$0 { colorToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                guard let color = colorToDelete else { return }
+                colorOptions.removeAll { $0.id == color.id }
+                if selectedColorID == color.id {
+                    selectedColorID = "green"
+                }
+                colorToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                colorToDelete = nil
+            }
+        }
+        .presentationDetents([.fraction(0.92), .large])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(34)
+        .presentationBackground(.thinMaterial)
     }
 
     private func handleCreate() {
         onCreate?(spaceName, selectedIconName, selectedCategory, descriptionText)
         dismiss()
-    }
-}
-
-private struct CreateStudySpacePlaceholderSheetView: View {
-    let title: String
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text(title)
-                .font(.title2.weight(.bold))
-            Text("This is a placeholder screen.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .padding()
-    }
-}
-
-private struct CreateStudySpaceAddCategorySheetView: View {
-    @Binding var text: String
-    let onAdd: () -> Void
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Text("Add Category")
-                .font(.title2.weight(.bold))
-
-            TextField("e.g., Biology", text: $text)
-                .textInputAutocapitalization(.words)
-                .padding(.horizontal, 16)
-                .frame(height: 48)
-                .background(CreateStudySpaceTheme.secondaryBackground)
-                .clipShape(Capsule())
-
-            Button("Add", action: onAdd)
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(CreateStudySpaceTheme.accent)
-                .foregroundStyle(.white)
-                .clipShape(Capsule())
-        }
-        .padding()
     }
 }
 

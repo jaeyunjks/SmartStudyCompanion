@@ -26,44 +26,50 @@ struct HomeDashboardView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                HomeTheme.background.ignoresSafeArea()
+            GeometryReader { geometry in
+                let topInset = geometry.safeAreaInsets.top
+                let bottomInset = geometry.safeAreaInsets.bottom
 
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: HomeTheme.sectionSpacing) {
-                        HeroSectionView(
-                            onCreateStudySpace: {
-                                showCreateStudySpaceSheet = true
-                            }
+                ZStack(alignment: .bottom) {
+                    HomeTheme.background.ignoresSafeArea()
+
+                    VStack(spacing: 0) {
+                        HomeTopBarView(
+                            greetingText: viewModel.greetingText,
+                            userInitials: viewModel.userInitials,
+                            animateGreeting: animateGreeting,
+                            onSettingsTap: {}
                         )
-                        ContinueLearningSectionView(spaces: viewModel.featuredStudySpaces) { space in
-                            selectedStudySpace = space
-                        }
-                        RecentStudySpacesSectionView(spaces: viewModel.recentStudySpaces) { space in
-                            selectedStudySpace = space
+                        .padding(.top, topInset + 2)
+
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: HomeTheme.sectionSpacing) {
+                                HeroSectionView(
+                                    onCreateStudySpace: {
+                                        showCreateStudySpaceSheet = true
+                                    }
+                                )
+                                ContinueLearningSectionView(spaces: viewModel.featuredStudySpaces) { space in
+                                    selectedStudySpace = space
+                                }
+                                RecentStudySpacesSectionView(spaces: viewModel.recentStudySpaces) { space in
+                                    selectedStudySpace = space
+                                }
+                            }
+                            .padding(.horizontal, HomeTheme.horizontalPadding)
+                            .padding(.top, 14)
+                            .padding(.bottom, 120 + bottomInset)
                         }
                     }
-                    .padding(.horizontal, HomeTheme.horizontalPadding)
-                    .padding(.top, 14)
-                    .padding(.bottom, 20)
-                }
-            }
-            .safeAreaInset(edge: .top) {
-                HomeTopBarView(
-                    greetingText: viewModel.greetingText,
-                    userInitials: viewModel.userInitials,
-                    animateGreeting: animateGreeting,
-                    onSettingsTap: {}
-                )
-                .padding(.top, 2)
-            }
-            .safeAreaInset(edge: .bottom) {
-                HomeBottomNavBarView(selected: selectedTab) { tab in
-                    withAnimation(.easeInOut(duration: 0.22)) {
-                        selectedTab = tab
+
+                    HomeBottomNavBarView(selected: selectedTab) { tab in
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            selectedTab = tab
+                        }
                     }
+                    .padding(.bottom, max(bottomInset, 8))
                 }
-                .padding(.bottom, 2)
+                .ignoresSafeArea(edges: [.top, .bottom])
             }
             .sheet(isPresented: $showCreateStudySpaceSheet) {
                 CreateStudySpaceView(onCreate: { title, icon, category, description in

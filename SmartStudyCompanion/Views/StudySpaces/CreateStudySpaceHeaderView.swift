@@ -6,11 +6,13 @@ struct CreateStudySpaceHeaderView: View {
     let onClose: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
                     .font(.title2.weight(.bold))
                     .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(CreateStudySpaceTheme.mutedText)

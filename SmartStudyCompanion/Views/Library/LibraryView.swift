@@ -27,43 +27,50 @@ struct LibraryView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
-                LibraryTheme.background.ignoresSafeArea()
+            GeometryReader { geometry in
+                let topInset = geometry.safeAreaInsets.top
+                let bottomInset = geometry.safeAreaInsets.bottom
 
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: LibraryTheme.sectionSpacing) {
-                        LibraryHeroHeaderView()
-                        LibrarySearchBarView(query: $viewModel.searchText)
-                        LibraryFilterChipsView(
-                            selectedSort: $viewModel.selectedSort,
-                            hasActiveAdvancedFilters: viewModel.hasActiveAdvancedFilters,
-                            onFilterTap: { showFilterSheet = true }
-                        )
-                        StudySpacesSectionView(spaces: viewModel.filteredStudySpaces) { space in
-                            selectedStudySpace = space
+                ZStack(alignment: .bottomTrailing) {
+                    LibraryTheme.background.ignoresSafeArea()
+
+                    VStack(spacing: 0) {
+                        LibraryTopBarView()
+                            .padding(.top, topInset + 2)
+
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: LibraryTheme.sectionSpacing) {
+                                LibraryHeroHeaderView()
+                                LibrarySearchBarView(query: $viewModel.searchText)
+                                LibraryFilterChipsView(
+                                    selectedSort: $viewModel.selectedSort,
+                                    hasActiveAdvancedFilters: viewModel.hasActiveAdvancedFilters,
+                                    onFilterTap: { showFilterSheet = true }
+                                )
+                                StudySpacesSectionView(spaces: viewModel.filteredStudySpaces) { space in
+                                    selectedStudySpace = space
+                                }
+                            }
+                            .padding(.horizontal, LibraryTheme.horizontalPadding)
+                            .padding(.top, 14)
+                            .padding(.bottom, 120 + bottomInset)
                         }
                     }
-                    .padding(.horizontal, LibraryTheme.horizontalPadding)
-                    .padding(.top, 14)
-                    .padding(.bottom, 22)
-                }
-                .safeAreaInset(edge: .top) {
-                    LibraryTopBarView()
-                }
-                .safeAreaInset(edge: .bottom) {
+
                     LibraryBottomNavBarView(selected: selectedTab) { tab in
                         withAnimation(.easeInOut(duration: 0.22)) {
                             selectedTab = tab
                         }
                     }
-                    .padding(.bottom, 2)
-                }
+                    .padding(.bottom, max(bottomInset, 8))
 
-                LibraryFloatingAddButtonView {
-                    showCreateStudySpaceSheet = true
+                    LibraryFloatingAddButtonView {
+                        showCreateStudySpaceSheet = true
+                    }
+                    .padding(.trailing, LibraryTheme.horizontalPadding)
+                    .padding(.bottom, max(bottomInset, 8) + 78)
                 }
-                .padding(.trailing, LibraryTheme.horizontalPadding)
-                .padding(.bottom, 84)
+                .ignoresSafeArea(edges: [.top, .bottom])
             }
             .sheet(isPresented: $showFilterSheet) {
                 LibraryAdvancedFilterSheetView(

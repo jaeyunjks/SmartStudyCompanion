@@ -5,26 +5,36 @@ struct QuickActionsChipsView: View {
     let onSelect: (String) -> Void
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Quick Actions")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(HomeTheme.accent)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
                 ForEach(actions, id: \.self) { action in
                     Button(action: { onSelect(action) }) {
                         HStack(spacing: 8) {
                             Image(systemName: iconName(for: action))
-                                .font(.system(size: 14, weight: .semibold))
-                            Text(action)
                                 .font(.system(size: 13, weight: .semibold))
+                            Text(action)
+                                .font(.system(size: 13, weight: .medium))
                         }
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .foregroundStyle(HomeTheme.accent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
                         .background(tint(for: action))
+                        .overlay(
+                            Capsule()
+                                .stroke(HomeTheme.accent.opacity(0.08), lineWidth: 1)
+                        )
                         .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
                 }
+                }
+                .padding(.vertical, 2)
             }
-            .padding(.vertical, 4)
         }
     }
 

@@ -8,7 +8,7 @@ struct ContinueLearningSectionView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Continue Learning")
-                    .font(.title2.weight(.bold))
+                    .font(.title3.weight(.bold))
 
                 Spacer()
 
@@ -17,7 +17,7 @@ struct ContinueLearningSectionView: View {
                     .foregroundStyle(HomeTheme.accent)
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16)], spacing: 16) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 14)], spacing: 14) {
                 ForEach(spaces) { space in
                     Button(action: { onSelect(space) }) {
                         ContinueLearningCardView(space: space)
@@ -46,16 +46,16 @@ private struct ContinueLearningCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(accent.opacity(0.12))
+                        .fill(accent.opacity(0.10))
                     Image(systemName: space.iconName)
                         .foregroundStyle(accent)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                 }
-                .frame(width: 44, height: 44)
+                .frame(width: 42, height: 42)
 
                 Spacer()
 
@@ -63,19 +63,22 @@ private struct ContinueLearningCardView: View {
                     .font(.caption2.weight(.bold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(accent.opacity(0.12))
+                    .background(accent.opacity(0.10))
                     .clipShape(Capsule())
                     .foregroundStyle(accent)
             }
 
             Text(space.title)
-                .font(.headline)
+                .font(.headline.weight(.semibold))
                 .foregroundStyle(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
 
             Text(space.description)
                 .font(.footnote)
                 .foregroundStyle(HomeTheme.mutedText)
-                .lineLimit(3)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
 
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
@@ -96,15 +99,10 @@ private struct ContinueLearningCardView: View {
                     .clipShape(Capsule())
             }
         }
-        .padding(16)
+        .padding(15)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(HomeTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: HomeTheme.cardCornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: HomeTheme.cardCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.08), lineWidth: 1)
-        )
-        .shadow(color: accent.opacity(0.06), radius: 10, x: 0, y: 6)
+        .homeGlass(cornerRadius: HomeTheme.cardCornerRadius)
+        .contentShape(RoundedRectangle(cornerRadius: HomeTheme.cardCornerRadius, style: .continuous))
     }
 }
 

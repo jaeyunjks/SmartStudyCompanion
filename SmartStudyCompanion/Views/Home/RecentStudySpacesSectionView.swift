@@ -5,11 +5,11 @@ struct RecentStudySpacesSectionView: View {
     let onSelect: (StudySpace) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("Recent Study Spaces")
-                .font(.title2.weight(.bold))
+                .font(.title3.weight(.bold))
 
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 ForEach(spaces) { space in
                     Button(action: { onSelect(space) }) {
                         RecentStudySpaceRow(space: space)
@@ -41,7 +41,7 @@ private struct RecentStudySpaceRow: View {
         HStack(spacing: 12) {
             Circle()
                 .fill(Color(.systemBackground))
-                .frame(width: 40, height: 40)
+                .frame(width: 42, height: 42)
                 .overlay(
                     Image(systemName: space.iconName)
                         .foregroundStyle(accent)
@@ -51,7 +51,8 @@ private struct RecentStudySpaceRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(space.title)
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
                 Text(space.lastUpdated)
                     .font(.caption)
                     .foregroundStyle(HomeTheme.mutedText)
@@ -67,13 +68,9 @@ private struct RecentStudySpaceRow: View {
                 .clipShape(Capsule())
                 .foregroundStyle(accent)
         }
-        .padding(14)
-        .background(HomeTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: HomeTheme.smallCornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: HomeTheme.smallCornerRadius, style: .continuous)
-                .stroke(accent.opacity(0.08), lineWidth: 1)
-        )
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .homeGlass(cornerRadius: HomeTheme.smallCornerRadius)
     }
 }
 

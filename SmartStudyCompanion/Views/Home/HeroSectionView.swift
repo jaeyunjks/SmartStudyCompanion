@@ -4,51 +4,50 @@ struct HeroSectionView: View {
     let onCreateStudySpace: () -> Void
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: 16) {
+        VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Personal Learning")
-                    .font(.caption)
-                    .fontWeight(.semibold)
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(HomeTheme.accent)
                     .textCase(.uppercase)
+                    .tracking(1.1)
 
-                Text("Good afternoon, Yafie")
-                    .font(.system(size: 34, weight: .bold, design: .default))
+                Text("Build Momentum In Today’s Study Session")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
-                    .minimumScaleFactor(0.85)
-            }
+                    .lineLimit(2)
 
-            Spacer(minLength: 8)
+                Text("Create a focused workspace, collect your materials, and continue where you left off.")
+                    .font(.subheadline.weight(.regular))
+                    .foregroundStyle(HomeTheme.mutedText)
+                    .lineSpacing(2)
+            }
 
             Button(action: onCreateStudySpace) {
                 HStack(spacing: 8) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .bold))
                     Text("New Study Space")
                         .font(.system(size: 15, weight: .semibold))
                 }
                 .foregroundStyle(.white)
-                .padding(.horizontal, 16)
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(
                     LinearGradient(
-                        colors: [HomeTheme.accent, HomeTheme.accent.opacity(0.8)],
+                        colors: [HomeTheme.accent, HomeTheme.accent.opacity(0.82)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .clipShape(Capsule())
-                .shadow(color: HomeTheme.accent.opacity(0.18), radius: 8, x: 0, y: 4)
+                .shadow(color: HomeTheme.accent.opacity(0.18), radius: 10, x: 0, y: 6)
             }
             .buttonStyle(.plain)
+            .scaleEffect(1)
         }
-        .padding(16)
-        .background(HomeTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: HomeTheme.cardCornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: HomeTheme.cardCornerRadius, style: .continuous)
-                .stroke(HomeTheme.accent.opacity(0.08), lineWidth: 1)
-        )
+        .padding(18)
+        .homeGlass(cornerRadius: HomeTheme.cardCornerRadius)
     }
 }
 

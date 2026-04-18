@@ -1,49 +1,56 @@
 import SwiftUI
 
 struct HomeTopBarView: View {
-    var body: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(HomeTheme.accentSoft)
-                    .overlay(
-                        Image(systemName: "person.crop.circle.fill")
-                            .foregroundStyle(HomeTheme.accent)
-                    )
-                    .frame(width: 40, height: 40)
-                    .overlay(
-                        Circle().stroke(HomeTheme.accent.opacity(0.2), lineWidth: 1)
-                    )
+    let greetingText: String
+    let userInitials: String
+    let animateGreeting: Bool
+    let onSettingsTap: () -> Void
 
-                Text("Welcome back")
-                    .font(.headline)
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(greetingText)
+                    .font(.system(size: 21, weight: .bold, design: .rounded))
                     .foregroundStyle(HomeTheme.accent)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
             }
+            .opacity(animateGreeting ? 1 : 0)
+            .offset(y: animateGreeting ? 0 : 6)
 
             Spacer()
 
-            Button(action: {}) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(HomeTheme.accent)
-                    .frame(width: 40, height: 40)
-                    .background(HomeTheme.secondaryBackground)
-                    .clipShape(Circle())
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(HomeTheme.accentSoft)
+                    .frame(width: 34, height: 34)
+                    .overlay(
+                        Text(userInitials)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(HomeTheme.accent)
+                    )
+
+                Button(action: onSettingsTap) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(HomeTheme.accent)
+                        .frame(width: 34, height: 34)
+                        .background(HomeTheme.secondaryBackground)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, HomeTheme.horizontalPadding)
-        .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
-        .overlay(
-            Rectangle()
-                .fill(HomeTheme.accent.opacity(0.08))
-                .frame(height: 1),
-            alignment: .bottom
-        )
+        .padding(.vertical, 10)
     }
 }
 
 #Preview {
-    HomeTopBarView()
+    HomeTopBarView(
+        greetingText: "Good afternoon, Yafie",
+        userInitials: "YF",
+        animateGreeting: true,
+        onSettingsTap: {}
+    )
 }

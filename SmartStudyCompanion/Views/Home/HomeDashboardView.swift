@@ -9,50 +9,61 @@ enum HomeTheme {
     static let secondaryBackground = Color(.secondarySystemBackground)
 
     static let horizontalPadding: CGFloat = 20
-    static let sectionSpacing: CGFloat = 22
-    static let cardCornerRadius: CGFloat = 20
+    static let sectionSpacing: CGFloat = 24
+    static let cardCornerRadius: CGFloat = 22
     static let chipCornerRadius: CGFloat = 18
-    static let smallCornerRadius: CGFloat = 14
+    static let smallCornerRadius: CGFloat = 16
+    static let glassBorder = accent.opacity(0.10)
+    static let glassShadow = accent.opacity(0.08)
 }
 
 struct HomeDashboardView: View {
     @StateObject private var viewModel = HomeDashboardViewModel()
     @State private var selectedTab: HomeNavItem = .home
-    @State private var selectedQuickAction: String?
-    @State private var showQuickActionAlert = false
     @State private var showCreateStudySpaceSheet = false
     @State private var selectedStudySpace: StudySpace?
+    @State private var animateGreeting = false
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: HomeTheme.sectionSpacing) {
-                    HeroSectionView(onCreateStudySpace: {
-                        showCreateStudySpaceSheet = true
-                    })
-                    QuickActionsChipsView(actions: viewModel.quickActions) { action in
-                        selectedQuickAction = action
-                        showQuickActionAlert = true
+            ZStack {
+                HomeTheme.background.ignoresSafeArea()
+
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: HomeTheme.sectionSpacing) {
+                        HeroSectionView(
+                            onCreateStudySpace: {
+                                showCreateStudySpaceSheet = true
+                            }
+                        )
+                        ContinueLearningSectionView(spaces: viewModel.featuredStudySpaces) { space in
+                            selectedStudySpace = space
+                        }
+                        RecentStudySpacesSectionView(spaces: viewModel.recentStudySpaces) { space in
+                            selectedStudySpace = space
+                        }
                     }
-                    ContinueLearningSectionView(spaces: viewModel.featuredStudySpaces) { space in
-                        selectedStudySpace = space
-                    }
-                    RecentStudySpacesSectionView(spaces: viewModel.recentStudySpaces) { space in
-                        selectedStudySpace = space
-                    }
+                    .padding(.horizontal, HomeTheme.horizontalPadding)
+                    .padding(.top, 14)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal, HomeTheme.horizontalPadding)
-                .padding(.top, 12)
-                .padding(.bottom, 32)
             }
-            .background(HomeTheme.background.ignoresSafeArea())
             .safeAreaInset(edge: .top) {
-                HomeTopBarView()
+                HomeTopBarView(
+                    greetingText: viewModel.greetingText,
+                    userInitials: viewModel.userInitials,
+                    animateGreeting: animateGreeting,
+                    onSettingsTap: {}
+                )
+                .padding(.top, 2)
             }
             .safeAreaInset(edge: .bottom) {
                 HomeBottomNavBarView(selected: selectedTab) { tab in
-                    selectedTab = tab
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        selectedTab = tab
+                    }
                 }
+                .padding(.bottom, 2)
             }
             .sheet(isPresented: $showCreateStudySpaceSheet) {
                 CreateStudySpaceView(onCreate: { title, icon, category, description in
@@ -60,15 +71,15 @@ struct HomeDashboardView: View {
                     showCreateStudySpaceSheet = false
                 })
             }
-            .alert("Quick Action", isPresented: $showQuickActionAlert, presenting: selectedQuickAction) { _ in
-                Button("OK", role: .cancel) {}
-            } message: { action in
-                Text("Selected: \(action)")
-            }
             .navigationDestination(item: $selectedStudySpace) { space in
                 ActiveWorkspaceView(studySpace: space)
             }
             .toolbar(.hidden, for: .navigationBar)
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.35)) {
+                    animateGreeting = true
+                }
+            }
         }
     }
 }

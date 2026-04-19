@@ -4,18 +4,18 @@ import { PasswordResetTokenRepository } from 'src/modules/password-reset-token/p
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class PrismaPasswordResetTokenRepository implements PasswordResetTokenRepository{
-    constructor(private prisma: PrismaService) {}
+export class PrismaPasswordResetTokenRepository implements PasswordResetTokenRepository {
+    constructor(private prisma: PrismaService) { }
 
-    async create(userId: string, token: string, expiresAt: Date){
+    async create(userId: string, token: string, expiresAt: Date) {
         const passwordResetToken = await this.prisma.passwordResetToken.create({
-            data: { userId: userId, token: token, expiresAt: expiresAt}
+            data: { userId: userId, token: token, expiresAt: expiresAt }
         });
 
         return passwordResetToken;
     }
 
-    async getToken(rawToken: string){
+    async getToken(rawToken: string) {
         const tokens = await this.prisma.passwordResetToken.findMany({
             where: {
                 used: false,

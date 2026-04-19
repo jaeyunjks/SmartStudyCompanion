@@ -26,11 +26,9 @@ private struct RecentStudySpaceRow: View {
 
     private var accent: Color {
         switch space.status {
-        case "Active", "In Progress":
+        case "Active":
             return HomeTheme.accent
-        case "Review":
-            return Color.orange
-        case "Completed":
+        case "Inactive":
             return Color.gray
         default:
             return HomeTheme.accent

@@ -34,11 +34,9 @@ private struct ContinueLearningCardView: View {
 
     private var accent: Color {
         switch space.status {
-        case "In Progress", "Active", "Priority":
+        case "Active":
             return HomeTheme.accent
-        case "Review":
-            return Color(red: 0.20, green: 0.53, blue: 0.56)
-        case "Completed":
+        case "Inactive":
             return Color.gray
         default:
             return HomeTheme.accent

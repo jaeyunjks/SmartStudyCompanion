@@ -20,6 +20,7 @@ struct CreateStudySpaceView: View {
     @State private var selectedIconName = "cloud"
     @State private var selectedCategory = "IT"
     @State private var descriptionText = ""
+    @State private var selectedStatus = "Active"
 
     @State private var customIcons: [String] = []
     @State private var customCategories: [String] = []
@@ -46,9 +47,11 @@ struct CreateStudySpaceView: View {
     ]
     private let builtInCategories = ["IT", "AI", "Math", "Design"]
 
-    let onCreate: ((String, String, String, String) -> Void)?
+    let initialSpace: StudySpace?
+    let onCreate: ((String, String, String, String, String) -> Void)?
 
-    init(onCreate: ((String, String, String, String) -> Void)? = nil) {
+    init(initialSpace: StudySpace? = nil, onCreate: ((String, String, String, String, String) -> Void)? = nil) {
+        self.initialSpace = initialSpace
         self.onCreate = onCreate
     }
 
@@ -72,8 +75,10 @@ struct CreateStudySpaceView: View {
         ScrollView {
             VStack(spacing: CreateStudySpaceTheme.sectionSpacing) {
                 CreateStudySpaceHeaderView(
-                    title: "Create Study Space",
-                    subtitle: "Design your digital sanctuary for focused learning.",
+                    title: initialSpace == nil ? "Create Study Space" : "Edit Study Space",
+                    subtitle: initialSpace == nil
+                        ? "Design your digital sanctuary for focused learning."
+                        : "Update your workspace details and status.",
                     onClose: { dismiss() }
                 )
 
@@ -97,6 +102,8 @@ struct CreateStudySpaceView: View {
                     onLongPressCategory: { categoryToDelete = $0 }
                 )
 
+                StudySpaceStatusPickerView(selectedStatus: $selectedStatus)
+
                 StudySpaceColorPickerView(
                     colors: colorOptions,
                     selectedColorID: $selectedColorID,
@@ -107,7 +114,7 @@ struct CreateStudySpaceView: View {
                 StudySpaceDescriptionInputView(text: $descriptionText)
 
                 Button(action: handleCreate) {
-                    Text("Create")
+                    Text(initialSpace == nil ? "Create" : "Save Changes")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -222,10 +229,17 @@ struct CreateStudySpaceView: View {
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(34)
         .presentationBackground(.thinMaterial)
+        .onAppear {
+            guard let initialSpace else { return }
+            spaceName = initialSpace.title
+            selectedIconName = initialSpace.iconName
+            descriptionText = initialSpace.description
+            selectedStatus = initialSpace.status
+        }
     }
 
     private func handleCreate() {
-        onCreate?(spaceName, selectedIconName, selectedCategory, descriptionText)
+        onCreate?(spaceName, selectedIconName, selectedCategory, descriptionText, selectedStatus)
         dismiss()
     }
 }

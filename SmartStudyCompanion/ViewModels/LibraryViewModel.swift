@@ -53,8 +53,8 @@ final class LibraryViewModel: ObservableObject {
         return categoryFiltered
     }
 
-    func addStudySpace(title: String, iconName: String, category: String, description: String) {
-        store.addStudySpace(title: title, iconName: iconName, category: category, description: description)
+    func addStudySpace(title: String, iconName: String, category: String, description: String, status: String) {
+        store.addStudySpace(title: title, iconName: iconName, category: category, description: description, status: status)
     }
 
     var hasActiveAdvancedFilters: Bool {

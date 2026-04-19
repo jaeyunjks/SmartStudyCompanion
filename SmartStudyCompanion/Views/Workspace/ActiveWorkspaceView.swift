@@ -24,12 +24,11 @@ struct ActivityItem: Identifiable {
 struct ActiveWorkspaceView: View {
     @Environment(\.dismiss) private var dismiss
 
-    let studySpace: StudySpace
-
     @StateObject private var viewModel: ActiveWorkspaceViewModel
 
-    @State private var showActionAlert = false
-    @State private var selectedActionTitle = ""
+    @State private var showWorkspaceMenu = false
+    @State private var showDeleteWorkspaceConfirmation = false
+    @State private var showEditWorkspaceSheet = false
     @State private var showSummaryDetail = false
     @State private var showAIChat = false
     @State private var showKnowledgeQuiz = false
@@ -47,7 +46,6 @@ struct ActiveWorkspaceView: View {
     ]
 
     init(studySpace: StudySpace) {
-        self.studySpace = studySpace
         _viewModel = StateObject(wrappedValue: ActiveWorkspaceViewModel(studySpace: studySpace))
     }
 
@@ -63,13 +61,18 @@ struct ActiveWorkspaceView: View {
                     WorkspaceTopBarView(
                         title: "Active Study Workspace",
                         onBack: { dismiss() },
-                        onMore: { handleAction("More Options") }
+                        onMore: { showWorkspaceMenu = true }
                     )
                     .padding(.top, topInset + 2)
 
                     ScrollView {
                         VStack(alignment: .leading, spacing: WorkspaceTheme.sectionSpacing) {
-                            WorkspaceOverviewCardView(studySpace: studySpace)
+                            WorkspaceOverviewCardView(
+                                studySpace: viewModel.workspace,
+                                materialCount: viewModel.materialCount,
+                                noteCount: viewModel.noteCount,
+                                aiOutputCount: viewModel.aiOutputCount
+                            )
 
                             AICompanionSectionView(
                                 onPrimaryAction: { handleAction("Summarise Knowledge") },
@@ -136,6 +139,36 @@ struct ActiveWorkspaceView: View {
             Button("Files") { showFileImporter = true }
             Button("Cancel", role: .cancel) {}
         }
+        .confirmationDialog("Workspace Actions", isPresented: $showWorkspaceMenu, titleVisibility: .visible) {
+            Button("Edit Workspace") {
+                showEditWorkspaceSheet = true
+            }
+            Button("Set as Active") {
+                viewModel.updateWorkspaceStatus("Active")
+            }
+            Button("Set as Inactive") {
+                viewModel.updateWorkspaceStatus("Inactive")
+            }
+            Button("Delete Workspace", role: .destructive) {
+                showDeleteWorkspaceConfirmation = true
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert("Delete Workspace?", isPresented: $showDeleteWorkspaceConfirmation) {
+            Button("Delete", role: .destructive) {
+                viewModel.deleteWorkspace()
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This workspace and its local materials will no longer be listed.")
+        }
+        .sheet(isPresented: $showEditWorkspaceSheet) {
+            CreateStudySpaceView(initialSpace: viewModel.workspace, onCreate: { title, icon, category, description, status in
+                viewModel.editWorkspace(title: title, iconName: icon, category: category, description: description, status: status)
+                showEditWorkspaceSheet = false
+            })
+        }
         .sheet(item: $viewModel.selectedMaterialForPreview) { material in
             WorkspaceMaterialPreviewView(material: material)
         }
@@ -156,18 +189,13 @@ struct ActiveWorkspaceView: View {
             AIChatView(viewModel: AIChatViewModel(selectedContext: chatContext))
         }
         .navigationDestination(isPresented: $showKnowledgeQuiz) {
-            QuizQuestionView(workspaceTitle: studySpace.title)
+            QuizQuestionView(workspaceTitle: viewModel.workspace.title)
         }
         .navigationDestination(isPresented: $showFlashcardSession) {
-            FlashcardSessionView(workspaceTitle: studySpace.title)
+            FlashcardSessionView(workspaceTitle: viewModel.workspace.title)
         }
         .navigationDestination(isPresented: $showStudyPlan) {
-            StudyPlanView(workspaceTitle: studySpace.title)
-        }
-        .alert("Action", isPresented: $showActionAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(selectedActionTitle)
+            StudyPlanView(workspaceTitle: viewModel.workspace.title)
         }
         .overlay {
             if viewModel.isImporting {
@@ -184,7 +212,7 @@ struct ActiveWorkspaceView: View {
     }
 
     private var initialSummary: StudySummary {
-        if studySpace.title.localizedCaseInsensitiveContains("cloud") {
+        if viewModel.workspace.title.localizedCaseInsensitiveContains("cloud") {
             return StudySummary.mockSummaries[0]
         }
         return StudySummary.mockSummaries[1]
@@ -192,12 +220,12 @@ struct ActiveWorkspaceView: View {
 
     private var chatContext: WorkspaceContext {
         WorkspaceContext(
-            workspaceTitle: studySpace.title,
+            workspaceTitle: viewModel.workspace.title,
             sourceTitle: "Comparison Table",
             sourceType: "PDF",
             description: "Reference extracted from your latest uploaded material.",
-            visualLabel: "Context: \(studySpace.title) notes and reference table",
-            previewSystemImage: studySpace.iconName,
+            visualLabel: "Context: \(viewModel.workspace.title) notes and reference table",
+            previewSystemImage: viewModel.workspace.iconName,
             referencedMaterials: viewModel.referencedMaterials,
             aiContextSource: viewModel.aiContextSource
         )
@@ -235,8 +263,6 @@ struct ActiveWorkspaceView: View {
             showStudyPlan = true
             return
         }
-        selectedActionTitle = title
-        showActionAlert = true
     }
 }
 

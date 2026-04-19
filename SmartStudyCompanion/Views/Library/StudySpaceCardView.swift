@@ -5,11 +5,9 @@ struct StudySpaceCardView: View {
 
     private var accent: Color {
         switch space.status {
-        case "Active", "In Progress", "Priority":
+        case "Active":
             return LibraryTheme.accent
-        case "Review":
-            return Color(red: 0.20, green: 0.53, blue: 0.56)
-        case "Completed":
+        case "Inactive":
             return Color.gray
         default:
             return LibraryTheme.accent

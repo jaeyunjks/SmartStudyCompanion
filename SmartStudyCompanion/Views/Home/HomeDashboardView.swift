@@ -72,8 +72,8 @@ struct HomeDashboardView: View {
                 .ignoresSafeArea(edges: [.top, .bottom])
             }
             .sheet(isPresented: $showCreateStudySpaceSheet) {
-                CreateStudySpaceView(onCreate: { title, icon, category, description in
-                    viewModel.addStudySpace(title: title, iconName: icon, category: category, description: description)
+                CreateStudySpaceView(onCreate: { title, icon, category, description, status in
+                    viewModel.addStudySpace(title: title, iconName: icon, category: category, description: description, status: status)
                     showCreateStudySpaceSheet = false
                 })
             }

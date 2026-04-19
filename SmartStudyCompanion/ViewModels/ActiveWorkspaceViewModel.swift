@@ -4,26 +4,47 @@ import Combine
 
 @MainActor
 final class ActiveWorkspaceViewModel: ObservableObject {
+    @Published var workspace: StudySpace
     @Published var materials: [StudyMaterial] = []
     @Published var isImporting = false
     @Published var importErrorMessage: String?
     @Published var selectedMaterialForPreview: StudyMaterial?
+    @Published var isWorkspaceDeleted = false
 
-    private let studySpace: StudySpace
+    private let store: StudySpaceStore
     private let storageService: WorkspaceMaterialStorageService
+    private var cancellables = Set<AnyCancellable>()
 
-    init(studySpace: StudySpace, storageService: WorkspaceMaterialStorageService) {
-        self.studySpace = studySpace
+    init(
+        studySpace: StudySpace,
+        storageService: WorkspaceMaterialStorageService,
+        store: StudySpaceStore
+    ) {
+        self.workspace = studySpace
+        self.store = store
         self.storageService = storageService
+        bindWorkspaceUpdates()
         loadMaterials()
     }
 
     convenience init(studySpace: StudySpace) {
-        self.init(studySpace: studySpace, storageService: .shared)
+        self.init(studySpace: studySpace, storageService: .shared, store: .shared)
     }
 
     var workspaceID: UUID {
-        studySpace.id
+        workspace.id
+    }
+
+    var materialCount: Int {
+        materials.count
+    }
+
+    var noteCount: Int {
+        workspace.noteCount
+    }
+
+    var aiOutputCount: Int {
+        workspace.aiOutputCount
     }
 
     var referencedMaterials: [ReferencedMaterial] {
@@ -41,9 +62,29 @@ final class ActiveWorkspaceViewModel: ObservableObject {
     var aiContextSource: AIContextSource {
         AIContextSource(
             workspaceID: workspaceID,
-            workspaceTitle: studySpace.title,
+            workspaceTitle: workspace.title,
             materials: referencedMaterials
         )
+    }
+
+    func editWorkspace(title: String, iconName: String, category: String, description: String, status: String) {
+        store.updateStudySpace(
+            id: workspace.id,
+            title: title,
+            iconName: iconName,
+            category: category,
+            description: description,
+            status: status
+        )
+    }
+
+    func updateWorkspaceStatus(_ status: String) {
+        store.updateStatus(for: workspace.id, status: status)
+    }
+
+    func deleteWorkspace() {
+        store.deleteStudySpace(id: workspace.id)
+        isWorkspaceDeleted = true
     }
 
     func loadMaterials() {
@@ -118,5 +159,19 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         case .other:
             return false
         }
+    }
+
+    private func bindWorkspaceUpdates() {
+        store.$studySpaces
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] spaces in
+                guard let self else { return }
+                if let updated = spaces.first(where: { $0.id == self.workspace.id }) {
+                    self.workspace = updated
+                } else {
+                    self.isWorkspaceDeleted = true
+                }
+            }
+            .store(in: &cancellables)
     }
 }

@@ -77,15 +77,15 @@ struct LibraryView: View {
                     selectedStatus: $viewModel.selectedStatus,
                     selectedSort: $viewModel.selectedSort,
                     selectedCategory: $viewModel.selectedCategory,
-                    statuses: ["All", "Active", "In Progress", "Priority", "Review", "Completed"],
+                    statuses: ["All", "Active", "Inactive"],
                     sorts: ["Recently Updated", "Alphabetical"],
                     categories: ["All", "Cloud", "AI", "Data", "Ethics", "Neuroscience"]
                 )
                 .presentationDetents([.fraction(0.45), .medium])
             }
             .sheet(isPresented: $showCreateStudySpaceSheet) {
-                CreateStudySpaceView(onCreate: { title, icon, category, description in
-                    viewModel.addStudySpace(title: title, iconName: icon, category: category, description: description)
+                CreateStudySpaceView(onCreate: { title, icon, category, description, status in
+                    viewModel.addStudySpace(title: title, iconName: icon, category: category, description: description, status: status)
                     showCreateStudySpaceSheet = false
                 })
             }

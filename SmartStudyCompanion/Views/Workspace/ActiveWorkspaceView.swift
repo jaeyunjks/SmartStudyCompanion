@@ -4,13 +4,15 @@ import UniformTypeIdentifiers
 
 enum WorkspaceTheme {
     static let accent = Color(red: 0.22, green: 0.53, blue: 0.40)
+    static let deepAccent = Color(red: 0.16, green: 0.43, blue: 0.33)
     static let accentSoft = Color(red: 0.86, green: 0.94, blue: 0.89)
-    static let background = Color(red: 0.97, green: 0.98, blue: 0.97)
+    static let mintTint = Color(red: 0.91, green: 0.97, blue: 0.94)
+    static let background = Color(red: 0.96, green: 0.97, blue: 0.95)
     static let cardBackground = Color(.systemBackground)
     static let secondaryBackground = Color(.secondarySystemBackground)
     static let mutedText = Color(.secondaryLabel)
     static let cornerRadius: CGFloat = 20
-    static let sectionSpacing: CGFloat = 24
+    static let sectionSpacing: CGFloat = 22
 }
 
 struct ActivityItem: Identifiable {
@@ -29,6 +31,7 @@ struct ActiveWorkspaceView: View {
     @State private var showWorkspaceMenu = false
     @State private var showDeleteWorkspaceConfirmation = false
     @State private var showEditWorkspaceSheet = false
+    @State private var activeNoteDraft: WorkspaceNote?
     @State private var showSummaryDetail = false
     @State private var showAIChat = false
     @State private var showKnowledgeQuiz = false
@@ -46,7 +49,14 @@ struct ActiveWorkspaceView: View {
     ]
 
     init(studySpace: StudySpace) {
-        _viewModel = StateObject(wrappedValue: ActiveWorkspaceViewModel(studySpace: studySpace))
+        _viewModel = StateObject(
+            wrappedValue: ActiveWorkspaceViewModel(
+                studySpace: studySpace,
+                storageService: .shared,
+                noteStorageService: .shared,
+                store: .shared
+            )
+        )
     }
 
     var body: some View {
@@ -55,7 +65,15 @@ struct ActiveWorkspaceView: View {
             let bottomInset = geometry.safeAreaInsets.bottom
 
             ZStack(alignment: .bottomTrailing) {
-                WorkspaceTheme.background.ignoresSafeArea()
+                LinearGradient(
+                    colors: [
+                        WorkspaceTheme.background,
+                        WorkspaceTheme.mintTint.opacity(0.38)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     WorkspaceTopBarView(
@@ -74,9 +92,16 @@ struct ActiveWorkspaceView: View {
                                 aiOutputCount: viewModel.aiOutputCount
                             )
 
-                            AICompanionSectionView(
+                            WorkspaceStudyToolsSectionView(
+                                onCreateNote: { activeNoteDraft = viewModel.makeDraftNote() },
                                 onPrimaryAction: { handleAction("Summarise Knowledge") },
                                 onSecondaryAction: { handleAction($0) }
+                            )
+
+                            WorkspaceNotesSectionView(
+                                notes: viewModel.notes,
+                                onCreateNote: { activeNoteDraft = viewModel.makeDraftNote() },
+                                onSelectNote: { note in activeNoteDraft = note }
                             )
 
                             WorkspaceMaterialsSectionView(
@@ -184,6 +209,11 @@ struct ActiveWorkspaceView: View {
         }
         .navigationDestination(isPresented: $showSummaryDetail) {
             SummaryDetailView(summary: initialSummary)
+        }
+        .navigationDestination(item: $activeNoteDraft) { note in
+            WorkspaceNoteEditorView(note: note, onSave: { saved in
+                viewModel.saveNote(saved)
+            })
         }
         .navigationDestination(isPresented: $showAIChat) {
             AIChatView(viewModel: AIChatViewModel(selectedContext: chatContext))

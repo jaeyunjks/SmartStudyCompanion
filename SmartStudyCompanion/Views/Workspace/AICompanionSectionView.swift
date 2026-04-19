@@ -15,7 +15,7 @@ struct AICompanionSectionView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("AI Study Hub")
-                    .font(.title3.weight(.bold))
+                    .font(.headline.weight(.bold))
 
                 Spacer()
 
@@ -34,13 +34,6 @@ struct AICompanionSectionView: View {
                 onSecondaryAction(action.title)
             })
         }
-        .padding(16)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                .stroke(WorkspaceTheme.accent.opacity(0.1), lineWidth: 1)
-        )
     }
 }
 

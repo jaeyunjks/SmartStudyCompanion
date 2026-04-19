@@ -10,25 +10,26 @@ final class ActiveWorkspaceViewModel: ObservableObject {
     @Published var importErrorMessage: String?
     @Published var selectedMaterialForPreview: StudyMaterial?
     @Published var isWorkspaceDeleted = false
+    @Published var notes: [WorkspaceNote] = []
 
     private let store: StudySpaceStore
     private let storageService: WorkspaceMaterialStorageService
+    private let noteStorageService: WorkspaceNoteStorageService
     private var cancellables = Set<AnyCancellable>()
 
     init(
         studySpace: StudySpace,
         storageService: WorkspaceMaterialStorageService,
+        noteStorageService: WorkspaceNoteStorageService,
         store: StudySpaceStore
     ) {
         self.workspace = studySpace
         self.store = store
         self.storageService = storageService
+        self.noteStorageService = noteStorageService
         bindWorkspaceUpdates()
         loadMaterials()
-    }
-
-    convenience init(studySpace: StudySpace) {
-        self.init(studySpace: studySpace, storageService: .shared, store: .shared)
+        loadNotes()
     }
 
     var workspaceID: UUID {
@@ -40,7 +41,7 @@ final class ActiveWorkspaceViewModel: ObservableObject {
     }
 
     var noteCount: Int {
-        workspace.noteCount
+        notes.count
     }
 
     var aiOutputCount: Int {
@@ -94,6 +95,39 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         } catch {
             importErrorMessage = "Could not load workspace materials."
             materials = []
+        }
+    }
+
+    func loadNotes() {
+        do {
+            notes = try noteStorageService.loadNotes(workspaceID: workspaceID)
+                .sorted { $0.updatedAt > $1.updatedAt }
+        } catch {
+            notes = []
+        }
+    }
+
+    func makeDraftNote() -> WorkspaceNote {
+        WorkspaceNote(workspaceID: workspaceID)
+    }
+
+    func saveNote(_ note: WorkspaceNote) {
+        var updated = note
+        let trimmedContent = updated.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let firstLine = trimmedContent.split(separator: "\n").first.map(String.init) ?? ""
+        updated.title = firstLine.isEmpty ? "Untitled Note" : String(firstLine.prefix(52))
+        updated.updatedAt = Date()
+
+        if let index = notes.firstIndex(where: { $0.id == updated.id }) {
+            notes[index] = updated
+        } else {
+            notes.insert(updated, at: 0)
+        }
+
+        do {
+            try noteStorageService.saveNotes(notes, workspaceID: workspaceID)
+        } catch {
+            importErrorMessage = "Could not save note. Please try again."
         }
     }
 

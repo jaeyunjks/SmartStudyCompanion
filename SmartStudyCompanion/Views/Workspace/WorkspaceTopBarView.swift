@@ -38,7 +38,6 @@ struct WorkspaceTopBarView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(0.92))
     }
 }
 

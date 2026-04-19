@@ -10,7 +10,7 @@ struct StudySpaceCategoryPickerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Category")
+            Text("Workspace Category")
                 .font(.caption.weight(.bold))
                 .textCase(.uppercase)
                 .foregroundStyle(CreateStudySpaceTheme.mutedText)

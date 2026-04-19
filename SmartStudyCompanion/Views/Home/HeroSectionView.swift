@@ -27,7 +27,7 @@ struct HeroSectionView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
                         .font(.system(size: 14, weight: .bold))
-                    Text("New Study Space")
+                    Text("New Study Workspace")
                         .font(.system(size: 15, weight: .semibold))
                 }
                 .foregroundStyle(.white)

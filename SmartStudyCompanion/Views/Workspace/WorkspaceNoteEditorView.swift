@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WorkspaceNoteEditorView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.workspaceThemePalette) private var palette
 
     let note: WorkspaceNote
     let onSave: (WorkspaceNote) -> Void
@@ -41,7 +42,7 @@ struct WorkspaceNoteEditorView: View {
             .ignoresSafeArea()
 
             Circle()
-                .fill(WorkspaceTheme.accentSoft.opacity(0.45))
+                .fill(palette.primarySoft.opacity(0.7))
                 .frame(width: 220, height: 220)
                 .blur(radius: 58)
                 .offset(x: 140, y: -220)
@@ -91,7 +92,7 @@ struct WorkspaceNoteEditorView: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(WorkspaceTheme.accent)
+                    .foregroundStyle(palette.primary)
                     .frame(width: 36, height: 36)
                     .background(WorkspaceTheme.secondaryBackground.opacity(0.9))
                     .clipShape(Circle())
@@ -102,7 +103,7 @@ struct WorkspaceNoteEditorView: View {
 
             Text("New Note")
                 .font(.headline.weight(.bold))
-                .foregroundStyle(WorkspaceTheme.deepAccent)
+                .foregroundStyle(palette.primaryStrong)
 
             Spacer()
 
@@ -118,7 +119,7 @@ struct WorkspaceNoteEditorView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(WorkspaceTheme.accent)
+                    .background(palette.primaryStrong)
                     .clipShape(Capsule())
             }
             .buttonStyle(.plain)
@@ -140,7 +141,7 @@ struct WorkspaceNoteEditorView: View {
         .background(.ultraThinMaterial)
         .clipShape(Capsule())
         .overlay(
-            Capsule().stroke(WorkspaceTheme.accent.opacity(0.12), lineWidth: 1)
+            Capsule().stroke(palette.primary.opacity(0.12), lineWidth: 1)
         )
         .padding(.bottom, 10)
     }
@@ -161,9 +162,9 @@ struct WorkspaceNoteEditorView: View {
         Button(action: {}) {
             Image(systemName: systemName)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(WorkspaceTheme.accent)
+                .foregroundStyle(palette.primary)
                 .frame(width: 30, height: 30)
-                .background(WorkspaceTheme.accentSoft.opacity(0.9))
+                .background(palette.iconBackground)
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)

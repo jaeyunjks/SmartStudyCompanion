@@ -6,7 +6,7 @@ struct RecentStudySpacesSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Recent Study Spaces")
+            Text("Recent Study Workspaces")
                 .font(.title3.weight(.bold))
 
             VStack(spacing: 10) {
@@ -25,14 +25,7 @@ private struct RecentStudySpaceRow: View {
     let space: StudySpace
 
     private var accent: Color {
-        switch space.status {
-        case "Active":
-            return HomeTheme.accent
-        case "Inactive":
-            return Color.gray
-        default:
-            return HomeTheme.accent
-        }
+        space.status == "Inactive" ? Color.gray : space.workspaceAccentColor
     }
 
     var body: some View {

@@ -5,12 +5,12 @@ struct StudySpaceNameInputView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Space name")
+            Text("Workspace Name")
                 .font(.caption.weight(.bold))
                 .textCase(.uppercase)
                 .foregroundStyle(CreateStudySpaceTheme.mutedText)
 
-            TextField("e.g., 41001 Cloud Computing", text: $text)
+            TextField("e.g., Cloud Computing Final Review", text: $text)
                 .textInputAutocapitalization(.words)
                 .padding(.horizontal, 18)
                 .frame(height: 52)

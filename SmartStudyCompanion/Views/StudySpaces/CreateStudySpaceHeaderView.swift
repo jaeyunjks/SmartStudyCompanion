@@ -39,8 +39,8 @@ struct CreateStudySpaceHeaderView: View {
 
 #Preview {
     CreateStudySpaceHeaderView(
-        title: "Create Study Space",
-        subtitle: "Design your digital sanctuary for focused learning.",
+        title: "Create Study Workspace",
+        subtitle: "Design your focused workspace for learning.",
         onClose: {}
     )
     .padding()

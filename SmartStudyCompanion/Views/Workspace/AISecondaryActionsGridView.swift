@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AISecondaryActionsGridView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.workspaceThemePalette) private var palette
     let actions: [AISecondaryAction]
     let onSelect: (AISecondaryAction) -> Void
 
@@ -12,12 +14,12 @@ struct AISecondaryActionsGridView: View {
                 Button(action: { onSelect(action) }) {
                     VStack(alignment: .leading, spacing: 10) {
                         Circle()
-                            .fill(WorkspaceTheme.accentSoft.opacity(0.95))
+                            .fill(palette.iconBackground)
                             .frame(width: 34, height: 34)
                             .overlay(
                                 Image(systemName: action.iconName)
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(WorkspaceTheme.accent)
+                                    .foregroundStyle(palette.primary)
                             )
 
                         Text(action.title)
@@ -26,14 +28,14 @@ struct AISecondaryActionsGridView: View {
                     }
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(WorkspaceTheme.secondaryBackground.opacity(0.75))
+                    .background(WorkspaceTheme.surfaceSecondary(for: colorScheme).opacity(0.92))
                     .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                        .stroke(WorkspaceTheme.accent.opacity(0.08), lineWidth: 1)
+                            .stroke(palette.primary.opacity(0.1), lineWidth: 1)
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(WorkspacePressableButtonStyle())
             }
         }
     }

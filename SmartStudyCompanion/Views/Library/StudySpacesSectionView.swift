@@ -6,7 +6,7 @@ struct StudySpacesSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("My Study Spaces")
+            Text("My Study Workspaces")
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(LibraryTheme.accent)
 

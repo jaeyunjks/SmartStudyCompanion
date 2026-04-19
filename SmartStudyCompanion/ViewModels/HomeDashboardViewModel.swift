@@ -32,8 +32,22 @@ final class HomeDashboardViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    func addStudySpace(title: String, iconName: String, category: String, description: String, status: String) {
-        store.addStudySpace(title: title, iconName: iconName, category: category, description: description, status: status)
+    func addStudyWorkspace(
+        title: String,
+        iconName: String,
+        category: String,
+        description: String,
+        status: String,
+        workspaceColorHex: String
+    ) {
+        store.addStudyWorkspace(
+            title: title,
+            iconName: iconName,
+            category: category,
+            description: description,
+            status: status,
+            workspaceColorHex: workspaceColorHex
+        )
     }
 
     var greetingText: String {

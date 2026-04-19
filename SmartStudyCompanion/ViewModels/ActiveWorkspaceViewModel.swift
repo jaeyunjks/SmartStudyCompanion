@@ -68,14 +68,22 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         )
     }
 
-    func editWorkspace(title: String, iconName: String, category: String, description: String, status: String) {
-        store.updateStudySpace(
+    func editWorkspace(
+        title: String,
+        iconName: String,
+        category: String,
+        description: String,
+        status: String,
+        workspaceColorHex: String
+    ) {
+        store.updateStudyWorkspace(
             id: workspace.id,
             title: title,
             iconName: iconName,
             category: category,
             description: description,
-            status: status
+            status: status,
+            workspaceColorHex: workspaceColorHex
         )
     }
 

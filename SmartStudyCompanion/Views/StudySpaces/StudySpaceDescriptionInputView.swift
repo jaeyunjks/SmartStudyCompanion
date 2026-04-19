@@ -5,14 +5,14 @@ struct StudySpaceDescriptionInputView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Description (Optional)")
+            Text("Workspace Description (Optional)")
                 .font(.caption.weight(.bold))
                 .textCase(.uppercase)
                 .foregroundStyle(CreateStudySpaceTheme.mutedText)
 
             ZStack(alignment: .topLeading) {
                 if text.isEmpty {
-                    Text("What's the goal for this space?")
+                    Text("What is the goal for this workspace?")
                         .font(.footnote)
                         .foregroundStyle(CreateStudySpaceTheme.mutedText.opacity(0.6))
                         .padding(.horizontal, 16)

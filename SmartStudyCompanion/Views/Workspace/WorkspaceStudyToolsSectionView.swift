@@ -1,27 +1,27 @@
 import SwiftUI
 
 struct WorkspaceStudyToolsSectionView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.workspaceThemePalette) private var palette
     let onCreateNote: () -> Void
     let onPrimaryAction: () -> Void
     let onSecondaryAction: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Study Tools")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(WorkspaceTheme.deepAccent)
-                .textCase(.uppercase)
-                .tracking(0.8)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(palette.primaryStrong)
 
             Button(action: onCreateNote) {
                 HStack(spacing: 12) {
                     Circle()
-                        .fill(WorkspaceTheme.accentSoft)
+                        .fill(palette.iconBackground)
                         .frame(width: 36, height: 36)
                         .overlay(
                             Image(systemName: "square.and.pencil")
                                 .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(WorkspaceTheme.deepAccent)
+                                .foregroundStyle(palette.primaryStrong)
                         )
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -39,17 +39,28 @@ struct WorkspaceStudyToolsSectionView: View {
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white.opacity(0.9))
                 }
-                .padding(14)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 16)
                 .background(
                     LinearGradient(
-                        colors: [WorkspaceTheme.deepAccent, WorkspaceTheme.accent],
+                        colors: [
+                            palette.primaryStrong,
+                            palette.primary.opacity(colorScheme == .dark ? 0.92 : 1)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(color: palette.primaryStrong.opacity(0.22), radius: 14, x: 0, y: 8)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(WorkspacePressableButtonStyle())
+
+            Text("AI support")
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(0.8)
+                .foregroundStyle(WorkspaceTheme.mutedText)
 
             AICompanionSectionView(
                 onPrimaryAction: onPrimaryAction,
@@ -57,13 +68,7 @@ struct WorkspaceStudyToolsSectionView: View {
             )
         }
         .padding(16)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                .stroke(WorkspaceTheme.accent.opacity(0.1), lineWidth: 1)
-        )
-        .shadow(color: WorkspaceTheme.accent.opacity(0.05), radius: 14, x: 0, y: 8)
+        .workspaceSurface(prominence: .primary)
     }
 }
 

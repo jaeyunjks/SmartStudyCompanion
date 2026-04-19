@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct WorkspaceNotesSectionView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.workspaceThemePalette) private var palette
     let notes: [WorkspaceNote]
     let onCreateNote: () -> Void
     let onSelectNote: (WorkspaceNote) -> Void
@@ -13,10 +15,10 @@ struct WorkspaceNotesSectionView: View {
                 Spacer()
                 Text("\(notes.count)")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(WorkspaceTheme.accent)
+                    .foregroundStyle(palette.primary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(WorkspaceTheme.accentSoft)
+                    .background(palette.chipBackground)
                     .clipShape(Capsule())
             }
 
@@ -32,11 +34,12 @@ struct WorkspaceNotesSectionView: View {
                         onCreateNote()
                     }
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(WorkspaceTheme.accent)
+                    .foregroundStyle(palette.primary)
+                    .buttonStyle(.plain)
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(WorkspaceTheme.secondaryBackground.opacity(0.72))
+                .background(WorkspaceTheme.surfaceSecondary(for: colorScheme).opacity(0.86))
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             } else {
                 VStack(spacing: 8) {
@@ -55,21 +58,16 @@ struct WorkspaceNotesSectionView: View {
                             }
                             .padding(12)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(WorkspaceTheme.secondaryBackground.opacity(0.7))
+                            .background(WorkspaceTheme.surfaceTertiary(for: colorScheme).opacity(0.84))
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(WorkspacePressableButtonStyle())
                     }
                 }
             }
         }
         .padding(16)
-        .background(.ultraThinMaterial.opacity(0.6))
-        .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                .stroke(WorkspaceTheme.accent.opacity(0.08), lineWidth: 1)
-        )
+        .workspaceSurface(prominence: .secondary)
     }
 }
 

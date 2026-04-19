@@ -10,7 +10,7 @@ struct StudySpaceIconPickerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Choose Icon")
+            Text("Workspace Icon")
                 .font(.caption.weight(.bold))
                 .textCase(.uppercase)
                 .foregroundStyle(CreateStudySpaceTheme.mutedText)

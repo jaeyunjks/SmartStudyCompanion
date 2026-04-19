@@ -2,6 +2,8 @@ import SwiftUI
 import UIKit
 
 struct WorkspaceMaterialCardView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.workspaceThemePalette) private var palette
     let material: StudyMaterial
     let onTap: () -> Void
     let onToggleAISelection: () -> Void
@@ -20,10 +22,10 @@ struct WorkspaceMaterialCardView: View {
                     HStack(spacing: 6) {
                         Text(material.type.displayName)
                             .font(.caption2.weight(.bold))
-                            .foregroundStyle(WorkspaceTheme.accent)
+                            .foregroundStyle(palette.primary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(WorkspaceTheme.accentSoft.opacity(0.85))
+                            .background(palette.chipBackground.opacity(0.9))
                             .clipShape(Capsule())
 
                         Text(material.createdAt, style: .date)
@@ -37,28 +39,28 @@ struct WorkspaceMaterialCardView: View {
                 Button(action: onToggleAISelection) {
                     Image(systemName: material.isSelectedForAIContext ? "sparkles" : "sparkles.slash")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(WorkspaceTheme.accent)
+                        .foregroundStyle(palette.primary)
                         .frame(width: 30, height: 30)
-                        .background(WorkspaceTheme.accentSoft.opacity(0.7))
+                        .background(palette.iconBackground)
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
             }
             .padding(12)
-            .background(WorkspaceTheme.secondaryBackground.opacity(0.72))
+            .background(WorkspaceTheme.surfaceTertiary(for: colorScheme).opacity(0.82))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(WorkspaceTheme.accent.opacity(0.1), lineWidth: 1)
+                    .stroke(palette.primary.opacity(0.1), lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(WorkspacePressableButtonStyle())
     }
 
     private var thumbnail: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(WorkspaceTheme.accentSoft.opacity(0.4))
+                .fill(palette.iconBackground.opacity(0.7))
                 .frame(width: 56, height: 56)
 
             if material.type == .image, let image = UIImage(contentsOfFile: material.storedPath) {
@@ -70,7 +72,7 @@ struct WorkspaceMaterialCardView: View {
             } else {
                 Image(systemName: material.type.systemIconName)
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(WorkspaceTheme.accent)
+                    .foregroundStyle(palette.primary)
             }
         }
     }

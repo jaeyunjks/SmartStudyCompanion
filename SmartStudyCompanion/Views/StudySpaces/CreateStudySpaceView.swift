@@ -16,7 +16,7 @@ enum CreateStudySpaceTheme {
 struct CreateStudySpaceView: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State private var spaceName = ""
+    @State private var workspaceName = ""
     @State private var selectedIconName = "cloud"
     @State private var selectedCategory = "IT"
     @State private var descriptionText = ""
@@ -48,9 +48,9 @@ struct CreateStudySpaceView: View {
     private let builtInCategories = ["IT", "AI", "Math", "Design"]
 
     let initialSpace: StudySpace?
-    let onCreate: ((String, String, String, String, String) -> Void)?
+    let onCreate: ((String, String, String, String, String, String) -> Void)?
 
-    init(initialSpace: StudySpace? = nil, onCreate: ((String, String, String, String, String) -> Void)? = nil) {
+    init(initialSpace: StudySpace? = nil, onCreate: ((String, String, String, String, String, String) -> Void)? = nil) {
         self.initialSpace = initialSpace
         self.onCreate = onCreate
     }
@@ -68,21 +68,21 @@ struct CreateStudySpaceView: View {
     }
 
     private var canCreate: Bool {
-        !spaceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !workspaceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
         ScrollView {
             VStack(spacing: CreateStudySpaceTheme.sectionSpacing) {
                 CreateStudySpaceHeaderView(
-                    title: initialSpace == nil ? "Create Study Space" : "Edit Study Space",
+                    title: initialSpace == nil ? "Create Study Workspace" : "Edit Study Workspace",
                     subtitle: initialSpace == nil
-                        ? "Design your digital sanctuary for focused learning."
-                        : "Update your workspace details and status.",
+                        ? "Design your focused workspace for learning."
+                        : "Update your workspace details.",
                     onClose: { dismiss() }
                 )
 
-                StudySpaceNameInputView(text: $spaceName)
+                StudySpaceNameInputView(text: $workspaceName)
 
                 StudySpaceIconPickerView(
                     icons: allIcons,
@@ -102,8 +102,6 @@ struct CreateStudySpaceView: View {
                     onLongPressCategory: { categoryToDelete = $0 }
                 )
 
-                StudySpaceStatusPickerView(selectedStatus: $selectedStatus)
-
                 StudySpaceColorPickerView(
                     colors: colorOptions,
                     selectedColorID: $selectedColorID,
@@ -111,10 +109,12 @@ struct CreateStudySpaceView: View {
                     onLongPressColor: { colorToDelete = $0 }
                 )
 
+                StudySpaceStatusPickerView(selectedStatus: $selectedStatus, selectedColor: selectedColor)
+
                 StudySpaceDescriptionInputView(text: $descriptionText)
 
                 Button(action: handleCreate) {
-                    Text(initialSpace == nil ? "Create" : "Save Changes")
+                    Text(initialSpace == nil ? "Create Workspace" : "Save Changes")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -231,15 +231,25 @@ struct CreateStudySpaceView: View {
         .presentationBackground(.thinMaterial)
         .onAppear {
             guard let initialSpace else { return }
-            spaceName = initialSpace.title
+            workspaceName = initialSpace.title
             selectedIconName = initialSpace.iconName
+            selectedCategory = initialSpace.category
             descriptionText = initialSpace.description
             selectedStatus = initialSpace.status
+            let normalizedHex = initialSpace.workspaceColorHex.uppercased()
+            if let matchedColor = colorOptions.first(where: { $0.id.uppercased() == normalizedHex || $0.color.hexString?.uppercased() == normalizedHex }) {
+                selectedColorID = matchedColor.id
+            } else if let restoredColor = Color(hex: normalizedHex) {
+                let id = normalizedHex
+                colorOptions.append(.init(id: id, name: "Custom", color: restoredColor, isCustom: true))
+                selectedColorID = id
+            }
         }
     }
 
     private func handleCreate() {
-        onCreate?(spaceName, selectedIconName, selectedCategory, descriptionText, selectedStatus)
+        let colorHex = colorOptions.first(where: { $0.id == selectedColorID })?.color.hexString ?? "#388767"
+        onCreate?(workspaceName, selectedIconName, selectedCategory, descriptionText, selectedStatus, colorHex)
         dismiss()
     }
 }

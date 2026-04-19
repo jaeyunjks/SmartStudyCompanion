@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StudySpaceStatusPickerView: View {
     @Binding var selectedStatus: String
+    let selectedColor: Color
 
     private let options = ["Active", "Inactive"]
 
@@ -23,7 +24,7 @@ struct StudySpaceStatusPickerView: View {
                             .foregroundStyle(isSelected ? .white : CreateStudySpaceTheme.accent)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
-                            .background(isSelected ? CreateStudySpaceTheme.accent : CreateStudySpaceTheme.accentSoft.opacity(0.9))
+                            .background(isSelected ? selectedColor : CreateStudySpaceTheme.accentSoft.opacity(0.9))
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -34,6 +35,6 @@ struct StudySpaceStatusPickerView: View {
 }
 
 #Preview {
-    StudySpaceStatusPickerView(selectedStatus: .constant("Active"))
+    StudySpaceStatusPickerView(selectedStatus: .constant("Active"), selectedColor: CreateStudySpaceTheme.accent)
         .padding()
 }

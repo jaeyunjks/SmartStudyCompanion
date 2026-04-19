@@ -15,12 +15,7 @@ struct RecentActivitySectionView: View {
             }
         }
         .padding(16)
-        .background(.ultraThinMaterial.opacity(0.6))
-        .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                .stroke(WorkspaceTheme.accent.opacity(0.08), lineWidth: 1)
-        )
+        .workspaceSurface(prominence: .tertiary)
     }
 }
 

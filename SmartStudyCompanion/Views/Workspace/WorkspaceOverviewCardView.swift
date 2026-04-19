@@ -1,32 +1,34 @@
 import SwiftUI
 
 struct WorkspaceOverviewCardView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.workspaceThemePalette) private var palette
     let studySpace: StudySpace
     let materialCount: Int
     let noteCount: Int
     let aiOutputCount: Int
 
     private var statusAccent: Color {
-        studySpace.status == "Inactive" ? Color.gray : WorkspaceTheme.accent
+        studySpace.status == "Inactive" ? Color.gray : palette.primary
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 12) {
                 Circle()
-                    .fill(WorkspaceTheme.accentSoft.opacity(0.95))
-                    .frame(width: 44, height: 44)
+                    .fill(palette.iconBackground)
+                    .frame(width: 46, height: 46)
                     .overlay(
                         Image(systemName: studySpace.iconName)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(WorkspaceTheme.accent)
+                            .font(.system(size: 19, weight: .semibold))
+                            .foregroundStyle(palette.primary)
                     )
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(studySpace.title)
-                        .font(.headline.weight(.semibold))
+                        .font(.title3.weight(.bold))
                         .lineLimit(1)
-                    Text(studySpace.lastUpdated)
+                    Text(studySpace.lastOpened)
                         .font(.caption)
                         .foregroundStyle(WorkspaceTheme.mutedText)
                 }
@@ -53,14 +55,18 @@ struct WorkspaceOverviewCardView: View {
                 metadataChip(title: "AI Outputs", value: "\(aiOutputCount)")
             }
         }
-        .padding(16)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                .stroke(WorkspaceTheme.accent.opacity(0.1), lineWidth: 1)
+        .padding(18)
+        .background(
+            LinearGradient(
+                colors: [
+                    WorkspaceTheme.surfaceSecondary(for: colorScheme),
+                    palette.primarySoft.opacity(colorScheme == .dark ? 0.14 : 0.26)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         )
-        .shadow(color: WorkspaceTheme.accent.opacity(0.06), radius: 14, x: 0, y: 8)
+        .workspaceSurface(prominence: .primary)
     }
 
     private func metadataChip(title: String, value: String) -> some View {
@@ -75,6 +81,10 @@ struct WorkspaceOverviewCardView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(WorkspaceTheme.secondaryBackground.opacity(0.8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(palette.primary.opacity(0.08), lineWidth: 1)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }

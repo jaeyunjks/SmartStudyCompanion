@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct WorkspaceMaterialsSectionView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.workspaceThemePalette) private var palette
     let materials: [StudyMaterial]
     let onTapMaterial: (StudyMaterial) -> Void
     let onToggleAISelection: (StudyMaterial) -> Void
@@ -15,21 +17,25 @@ struct WorkspaceMaterialsSectionView: View {
 
                 Text("\(materials.count)")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(WorkspaceTheme.accent)
+                    .foregroundStyle(palette.primary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(WorkspaceTheme.accentSoft)
+                    .background(palette.chipBackground)
                     .clipShape(Capsule())
             }
 
             if materials.isEmpty {
-                Text("No materials yet. Tap + to import from Photos or Files.")
-                    .font(.subheadline)
-                    .foregroundStyle(WorkspaceTheme.mutedText)
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(WorkspaceTheme.secondaryBackground.opacity(0.7))
-                    .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("No materials yet")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Tap + to import from Photos or Files.")
+                        .font(.footnote)
+                        .foregroundStyle(WorkspaceTheme.mutedText)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(WorkspaceTheme.surfaceSecondary(for: colorScheme).opacity(0.86))
+                .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
             } else {
                 VStack(spacing: 10) {
                     ForEach(materials) { material in
@@ -43,12 +49,7 @@ struct WorkspaceMaterialsSectionView: View {
             }
         }
         .padding(16)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                .stroke(WorkspaceTheme.accent.opacity(0.1), lineWidth: 1)
-        )
+        .workspaceSurface(prominence: .secondary)
     }
 }
 

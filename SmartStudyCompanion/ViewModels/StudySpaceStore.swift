@@ -10,13 +10,22 @@ final class StudySpaceStore: ObservableObject {
         studySpaces = seed
     }
 
-    func addStudySpace(title: String, iconName: String, category: String, description: String, status: String = "Active") {
+    func addStudyWorkspace(
+        title: String,
+        iconName: String,
+        category: String,
+        description: String,
+        status: String = "Active",
+        workspaceColorHex: String = "#388767"
+    ) {
         let newSpace = StudySpace(
             id: UUID(),
-            title: title.isEmpty ? "Untitled Space" : title,
+            title: title.isEmpty ? "Untitled Workspace" : title,
             description: description.isEmpty ? "No description yet." : description,
             iconName: iconName,
+            category: category,
             status: status,
+            workspaceColorHex: workspaceColorHex,
             documentCount: 0,
             noteCount: 0,
             lastUpdated: "Just now",
@@ -27,13 +36,14 @@ final class StudySpaceStore: ObservableObject {
         studySpaces.insert(newSpace, at: 0)
     }
 
-    func updateStudySpace(
+    func updateStudyWorkspace(
         id: UUID,
         title: String,
         iconName: String,
         category: String,
         description: String,
-        status: String
+        status: String,
+        workspaceColorHex: String
     ) {
         guard let index = studySpaces.firstIndex(where: { $0.id == id }) else { return }
         let existing = studySpaces[index]
@@ -42,7 +52,9 @@ final class StudySpaceStore: ObservableObject {
             title: title.isEmpty ? existing.title : title,
             description: description.isEmpty ? existing.description : description,
             iconName: iconName,
+            category: category,
             status: status,
+            workspaceColorHex: workspaceColorHex,
             documentCount: existing.documentCount,
             noteCount: existing.noteCount,
             lastUpdated: "Last updated just now",
@@ -60,7 +72,9 @@ final class StudySpaceStore: ObservableObject {
             title: existing.title,
             description: existing.description,
             iconName: existing.iconName,
+            category: existing.category,
             status: status,
+            workspaceColorHex: existing.workspaceColorHex,
             documentCount: existing.documentCount,
             noteCount: existing.noteCount,
             lastUpdated: "Last updated just now",

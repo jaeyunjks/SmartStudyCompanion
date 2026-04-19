@@ -15,7 +15,7 @@ struct StudySpaceColorPickerView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Color")
+            Text("Workspace Color")
                 .font(.caption.weight(.bold))
                 .textCase(.uppercase)
                 .foregroundStyle(CreateStudySpaceTheme.mutedText)

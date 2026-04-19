@@ -1,17 +1,18 @@
 import SwiftUI
 
 struct ActivityTimelineItemView: View {
+    @Environment(\.workspaceThemePalette) private var palette
     let item: ActivityItem
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Circle()
-                .fill(WorkspaceTheme.accentSoft.opacity(0.85))
+                .fill(palette.iconBackground.opacity(0.9))
                 .frame(width: 32, height: 32)
                 .overlay(
                     Image(systemName: item.iconName)
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(WorkspaceTheme.accent)
+                        .foregroundStyle(palette.primary)
                 )
 
             VStack(alignment: .leading, spacing: 8) {

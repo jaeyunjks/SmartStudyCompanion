@@ -33,14 +33,7 @@ private struct ContinueLearningCardView: View {
     let space: StudySpace
 
     private var accent: Color {
-        switch space.status {
-        case "Active":
-            return HomeTheme.accent
-        case "Inactive":
-            return Color.gray
-        default:
-            return HomeTheme.accent
-        }
+        space.status == "Inactive" ? Color.gray : space.workspaceAccentColor
     }
 
     var body: some View {

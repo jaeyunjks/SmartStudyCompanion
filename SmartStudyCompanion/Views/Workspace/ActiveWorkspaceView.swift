@@ -1,18 +1,55 @@
 import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
+import UIKit
 
 enum WorkspaceTheme {
-    static let accent = Color(red: 0.22, green: 0.53, blue: 0.40)
-    static let deepAccent = Color(red: 0.16, green: 0.43, blue: 0.33)
-    static let accentSoft = Color(red: 0.86, green: 0.94, blue: 0.89)
-    static let mintTint = Color(red: 0.91, green: 0.97, blue: 0.94)
-    static let background = Color(red: 0.96, green: 0.97, blue: 0.95)
+    static let accent = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.42, green: 0.64, blue: 0.53, alpha: 1)
+            : UIColor(red: 0.22, green: 0.53, blue: 0.40, alpha: 1)
+    })
+    static let deepAccent = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.31, green: 0.51, blue: 0.42, alpha: 1)
+            : UIColor(red: 0.16, green: 0.43, blue: 0.33, alpha: 1)
+    })
+    static let accentSoft = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.20, green: 0.28, blue: 0.25, alpha: 1)
+            : UIColor(red: 0.86, green: 0.94, blue: 0.89, alpha: 1)
+    })
+    static let mintTint = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.15, green: 0.23, blue: 0.20, alpha: 1)
+            : UIColor(red: 0.91, green: 0.97, blue: 0.94, alpha: 1)
+    })
+    static let background = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.09, green: 0.13, blue: 0.12, alpha: 1)
+            : UIColor(red: 0.96, green: 0.97, blue: 0.95, alpha: 1)
+    })
     static let cardBackground = Color(.systemBackground)
-    static let secondaryBackground = Color(.secondarySystemBackground)
+    static let secondaryBackground = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark
+            ? UIColor(red: 0.13, green: 0.17, blue: 0.16, alpha: 1)
+            : UIColor(red: 0.94, green: 0.96, blue: 0.95, alpha: 1)
+    })
     static let mutedText = Color(.secondaryLabel)
     static let cornerRadius: CGFloat = 20
     static let sectionSpacing: CGFloat = 22
+
+    static func surfaceSecondary(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.14, green: 0.18, blue: 0.17)
+            : Color(red: 0.95, green: 0.97, blue: 0.96)
+    }
+
+    static func surfaceTertiary(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.17, green: 0.22, blue: 0.20)
+            : Color(red: 0.92, green: 0.95, blue: 0.93)
+    }
 }
 
 struct ActivityItem: Identifiable {
@@ -25,6 +62,7 @@ struct ActivityItem: Identifiable {
 
 struct ActiveWorkspaceView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     @StateObject private var viewModel: ActiveWorkspaceViewModel
 
@@ -60,6 +98,8 @@ struct ActiveWorkspaceView: View {
     }
 
     var body: some View {
+        let workspacePalette = WorkspaceThemePalette(base: viewModel.workspace.workspaceAccentColor, colorScheme: colorScheme)
+
         GeometryReader { geometry in
             let topInset = geometry.safeAreaInsets.top
             let bottomInset = geometry.safeAreaInsets.bottom
@@ -68,12 +108,18 @@ struct ActiveWorkspaceView: View {
                 LinearGradient(
                     colors: [
                         WorkspaceTheme.background,
-                        WorkspaceTheme.mintTint.opacity(0.38)
+                        workspacePalette.primarySoft.opacity(colorScheme == .dark ? 0.24 : 0.42)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
                 .ignoresSafeArea()
+
+                Circle()
+                    .fill(workspacePalette.primarySoft.opacity(colorScheme == .dark ? 0.18 : 0.45))
+                    .frame(width: 260, height: 260)
+                    .blur(radius: 80)
+                    .offset(x: 140, y: -220)
 
                 VStack(spacing: 0) {
                     WorkspaceTopBarView(
@@ -85,6 +131,7 @@ struct ActiveWorkspaceView: View {
 
                     ScrollView {
                         VStack(alignment: .leading, spacing: WorkspaceTheme.sectionSpacing) {
+                            WorkspaceSectionLabel(title: "Workspace")
                             WorkspaceOverviewCardView(
                                 studySpace: viewModel.workspace,
                                 materialCount: viewModel.materialCount,
@@ -92,18 +139,21 @@ struct ActiveWorkspaceView: View {
                                 aiOutputCount: viewModel.aiOutputCount
                             )
 
+                            WorkspaceSectionLabel(title: "Capture & AI")
                             WorkspaceStudyToolsSectionView(
                                 onCreateNote: { activeNoteDraft = viewModel.makeDraftNote() },
                                 onPrimaryAction: { handleAction("Summarise Knowledge") },
                                 onSecondaryAction: { handleAction($0) }
                             )
 
+                            WorkspaceSectionLabel(title: "Notes")
                             WorkspaceNotesSectionView(
                                 notes: viewModel.notes,
                                 onCreateNote: { activeNoteDraft = viewModel.makeDraftNote() },
                                 onSelectNote: { note in activeNoteDraft = note }
                             )
 
+                            WorkspaceSectionLabel(title: "Materials")
                             WorkspaceMaterialsSectionView(
                                 materials: viewModel.materials,
                                 onTapMaterial: { material in
@@ -114,6 +164,7 @@ struct ActiveWorkspaceView: View {
                                 }
                             )
 
+                            WorkspaceSectionLabel(title: "Activity")
                             RecentActivitySectionView(items: activityItems)
                         }
                         .padding(.horizontal, 20)
@@ -129,6 +180,7 @@ struct ActiveWorkspaceView: View {
                 .padding(.bottom, max(bottomInset, 8) + 14)
             }
             .ignoresSafeArea(edges: [.top, .bottom])
+            .environment(\.workspaceThemePalette, workspacePalette)
         }
         .photosPicker(
             isPresented: $showPhotoPicker,
@@ -189,8 +241,15 @@ struct ActiveWorkspaceView: View {
             Text("This workspace and its local materials will no longer be listed.")
         }
         .sheet(isPresented: $showEditWorkspaceSheet) {
-            CreateStudySpaceView(initialSpace: viewModel.workspace, onCreate: { title, icon, category, description, status in
-                viewModel.editWorkspace(title: title, iconName: icon, category: category, description: description, status: status)
+            CreateStudySpaceView(initialSpace: viewModel.workspace, onCreate: { title, icon, category, description, status, workspaceColorHex in
+                viewModel.editWorkspace(
+                    title: title,
+                    iconName: icon,
+                    category: category,
+                    description: description,
+                    status: status,
+                    workspaceColorHex: workspaceColorHex
+                )
                 showEditWorkspaceSheet = false
             })
         }
@@ -214,6 +273,7 @@ struct ActiveWorkspaceView: View {
             WorkspaceNoteEditorView(note: note, onSave: { saved in
                 viewModel.saveNote(saved)
             })
+            .environment(\.workspaceThemePalette, workspacePalette)
         }
         .navigationDestination(isPresented: $showAIChat) {
             AIChatView(viewModel: AIChatViewModel(selectedContext: chatContext))

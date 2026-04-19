@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct AIPrimaryActionCardView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.workspaceThemePalette) private var palette
     let title: String
     let subtitle: String
     let onTap: () -> Void
@@ -9,22 +11,22 @@ struct AIPrimaryActionCardView: View {
         Button(action: onTap) {
             HStack(spacing: 12) {
                 Circle()
-                    .fill(Color.white.opacity(0.22))
+                    .fill(Color.white.opacity(colorScheme == .dark ? 0.16 : 0.26))
                     .frame(width: 36, height: 36)
                     .overlay(
                         Image(systemName: "sparkles")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(colorScheme == .dark ? palette.primarySoft : .white)
                     )
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(colorScheme == .dark ? .white : palette.primaryStrong)
                         .lineLimit(1)
                     Text(subtitle)
                         .font(.footnote)
-                        .foregroundStyle(Color.white.opacity(0.9))
+                        .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.86) : palette.primaryStrong.opacity(0.82))
                         .lineLimit(2)
                 }
 
@@ -32,21 +34,27 @@ struct AIPrimaryActionCardView: View {
 
                 Image(systemName: "arrow.up.right")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.9) : palette.primaryStrong.opacity(0.85))
             }
             .padding(18)
             .frame(maxWidth: .infinity)
             .background(
                 LinearGradient(
-                    colors: [WorkspaceTheme.accent, WorkspaceTheme.accent.opacity(0.8)],
+                    colors: colorScheme == .dark
+                        ? [palette.primaryStrong.opacity(0.9), palette.primary.opacity(0.7)]
+                        : [palette.primarySoft.opacity(0.65), palette.chipBackground.opacity(0.9)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
             .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
-            .shadow(color: WorkspaceTheme.accent.opacity(0.18), radius: 12, x: 0, y: 8)
+            .overlay(
+                RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
+                    .stroke(palette.primary.opacity(0.18), lineWidth: 1)
+            )
+            .shadow(color: palette.primary.opacity(0.14), radius: 10, x: 0, y: 6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(WorkspacePressableButtonStyle())
     }
 }
 

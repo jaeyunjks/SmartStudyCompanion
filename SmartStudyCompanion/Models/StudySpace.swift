@@ -1,11 +1,14 @@
 import Foundation
+import SwiftUI
 
 struct StudySpace: Identifiable, Hashable {
     let id: UUID
     let title: String
     let description: String
     let iconName: String
+    let category: String
     let status: String
+    let workspaceColorHex: String
     let documentCount: Int
     let noteCount: Int
     let lastUpdated: String
@@ -21,7 +24,9 @@ extension StudySpace {
             title: "41001 Cloud Computing",
             description: "Infrastructure as service, virtualization techniques, and distributed systems architecture.",
             iconName: "cloud",
+            category: "IT",
             status: "Active",
+            workspaceColorHex: "#388767",
             documentCount: 3,
             noteCount: 2,
             lastUpdated: "Last updated 2h ago",
@@ -34,7 +39,9 @@ extension StudySpace {
             title: "Cognitive Neuroscience",
             description: "Exploring neural mechanisms of thought, memory, and spatial navigation.",
             iconName: "brain.head.profile",
+            category: "Science",
             status: "Inactive",
+            workspaceColorHex: "#4B85E5",
             documentCount: 12,
             noteCount: 8,
             lastUpdated: "Last updated 5h ago",
@@ -47,7 +54,9 @@ extension StudySpace {
             title: "Advanced AI Ethics",
             description: "Algorithmic bias, regulatory frameworks, and future safety.",
             iconName: "sparkles",
+            category: "AI",
             status: "Active",
+            workspaceColorHex: "#8E68D8",
             documentCount: 5,
             noteCount: 6,
             lastUpdated: "Last updated yesterday",
@@ -60,7 +69,9 @@ extension StudySpace {
             title: "Data Structures & Algo",
             description: "B-Trees, graph theory, and complexity analysis for final prep.",
             iconName: "tray.full",
+            category: "IT",
             status: "Active",
+            workspaceColorHex: "#E58A39",
             documentCount: 5,
             noteCount: 14,
             lastUpdated: "Last updated yesterday",
@@ -73,7 +84,9 @@ extension StudySpace {
             title: "Modern Ethics 101",
             description: "Readings on utilitarianism, deontology, and virtual ethics frameworks.",
             iconName: "book.closed",
+            category: "Humanities",
             status: "Inactive",
+            workspaceColorHex: "#D7669D",
             documentCount: 2,
             noteCount: 1,
             lastUpdated: "Completed Oct 24",
@@ -82,4 +95,10 @@ extension StudySpace {
             progress: 1.0
         )
     ]
+}
+
+extension StudySpace {
+    var workspaceAccentColor: Color {
+        Color(hex: workspaceColorHex) ?? Color(red: 0.22, green: 0.53, blue: 0.40)
+    }
 }

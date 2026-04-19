@@ -108,18 +108,12 @@ struct ActiveWorkspaceView: View {
                 LinearGradient(
                     colors: [
                         WorkspaceTheme.background,
-                        workspacePalette.primarySoft.opacity(colorScheme == .dark ? 0.24 : 0.42)
+                        WorkspaceTheme.surfaceSecondary(for: colorScheme)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
                 .ignoresSafeArea()
-
-                Circle()
-                    .fill(workspacePalette.primarySoft.opacity(colorScheme == .dark ? 0.18 : 0.45))
-                    .frame(width: 260, height: 260)
-                    .blur(radius: 80)
-                    .offset(x: 140, y: -220)
 
                 VStack(spacing: 0) {
                     WorkspaceTopBarView(

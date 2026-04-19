@@ -79,7 +79,6 @@ enum WorkspaceSurfaceProminence {
 
 struct WorkspaceSurfaceModifier: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.workspaceThemePalette) private var palette
     let prominence: WorkspaceSurfaceProminence
     let cornerRadius: CGFloat
 
@@ -97,7 +96,7 @@ struct WorkspaceSurfaceModifier: ViewModifier {
     private var background: some ShapeStyle {
         switch prominence {
         case .primary:
-            return AnyShapeStyle(.thinMaterial)
+            return AnyShapeStyle(WorkspaceTheme.surfaceSecondary(for: colorScheme))
         case .secondary:
             return AnyShapeStyle(WorkspaceTheme.surfaceSecondary(for: colorScheme))
         case .tertiary:
@@ -106,11 +105,11 @@ struct WorkspaceSurfaceModifier: ViewModifier {
     }
 
     private var borderColor: Color {
-        palette.primary.opacity(colorScheme == .dark ? 0.26 : 0.12)
+        colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06)
     }
 
     private var shadowColor: Color {
-        palette.primaryStrong.opacity(colorScheme == .dark ? 0.22 : 0.08)
+        Color.black.opacity(colorScheme == .dark ? 0.22 : 0.08)
     }
 
     private var shadowRadius: CGFloat {

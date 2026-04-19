@@ -11,7 +11,7 @@ struct WorkspaceStudyToolsSectionView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Study Tools")
                 .font(.headline.weight(.bold))
-                .foregroundStyle(palette.primaryStrong)
+                .foregroundStyle(.primary)
 
             Button(action: onCreateNote) {
                 HStack(spacing: 12) {
@@ -30,14 +30,14 @@ struct WorkspaceStudyToolsSectionView: View {
                             .foregroundStyle(.white)
                         Text("Capture insights while you study")
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.92))
+                            .foregroundStyle(.white)
                     }
 
                     Spacer()
 
                     Image(systemName: "arrow.right")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(.white)
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 16)

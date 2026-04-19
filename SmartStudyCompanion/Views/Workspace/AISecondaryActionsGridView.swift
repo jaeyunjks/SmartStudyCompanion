@@ -32,7 +32,7 @@ struct AISecondaryActionsGridView: View {
                     .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                            .stroke(palette.primary.opacity(0.1), lineWidth: 1)
+                            .stroke(Color.primary.opacity(0.06), lineWidth: 1)
                     )
                 }
                 .buttonStyle(WorkspacePressableButtonStyle())

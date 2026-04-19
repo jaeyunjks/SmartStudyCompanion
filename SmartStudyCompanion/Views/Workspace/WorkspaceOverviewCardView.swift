@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct WorkspaceOverviewCardView: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.workspaceThemePalette) private var palette
     let studySpace: StudySpace
     let materialCount: Int
@@ -56,16 +55,6 @@ struct WorkspaceOverviewCardView: View {
             }
         }
         .padding(18)
-        .background(
-            LinearGradient(
-                colors: [
-                    WorkspaceTheme.surfaceSecondary(for: colorScheme),
-                    palette.primarySoft.opacity(colorScheme == .dark ? 0.14 : 0.26)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
         .workspaceSurface(prominence: .primary)
     }
 
@@ -83,7 +72,7 @@ struct WorkspaceOverviewCardView: View {
         .background(WorkspaceTheme.secondaryBackground.opacity(0.8))
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(palette.primary.opacity(0.08), lineWidth: 1)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         )
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }

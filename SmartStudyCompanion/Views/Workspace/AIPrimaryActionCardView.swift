@@ -11,22 +11,22 @@ struct AIPrimaryActionCardView: View {
         Button(action: onTap) {
             HStack(spacing: 12) {
                 Circle()
-                    .fill(Color.white.opacity(colorScheme == .dark ? 0.16 : 0.26))
+                    .fill(palette.iconBackground)
                     .frame(width: 36, height: 36)
                     .overlay(
                         Image(systemName: "sparkles")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(colorScheme == .dark ? palette.primarySoft : .white)
+                            .foregroundStyle(palette.primaryStrong)
                     )
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.headline.weight(.bold))
-                        .foregroundStyle(colorScheme == .dark ? .white : palette.primaryStrong)
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
                     Text(subtitle)
                         .font(.footnote)
-                        .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.86) : palette.primaryStrong.opacity(0.82))
+                        .foregroundStyle(WorkspaceTheme.mutedText)
                         .lineLimit(2)
                 }
 
@@ -34,25 +34,29 @@ struct AIPrimaryActionCardView: View {
 
                 Image(systemName: "arrow.up.right")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(colorScheme == .dark ? Color.white.opacity(0.9) : palette.primaryStrong.opacity(0.85))
+                    .foregroundStyle(palette.primaryStrong)
             }
             .padding(18)
             .frame(maxWidth: .infinity)
-            .background(
-                LinearGradient(
-                    colors: colorScheme == .dark
-                        ? [palette.primaryStrong.opacity(0.9), palette.primary.opacity(0.7)]
-                        : [palette.primarySoft.opacity(0.65), palette.chipBackground.opacity(0.9)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .background(WorkspaceTheme.surfaceSecondary(for: colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                    .stroke(palette.primary.opacity(0.18), lineWidth: 1)
+                    .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             )
-            .shadow(color: palette.primary.opacity(0.14), radius: 10, x: 0, y: 6)
+            .overlay(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [palette.primaryStrong.opacity(0.9), palette.primary.opacity(0.65)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 3)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 10)
+            }
         }
         .buttonStyle(WorkspacePressableButtonStyle())
     }

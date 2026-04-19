@@ -11,16 +11,16 @@ struct WorkspaceTopBarView: View {
         ZStack {
             Text(title)
                 .font(.headline.weight(.bold))
-                .foregroundStyle(palette.primary)
+                .foregroundStyle(.primary)
                 .lineLimit(1)
 
             HStack {
                 Button(action: onBack) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(palette.primary)
+                            .foregroundStyle(palette.primaryStrong)
                             .frame(width: 36, height: 36)
-                            .background(palette.iconBackground)
+                            .background(WorkspaceTheme.secondaryBackground)
                             .clipShape(Circle())
                     }
                 .buttonStyle(.plain)
@@ -30,7 +30,7 @@ struct WorkspaceTopBarView: View {
                 Button(action: onMore) {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(palette.primary)
+                        .foregroundStyle(palette.primaryStrong)
                         .frame(width: 36, height: 36)
                         .background(WorkspaceTheme.secondaryBackground)
                         .clipShape(Circle())

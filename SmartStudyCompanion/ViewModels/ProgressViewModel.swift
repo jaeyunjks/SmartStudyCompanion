@@ -45,6 +45,13 @@ class ProgressViewModel: ObservableObject {
         isLoading = false
     }
     
+    //MARK: - load Progress
+    
+    @MainActor
+    func loadProgress(for pdfField: String) async {
+        await fetchProgress(for: pdfField)
+    }
+    
     // MARK: - Update Progress
     
     /// Update progress after studying

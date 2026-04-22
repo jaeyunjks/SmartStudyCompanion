@@ -23,20 +23,96 @@ model User {
     createdAt               DateTime                @default(now())
 
     passwordResetTokens     PasswordResetToken[]
+    studySpace              StudySpace[]
+    files                   File[]
+    images                  Image[]
+    notes                   Note[]
     
     @@map("user")
 }
 
 model PasswordResetToken {
-    id              String      @id @default(uuid())
-    userId          String
-    token           String
-    expiresAt       DateTime
-    used            Boolean     @default(false)
-    createdAt       DateTime    @default(now())
+    id                      String                  @id @default(uuid())
+    userId                  String
+    token                   String
+    expiresAt               DateTime
+    used                    Boolean                 @default(false)
+    createdAt               DateTime                @default(now())
 
-    user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId])
     @@map("password_reset_tokens")
+}
+
+model StudySpace {
+    id                      String                  @id @default(uuid())
+    title                   String
+    userId                  String
+    createdAt               DateTime                @default(now())
+
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)    
+
+    notes                   Note[]
+    files                   File[]
+    images                  Image[]
+
+    @@index([userId])
+    @@unique([title, userId])
+    @@map("study_space")
+}
+
+model Note {
+    id                      String                  @id @default(uuid())
+    title                   String
+    spaceId                 String
+    userId                  String
+    content                 Json                    @default("{}")
+
+    createdAt               DateTime                @default(now())
+
+    studySpace              StudySpace              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([spaceId])
+    @@unique([title, spaceId])
+    @@map("note")
+}
+
+model File {
+    id                      String                  @id @default(uuid())
+    name                    String
+    mimeType                String
+    size                    Int
+    userId                  String
+    spaceId                 String
+
+    createdAt               DateTime                @default(now())
+
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    studySpace              StudySpace              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+    @@index([spaceId])
+    @@unique([name, spaceId])
+
+    @@map("file")
+}
+
+model Image {
+    id                      String                  @id @default(uuid())
+    name                    String
+    mimeType                String
+    size                    Int
+    userId                  String
+    spaceId                 String
+
+    createdAt               DateTime                @default(now())
+
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    studySpace              StudySpace              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+    @@index([spaceId])
+    @@unique([name, spaceId])
+
+    @@map("image")
 }

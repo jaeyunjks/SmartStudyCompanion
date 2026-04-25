@@ -44,6 +44,6 @@ struct ImportantPointsCard: View {
 }
 
 #Preview {
-    ImportantPointsCard(points: StudySummary.mockSummaries[0].importantPoints)
+    ImportantPointsCard(points: StudySummary.previewSummaries[0].importantPoints)
         .padding()
 }

@@ -68,6 +68,14 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         )
     }
 
+    func workspaceSummaryRequest() -> WorkspaceAISummaryRequest {
+        WorkspaceAISummaryRequest(
+            workspaceId: workspaceID.uuidString,
+            workspaceTitle: workspace.title,
+            workspaceContent: buildWorkspaceSummaryContent() ?? ""
+        )
+    }
+
     func editWorkspace(
         title: String,
         iconName: String,
@@ -223,5 +231,59 @@ final class ActiveWorkspaceViewModel: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+    }
+
+    private func buildWorkspaceSummaryContent() -> String? {
+        let noteChunks: [String] = notes.compactMap { note in
+            let title = note.displayTitle
+            let content = extractNoteTextForSummary(note)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard !content.isEmpty else { return nil }
+            return "Title: \(title)\n\(content)"
+        }
+
+        guard !noteChunks.isEmpty else { return nil }
+
+        return """
+        Workspace: \(workspace.title)
+
+        Notes:
+
+        \(noteChunks.joined(separator: "\n\n"))
+        """
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func extractNoteTextForSummary(_ note: WorkspaceNote) -> String {
+        if !note.blocks.isEmpty {
+            let extracted = note.blocks.compactMap { block -> String? in
+                switch block.kind {
+                case .text:
+                    let text = block.attributedText().string.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return text.isEmpty ? nil : text
+                case .checklist:
+                    let checklistText = block.checklist?.items
+                        .map { item in
+                            let prefix = item.isChecked ? "[x]" : "[ ]"
+                            return "\(prefix) \(item.text)"
+                        }
+                        .joined(separator: "\n")
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard let checklistText, !checklistText.isEmpty else { return nil }
+                    return checklistText
+                case .image, .table:
+                    return nil
+                }
+            }
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if !extracted.isEmpty {
+                return extracted
+            }
+        }
+
+        return note.content
     }
 }

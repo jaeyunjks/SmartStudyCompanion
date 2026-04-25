@@ -26,6 +26,6 @@ struct KeyConceptCard: View {
 }
 
 #Preview {
-    KeyConceptCard(concept: StudySummary.mockSummaries[0].keyConcepts[0])
+    KeyConceptCard(concept: StudySummary.previewSummaries[0].keyConcepts[0])
         .padding()
 }

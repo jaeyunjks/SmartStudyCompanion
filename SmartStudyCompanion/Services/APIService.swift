@@ -252,6 +252,26 @@ class APIService {
             return nil
         }
     }
+
+    /// Generate AI summary for a workspace from aggregated note text
+    func generateWorkspaceSummary(
+        workspaceId: String,
+        workspaceTitle: String,
+        workspaceContent: String
+    ) async throws -> StudySummary {
+        let endpoint = "/ai/summary"
+        let request = WorkspaceAISummaryRequest(
+            workspaceId: workspaceId,
+            workspaceTitle: workspaceTitle,
+            workspaceContent: workspaceContent
+        )
+        let response: WorkspaceAISummaryResponse = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: request
+        )
+        return response.summary.toStudySummary(workspaceTitle: workspaceTitle)
+    }
     
     // MARK: - Flashcard Methods
     

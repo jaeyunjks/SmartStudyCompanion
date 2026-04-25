@@ -33,6 +33,6 @@ struct SummaryHeroSection: View {
 }
 
 #Preview {
-    SummaryHeroSection(summary: StudySummary.mockSummaries[0])
+    SummaryHeroSection(summary: StudySummary.previewSummaries[0])
         .padding()
 }

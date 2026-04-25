@@ -42,6 +42,6 @@ struct MainIdeasCard: View {
 }
 
 #Preview {
-    MainIdeasCard(ideas: StudySummary.mockSummaries[0].mainIdeas)
+    MainIdeasCard(ideas: StudySummary.previewSummaries[0].mainIdeas)
         .padding()
 }

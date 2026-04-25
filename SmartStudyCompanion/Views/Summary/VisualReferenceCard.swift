@@ -58,10 +58,10 @@ struct VisualReferenceCard: View {
 
 #Preview {
     VisualReferenceCard(
-        title: StudySummary.mockSummaries[0].visualReferenceTitle,
-        caption: StudySummary.mockSummaries[0].visualReferenceCaption,
+        title: StudySummary.previewSummaries[0].visualReferenceTitle,
+        caption: StudySummary.previewSummaries[0].visualReferenceCaption,
         imageName: nil,
-        imageSystemName: StudySummary.mockSummaries[0].imageSystemName
+        imageSystemName: StudySummary.previewSummaries[0].imageSystemName
     )
     .padding()
 }

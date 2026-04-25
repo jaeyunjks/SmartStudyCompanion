@@ -103,7 +103,8 @@ struct ImportantPoint: Identifiable, Equatable {
 }
 
 extension StudySummary {
-    static let mockSummaries: [StudySummary] = [
+    /// Development-only sample summaries for SwiftUI previews.
+    static let previewSummaries: [StudySummary] = [
         StudySummary(
             id: UUID(),
             category: "Computer Science",

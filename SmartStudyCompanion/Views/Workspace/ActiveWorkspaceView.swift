@@ -60,6 +60,11 @@ struct ActivityItem: Identifiable {
     let detail: String
 }
 
+private struct WorkspaceSummaryRoute: Identifiable, Hashable {
+    let id = UUID()
+    let request: WorkspaceAISummaryRequest
+}
+
 struct ActiveWorkspaceView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
@@ -70,7 +75,7 @@ struct ActiveWorkspaceView: View {
     @State private var showDeleteWorkspaceConfirmation = false
     @State private var showEditWorkspaceSheet = false
     @State private var activeNoteDraft: WorkspaceNote?
-    @State private var showSummaryDetail = false
+    @State private var summaryRoute: WorkspaceSummaryRoute?
     @State private var showAllNotes = false
     @State private var showAIChat = false
     @State private var showKnowledgeQuiz = false
@@ -270,8 +275,12 @@ struct ActiveWorkspaceView: View {
         } message: {
             Text(viewModel.importErrorMessage ?? "")
         }
-        .navigationDestination(isPresented: $showSummaryDetail) {
-            SummaryDetailView(summary: initialSummary)
+        .navigationDestination(item: $summaryRoute) { route in
+            SummaryDetailView(
+                workspaceId: route.request.workspaceId,
+                workspaceTitle: route.request.workspaceTitle,
+                workspaceContent: route.request.workspaceContent
+            )
         }
         .navigationDestination(item: $activeNoteDraft) { note in
             WorkspaceNoteEditorView(
@@ -309,13 +318,6 @@ struct ActiveWorkspaceView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
-    }
-
-    private var initialSummary: StudySummary {
-        if viewModel.workspace.title.localizedCaseInsensitiveContains("cloud") {
-            return StudySummary.mockSummaries[0]
-        }
-        return StudySummary.mockSummaries[1]
     }
 
     private var chatContext: WorkspaceContext {
@@ -385,7 +387,7 @@ struct ActiveWorkspaceView: View {
 
     private func handleAction(_ title: String) {
         if title == "Summarise Knowledge" {
-            showSummaryDetail = true
+            summaryRoute = WorkspaceSummaryRoute(request: viewModel.workspaceSummaryRequest())
             return
         }
         if title == "Ask AI" {

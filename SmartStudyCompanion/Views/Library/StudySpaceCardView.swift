@@ -4,7 +4,7 @@ struct StudySpaceCardView: View {
     let space: StudySpace
 
     private var accent: Color {
-        space.status == "Inactive" ? Color.gray : space.workspaceAccentColor
+        space.workspaceAccentColor
     }
 
     var body: some View {
@@ -12,49 +12,51 @@ struct StudySpaceCardView: View {
             HStack(alignment: .top) {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(accent.opacity(0.12))
-                    .frame(width: 46, height: 46)
+                    .frame(width: 44, height: 44)
                     .overlay(
                         Image(systemName: space.iconName)
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(accent)
                     )
 
                 Spacer()
 
-                Text(space.status)
+                Text(space.normalizedStatus)
                     .font(.caption2.weight(.bold))
                     .padding(.horizontal, 9)
                     .padding(.vertical, 4)
-                    .background(accent.opacity(0.14))
+                    .background(space.statusBackgroundColor)
                     .clipShape(Capsule())
-                    .foregroundStyle(accent)
+                    .foregroundStyle(space.statusForegroundColor)
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(space.title)
-                    .font(.headline.weight(.semibold))
+                    .font(.subheadline.weight(.semibold))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
 
                 Text(space.description)
-                    .font(.subheadline)
+                    .font(.footnote)
                     .foregroundStyle(LibraryTheme.mutedText)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 Label("\(space.documentCount)", systemImage: "doc.text")
+                    .labelStyle(.titleAndIcon)
                 Label("\(space.noteCount)", systemImage: "note.text")
+                    .labelStyle(.titleAndIcon)
                 Spacer()
                 Text(space.lastUpdated)
                     .font(.caption)
                     .foregroundStyle(LibraryTheme.mutedText)
             }
-            .font(.caption.weight(.medium))
+            .font(.caption.weight(.semibold))
             .foregroundStyle(LibraryTheme.mutedText)
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("Progress")
                         .font(.caption.weight(.semibold))
@@ -71,7 +73,8 @@ struct StudySpaceCardView: View {
                     .clipShape(Capsule())
             }
         }
-        .padding(16)
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .libraryGlass(cornerRadius: LibraryTheme.cardCornerRadius)
     }
 }

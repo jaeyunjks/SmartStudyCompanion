@@ -18,14 +18,35 @@ struct ContinueLearningSectionView: View {
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 14)], spacing: 14) {
-                ForEach(spaces) { space in
-                    Button(action: { onSelect(space) }) {
-                        ContinueLearningCardView(space: space)
+                if spaces.isEmpty {
+                    EmptyContinueLearningCard()
+                } else {
+                    ForEach(spaces) { space in
+                        Button(action: { onSelect(space) }) {
+                            ContinueLearningCardView(space: space)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
+    }
+}
+
+private struct EmptyContinueLearningCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("No active sessions yet")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+            Text("Your active study workspace will appear here once you create one.")
+                .font(.footnote)
+                .foregroundStyle(HomeTheme.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .homeGlass(cornerRadius: HomeTheme.cardCornerRadius)
     }
 }
 
@@ -33,7 +54,7 @@ private struct ContinueLearningCardView: View {
     let space: StudySpace
 
     private var accent: Color {
-        space.status == "Inactive" ? Color.gray : space.workspaceAccentColor
+        space.workspaceAccentColor
     }
 
     var body: some View {
@@ -50,13 +71,13 @@ private struct ContinueLearningCardView: View {
 
                 Spacer()
 
-                Text(space.status)
+                Text(space.normalizedStatus)
                     .font(.caption2.weight(.bold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(accent.opacity(0.10))
+                    .background(space.statusBackgroundColor)
                     .clipShape(Capsule())
-                    .foregroundStyle(accent)
+                    .foregroundStyle(space.statusForegroundColor)
             }
 
             Text(space.title)

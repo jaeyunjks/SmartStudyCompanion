@@ -26,15 +26,24 @@ class AuthViewModel: ObservableObject {
         errorMessage = nil
         
         do {
-            let signUpRequest = SignUpRequest(email: email, password: password, username: username, fullName: fullName)
-            let response = try await apiService.signUp(signUpRequest: signUpRequest)
+            let sanitizedUsername = username
+                .lowercased()
+                .replacingOccurrences(of: " ", with: "")
+            let signUpRequest = SignUpRequest(
+                email: email,
+                password: password,
+                confirmPassword: password,
+                username: sanitizedUsername.isEmpty ? email.components(separatedBy: "@").first ?? "user" : sanitizedUsername,
+                fullname: fullName
+            )
+            _ = try await apiService.signUp(signUpRequest: signUpRequest)
             
-            self.user = response.user
+            self.user = nil
             self.isAuthenticated = true
         } catch let error as NetworkError {
             self.errorMessage = error.localizedDescription
         } catch {
-            self.errorMessage = "An unexpected error occurred"
+            self.errorMessage = error.localizedDescription
         }
         
         isLoading = false
@@ -49,14 +58,14 @@ class AuthViewModel: ObservableObject {
         errorMessage = nil
         
         do {
-            let response = try await apiService.login(email: email, password: password)
+            _ = try await apiService.login(email: email, password: password)
             
-            self.user = response.user
+            self.user = nil
             self.isAuthenticated = true
         } catch let error as NetworkError {
             self.errorMessage = error.localizedDescription
         } catch {
-            self.errorMessage = "An unexpected error occurred"
+            self.errorMessage = error.localizedDescription
         }
         
         isLoading = false

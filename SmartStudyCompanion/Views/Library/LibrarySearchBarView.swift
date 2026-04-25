@@ -21,7 +21,7 @@ struct LibrarySearchBarView: View {
             }
         }
         .padding(.horizontal, 16)
-        .frame(height: 52)
+        .frame(height: 48)
         .libraryGlass(cornerRadius: LibraryTheme.chipCornerRadius)
     }
 }

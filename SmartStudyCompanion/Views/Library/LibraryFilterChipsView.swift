@@ -43,13 +43,13 @@ private struct FilterChipView: View {
     var body: some View {
         Text(title)
             .font(.footnote.weight(.semibold))
-            .foregroundStyle(isSelected ? Color.white : LibraryTheme.accent)
+            .foregroundStyle(isSelected ? Color.white : LibraryTheme.accent.opacity(0.9))
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(isSelected ? LibraryTheme.accent : LibraryTheme.accentSoft.opacity(0.9))
+            .background(isSelected ? LibraryTheme.accent : Color.white.opacity(0.72))
             .overlay(
                 Capsule()
-                    .stroke(LibraryTheme.accent.opacity(0.08), lineWidth: 1)
+                    .stroke(LibraryTheme.accent.opacity(isSelected ? 0.0 : 0.18), lineWidth: 1)
             )
             .clipShape(Capsule())
     }

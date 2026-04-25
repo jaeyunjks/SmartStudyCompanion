@@ -8,55 +8,60 @@ struct WorkspaceStudyToolsSectionView: View {
     let onSecondaryAction: (String) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Study Tools")
-                .font(.headline.weight(.bold))
-                .foregroundStyle(.primary)
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Capture notes instantly, then turn them into summaries, quizzes, flashcards, and plans.")
+                .font(.caption)
+                .foregroundStyle(WorkspaceTheme.mutedText)
 
             Button(action: onCreateNote) {
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(palette.iconBackground)
-                        .frame(width: 36, height: 36)
+                HStack(spacing: 14) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.white.opacity(colorScheme == .dark ? 0.14 : 0.28))
+                        .frame(width: 42, height: 42)
                         .overlay(
                             Image(systemName: "square.and.pencil")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(palette.primaryStrong)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(.white)
                         )
 
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text("Create Note")
-                            .font(.headline.weight(.semibold))
+                            .font(.headline.weight(.bold))
                             .foregroundStyle(.white)
-                        Text("Capture insights while you study")
+                        Text("Capture ideas quickly and keep momentum")
                             .font(.caption)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.white.opacity(0.9))
                     }
 
                     Spacer()
 
                     Image(systemName: "arrow.right")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(.white)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 16)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 18)
                 .background(
                     LinearGradient(
                         colors: [
-                            palette.primaryStrong,
-                            palette.primary.opacity(colorScheme == .dark ? 0.92 : 1)
+                            palette.primaryStrong.opacity(colorScheme == .dark ? 0.96 : 1),
+                            palette.primary.opacity(colorScheme == .dark ? 0.88 : 0.96),
+                            palette.primaryStrong.opacity(colorScheme == .dark ? 0.95 : 0.9)
                         ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+                        startPoint: .leading,
+                        endPoint: .trailing
                     )
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .shadow(color: palette.primaryStrong.opacity(0.22), radius: 14, x: 0, y: 8)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(.white.opacity(0.22), lineWidth: 1)
+                )
+                .shadow(color: palette.primaryStrong.opacity(0.24), radius: 16, x: 0, y: 9)
             }
             .buttonStyle(WorkspacePressableButtonStyle())
 
-            Text("AI support")
+            Text("AI Tools")
                 .font(.caption.weight(.semibold))
                 .textCase(.uppercase)
                 .tracking(0.8)

@@ -44,19 +44,6 @@ struct AIPrimaryActionCardView: View {
                 RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
                     .stroke(Color.primary.opacity(0.08), lineWidth: 1)
             )
-            .overlay(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [palette.primaryStrong.opacity(0.9), palette.primary.opacity(0.65)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(height: 3)
-                    .padding(.horizontal, 12)
-                    .padding(.top, 10)
-            }
         }
         .buttonStyle(WorkspacePressableButtonStyle())
     }

@@ -8,8 +8,8 @@ enum LibraryTheme {
     static let mutedText = Color(.secondaryLabel)
     static let secondaryBackground = Color(.secondarySystemBackground)
 
-    static let horizontalPadding: CGFloat = 20
-    static let sectionSpacing: CGFloat = 24
+    static let horizontalPadding: CGFloat = 24
+    static let sectionSpacing: CGFloat = 20
     static let cardCornerRadius: CGFloat = 22
     static let chipCornerRadius: CGFloat = 18
     static let smallCornerRadius: CGFloat = 16
@@ -19,87 +19,126 @@ enum LibraryTheme {
 
 /// Home/Library screen showing recent documents and quick actions
 struct LibraryView: View {
+    @Environment(\.dismiss) private var dismiss
+    let isEmbeddedInHome: Bool
+    let onNavigateHome: (() -> Void)?
+
     @StateObject private var viewModel = LibraryViewModel()
     @State private var selectedTab: LibraryNavItem = .library
     @State private var showFilterSheet = false
     @State private var showCreateStudySpaceSheet = false
     @State private var selectedStudySpace: StudySpace?
 
+    init(isEmbeddedInHome: Bool = false, onNavigateHome: (() -> Void)? = nil) {
+        self.isEmbeddedInHome = isEmbeddedInHome
+        self.onNavigateHome = onNavigateHome
+    }
+
     var body: some View {
-        NavigationStack {
-            GeometryReader { geometry in
-                let topInset = geometry.safeAreaInsets.top
-                let bottomInset = geometry.safeAreaInsets.bottom
+        Group {
+            if isEmbeddedInHome {
+                libraryContent
+            } else {
+                NavigationStack {
+                    libraryContent
+                }
+            }
+        }
+    }
 
-                ZStack(alignment: .bottomTrailing) {
-                    LibraryTheme.background.ignoresSafeArea()
+    private var libraryContent: some View {
+        GeometryReader { geometry in
+            let bottomInset = geometry.safeAreaInsets.bottom
 
-                    VStack(spacing: 0) {
-                        LibraryTopBarView()
-                            .padding(.top, topInset + 2)
+            ZStack(alignment: .bottomTrailing) {
+                LibraryTheme.background.ignoresSafeArea()
 
-                        ScrollView {
-                            LazyVStack(alignment: .leading, spacing: LibraryTheme.sectionSpacing) {
-                                LibraryHeroHeaderView()
-                                LibrarySearchBarView(query: $viewModel.searchText)
-                                LibraryFilterChipsView(
-                                    selectedSort: $viewModel.selectedSort,
-                                    hasActiveAdvancedFilters: viewModel.hasActiveAdvancedFilters,
-                                    onFilterTap: { showFilterSheet = true }
-                                )
-                                StudySpacesSectionView(spaces: viewModel.filteredStudySpaces) { space in
+                VStack(spacing: 0) {
+                    LibraryTopBarView()
+                        .padding(.top, 8)
+
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: LibraryTheme.sectionSpacing) {
+                            LibraryHeroHeaderView()
+                            LibrarySearchBarView(query: $viewModel.searchText)
+                            LibraryFilterChipsView(
+                                selectedSort: $viewModel.selectedSort,
+                                hasActiveAdvancedFilters: viewModel.hasActiveAdvancedFilters,
+                                onFilterTap: { showFilterSheet = true }
+                            )
+                            StudySpacesSectionView(
+                                spaces: viewModel.filteredStudySpaces,
+                                onSelect: { space in
                                     selectedStudySpace = space
+                                },
+                                onCreateFirst: {
+                                    showCreateStudySpaceSheet = true
                                 }
-                            }
-                            .padding(.horizontal, LibraryTheme.horizontalPadding)
-                            .padding(.top, 14)
-                            .padding(.bottom, 120 + bottomInset)
+                            )
                         }
+                        .padding(.horizontal, LibraryTheme.horizontalPadding)
+                        .padding(.top, 10)
+                        .padding(.bottom, (isEmbeddedInHome ? 94 : 108) + bottomInset)
                     }
+                }
 
+                if !isEmbeddedInHome {
                     LibraryBottomNavBarView(selected: selectedTab) { tab in
-                        withAnimation(.easeInOut(duration: 0.22)) {
+                        switch tab {
+                        case .home:
+                            dismiss()
+                        default:
                             selectedTab = tab
                         }
                     }
                     .padding(.bottom, max(bottomInset, 8))
-
-                    LibraryFloatingAddButtonView {
-                        showCreateStudySpaceSheet = true
-                    }
-                    .padding(.trailing, LibraryTheme.horizontalPadding)
-                    .padding(.bottom, max(bottomInset, 8) + 78)
                 }
-                .ignoresSafeArea(edges: [.top, .bottom])
+
+                LibraryFloatingAddButtonView {
+                    showCreateStudySpaceSheet = true
+                }
+                .padding(.trailing, LibraryTheme.horizontalPadding)
+                .padding(.bottom, max(bottomInset, 8) + (isEmbeddedInHome ? 122 : 128))
             }
-            .sheet(isPresented: $showFilterSheet) {
-                LibraryAdvancedFilterSheetView(
-                    selectedStatus: $viewModel.selectedStatus,
-                    selectedSort: $viewModel.selectedSort,
-                    selectedCategory: $viewModel.selectedCategory,
-                    statuses: ["All", "Active", "Inactive"],
-                    sorts: ["Recently Updated", "Alphabetical"],
-                    categories: ["All", "Cloud", "AI", "Data", "Ethics", "Neuroscience"]
+            .ignoresSafeArea(edges: .bottom)
+        }
+        .sheet(isPresented: $showFilterSheet) {
+            LibraryAdvancedFilterSheetView(
+                selectedStatus: $viewModel.selectedStatus,
+                selectedSort: $viewModel.selectedSort,
+                selectedCategory: $viewModel.selectedCategory,
+                statuses: ["All", "Active", "Inactive"],
+                sorts: ["Recently Updated", "Alphabetical"],
+                categories: ["All", "Cloud", "AI", "Data", "Ethics", "Neuroscience"]
+            )
+            .presentationDetents([.fraction(0.45), .medium])
+        }
+        .sheet(isPresented: $showCreateStudySpaceSheet) {
+            CreateStudySpaceView(onCreate: { title, icon, category, description, status, workspaceColorHex in
+                viewModel.addStudyWorkspace(
+                    title: title,
+                    iconName: icon,
+                    category: category,
+                    description: description,
+                    status: status,
+                    workspaceColorHex: workspaceColorHex
                 )
-                .presentationDetents([.fraction(0.45), .medium])
+                showCreateStudySpaceSheet = false
+            })
+        }
+        .navigationDestination(item: $selectedStudySpace) { space in
+            ActiveWorkspaceView(studySpace: space)
+        }
+        .toolbar(.hidden, for: .navigationBar)
+        .onChange(of: selectedTab) { _, newTab in
+            guard isEmbeddedInHome, newTab == .home else { return }
+            onNavigateHome?()
+            selectedTab = .library
+        }
+        .onAppear {
+            if isEmbeddedInHome {
+                selectedTab = .library
             }
-            .sheet(isPresented: $showCreateStudySpaceSheet) {
-                CreateStudySpaceView(onCreate: { title, icon, category, description, status, workspaceColorHex in
-                    viewModel.addStudyWorkspace(
-                        title: title,
-                        iconName: icon,
-                        category: category,
-                        description: description,
-                        status: status,
-                        workspaceColorHex: workspaceColorHex
-                    )
-                    showCreateStudySpaceSheet = false
-                })
-            }
-            .navigationDestination(item: $selectedStudySpace) { space in
-                ActiveWorkspaceView(studySpace: space)
-            }
-            .toolbar(.hidden, for: .navigationBar)
         }
     }
 }

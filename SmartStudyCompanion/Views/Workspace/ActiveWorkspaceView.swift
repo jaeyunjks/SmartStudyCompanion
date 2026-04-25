@@ -80,12 +80,6 @@ struct ActiveWorkspaceView: View {
     @State private var showFileImporter = false
     @State private var selectedPhotoItem: PhotosPickerItem?
 
-    private let activityItems: [ActivityItem] = [
-        .init(iconName: "doc.text", title: "Key Concepts of Serverless", timestamp: "2h ago", detail: "Exploration of FaaS, cold starts, and event-driven architectures."),
-        .init(iconName: "photo", title: "Architecture Diagram", timestamp: "3d ago", detail: "Updated system diagram for scalable compute clusters."),
-        .init(iconName: "doc.richtext", title: "Distributed Systems Syllabus", timestamp: "1d ago", detail: "2.4 MB • PDF Document • Core curriculum")
-    ]
-
     init(studySpace: StudySpace) {
         _viewModel = StateObject(
             wrappedValue: ActiveWorkspaceViewModel(
@@ -158,8 +152,10 @@ struct ActiveWorkspaceView: View {
                                 }
                             )
 
-                            WorkspaceSectionLabel(title: "Activity")
-                            RecentActivitySectionView(items: activityItems)
+                            if !recentActivityItems.isEmpty {
+                                WorkspaceSectionLabel(title: "Activity")
+                                RecentActivitySectionView(items: recentActivityItems)
+                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 14)
@@ -326,6 +322,47 @@ struct ActiveWorkspaceView: View {
         ].compactMap { $0 }
     }
 
+    private var recentActivityItems: [ActivityItem] {
+        let noteItems = viewModel.notes.prefix(3).map { note in
+            ActivityItem(
+                iconName: "square.and.pencil",
+                title: note.title,
+                timestamp: note.updatedAt.formattedActivityTimestamp,
+                detail: "Note updated in this workspace."
+            )
+        }
+
+        let materialItems = viewModel.materials.prefix(3).map { material in
+            ActivityItem(
+                iconName: materialIconName(for: material.type),
+                title: material.title,
+                timestamp: material.createdAt.formattedActivityTimestamp,
+                detail: materialDetailText(for: material)
+            )
+        }
+
+        return Array((noteItems + materialItems).prefix(5))
+    }
+
+    private func materialIconName(for type: StudyMaterialType) -> String {
+        switch type {
+        case .image:
+            return "photo"
+        case .pdf, .document, .text:
+            return "doc.text"
+        case .other:
+            return "doc"
+        }
+    }
+
+    private func materialDetailText(for material: StudyMaterial) -> String {
+        let tag = material.type.displayName
+        if material.fileSizeInBytes > 0 {
+            return "\(material.fileSizeInBytes.formattedByteCount) • \(tag)"
+        }
+        return tag
+    }
+
     private func handleAction(_ title: String) {
         if title == "Summarise Knowledge" {
             showSummaryDetail = true
@@ -347,6 +384,20 @@ struct ActiveWorkspaceView: View {
             showStudyPlan = true
             return
         }
+    }
+}
+
+private extension Date {
+    var formattedActivityTimestamp: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: self, relativeTo: Date())
+    }
+}
+
+private extension Int64 {
+    var formattedByteCount: String {
+        ByteCountFormatter.string(fromByteCount: self, countStyle: .file)
     }
 }
 

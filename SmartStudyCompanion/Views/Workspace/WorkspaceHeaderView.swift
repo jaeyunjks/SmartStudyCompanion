@@ -16,12 +16,12 @@ struct WorkspaceHeaderView: View {
                             .foregroundStyle(accent)
                     )
 
-                Text(studySpace.status)
+                Text(studySpace.normalizedStatus)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(accent)
+                    .foregroundStyle(studySpace.statusForegroundColor)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(accent.opacity(0.12))
+                    .background(studySpace.statusBackgroundColor)
                     .clipShape(Capsule())
             }
 

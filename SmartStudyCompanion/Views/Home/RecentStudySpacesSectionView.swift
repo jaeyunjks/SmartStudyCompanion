@@ -10,14 +10,35 @@ struct RecentStudySpacesSectionView: View {
                 .font(.title3.weight(.bold))
 
             VStack(spacing: 10) {
-                ForEach(spaces) { space in
-                    Button(action: { onSelect(space) }) {
-                        RecentStudySpaceRow(space: space)
+                if spaces.isEmpty {
+                    RecentWorkspacesEmptyState()
+                } else {
+                    ForEach(spaces) { space in
+                        Button(action: { onSelect(space) }) {
+                            RecentStudySpaceRow(space: space)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
+    }
+}
+
+private struct RecentWorkspacesEmptyState: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("No study workspaces yet")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+            Text("Create your first workspace to start organising notes, materials, and AI tools.")
+                .font(.footnote)
+                .foregroundStyle(HomeTheme.mutedText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .homeGlass(cornerRadius: HomeTheme.smallCornerRadius)
     }
 }
 
@@ -25,7 +46,7 @@ private struct RecentStudySpaceRow: View {
     let space: StudySpace
 
     private var accent: Color {
-        space.status == "Inactive" ? Color.gray : space.workspaceAccentColor
+        space.workspaceAccentColor
     }
 
     var body: some View {
@@ -51,13 +72,13 @@ private struct RecentStudySpaceRow: View {
 
             Spacer()
 
-            Text(space.status)
+            Text(space.normalizedStatus)
                 .font(.caption2.weight(.bold))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(accent.opacity(0.12))
+                .background(space.statusBackgroundColor)
                 .clipShape(Capsule())
-                .foregroundStyle(accent)
+                .foregroundStyle(space.statusForegroundColor)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// Main API service for communicating with the FastAPI backend
+/// Main API service for communicating with the backend
 class APIService {
     // MARK: - Singleton
     static let shared = APIService()
@@ -37,8 +37,8 @@ class APIService {
     
     /// Sign up a new user
     /// - Parameters:
-    ///   - signUpRequest: The sign-up request containing email, password, username, and full name
-    /// - Returns: AuthResponse containing user info and authentication tokens
+    ///   - signUpRequest: The sign-up request payload
+    /// - Returns: AuthResponse containing backend auth token
     func signUp(signUpRequest: SignUpRequest) async throws -> AuthResponse {
         let endpoint = "/auth/signup"
         let response: AuthResponse = try await performRequest(
@@ -47,8 +47,8 @@ class APIService {
             body: signUpRequest
         )
         
-        // Store tokens after successful signup
-        setTokens(accessToken: response.token, refreshToken: response.refreshToken)
+        // Store token after successful signup
+        setTokens(accessToken: response.accessToken)
         
         return response
     }
@@ -57,7 +57,7 @@ class APIService {
     /// - Parameters:
     ///   - email: User's email
     ///   - password: User's password
-    /// - Returns: AuthResponse containing user info and authentication tokens
+    /// - Returns: AuthResponse containing backend auth token
     func login(email: String, password: String) async throws -> AuthResponse {
         let endpoint = "/auth/login"
         let authRequest = AuthRequest(email: email, password: password)
@@ -67,8 +67,8 @@ class APIService {
             body: authRequest
         )
         
-        // Store tokens after successful login
-        setTokens(accessToken: response.token, refreshToken: response.refreshToken)
+        // Store token after successful login
+        setTokens(accessToken: response.accessToken)
         
         return response
     }
@@ -88,7 +88,7 @@ class APIService {
             body: tokenRequest
         )
         
-        setTokens(accessToken: response.token, refreshToken: response.refreshToken)
+        setTokens(accessToken: response.accessToken)
         return response
     }
     
@@ -339,7 +339,26 @@ class APIService {
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
         
-        let (data, response) = try await session.data(for: urlRequest)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: urlRequest)
+        } catch let urlError as URLError {
+            switch urlError.code {
+            case .timedOut:
+                throw NetworkError.timeout
+            case .notConnectedToInternet, .networkConnectionLost:
+                throw NetworkError.offline
+            case .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed:
+                throw NetworkError.serverError(
+                    statusCode: 0,
+                    message: "Cannot connect to backend at \(baseURL.absoluteString)"
+                )
+            default:
+                throw NetworkError.unknown(urlError)
+            }
+        } catch {
+            throw NetworkError.unknown(error)
+        }
         try validateResponse(response)
         
         let decoder = JSONDecoder()
@@ -385,7 +404,7 @@ class APIService {
     }
     
     /// Store authentication tokens
-    private func setTokens(accessToken: String, refreshToken: String) {
+    private func setTokens(accessToken: String, refreshToken: String? = nil) {
         lock.lock()
         defer { lock.unlock() }
         self.authToken = accessToken
@@ -400,7 +419,7 @@ class APIService {
     }
     
     /// Save tokens to Keychain
-    private func saveTokensToKeychain(accessToken: String, refreshToken: String) {
+    private func saveTokensToKeychain(accessToken: String, refreshToken: String?) {
         // TODO: Implement Keychain save for secure token storage
     }
     

@@ -14,15 +14,8 @@ final class HomeDashboardViewModel: ObservableObject {
         self.store = store
         featuredStudySpaces = Array(store.studySpaces.prefix(2))
         recentStudySpaces = Array(store.studySpaces.prefix(3))
-        quickActions = ["Review Flashcards", "Continue Summary", "Take a Quiz", "AI Insights"]
-        currentUser = User(
-            id: UUID().uuidString,
-            email: "yafie@example.com",
-            username: "yafie",
-            fullName: "Yafie",
-            createdAt: Date(),
-            updatedAt: Date()
-        )
+        quickActions = []
+        currentUser = nil
 
         store.$studySpaces
             .sink { [weak self] spaces in

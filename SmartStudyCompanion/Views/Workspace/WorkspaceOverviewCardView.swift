@@ -8,7 +8,7 @@ struct WorkspaceOverviewCardView: View {
     let aiOutputCount: Int
 
     private var statusAccent: Color {
-        studySpace.status == "Inactive" ? Color.gray : palette.primary
+        studySpace.statusForegroundColor
     }
 
     var body: some View {
@@ -34,12 +34,12 @@ struct WorkspaceOverviewCardView: View {
 
                 Spacer(minLength: 8)
 
-                Text(studySpace.status)
+                Text(studySpace.normalizedStatus)
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(statusAccent)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(statusAccent.opacity(0.14))
+                    .background(studySpace.statusBackgroundColor)
                     .clipShape(Capsule())
             }
 

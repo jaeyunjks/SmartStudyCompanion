@@ -6,7 +6,7 @@ final class StudySpaceStore: ObservableObject {
 
     @Published private(set) var studySpaces: [StudySpace]
 
-    init(seed: [StudySpace] = StudySpace.sampleData) {
+    init(seed: [StudySpace] = []) {
         studySpaces = seed
     }
 
@@ -24,7 +24,7 @@ final class StudySpaceStore: ObservableObject {
             description: description.isEmpty ? "No description yet." : description,
             iconName: iconName,
             category: category,
-            status: status,
+            status: "Active",
             workspaceColorHex: workspaceColorHex,
             documentCount: 0,
             noteCount: 0,

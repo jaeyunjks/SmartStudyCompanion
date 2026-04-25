@@ -25,9 +25,8 @@ struct SmartStudyCompanionApp: App {
                     // First time -> Show onboarding carousel
                     OnboardingView(hasSeenOnboarding: $hasSeenOnboarding)
                 } else if authViewModel.isAuthenticated {
-                    // User is logged in -> Show main app with tabs
-                    MainTabView()
-                        .environmentObject(authViewModel)
+                    // User is logged in -> Go directly to the Home dashboard
+                    HomeDashboardView()
                 } else {
                     // User has seen onboarding -> Show login/signup
                     AuthenticationFlowView()

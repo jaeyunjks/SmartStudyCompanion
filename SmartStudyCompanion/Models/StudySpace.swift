@@ -101,4 +101,18 @@ extension StudySpace {
     var workspaceAccentColor: Color {
         Color(hex: workspaceColorHex) ?? Color(red: 0.22, green: 0.53, blue: 0.40)
     }
+
+    var normalizedStatus: String {
+        status.caseInsensitiveCompare("inactive") == .orderedSame ? "Inactive" : "Active"
+    }
+
+    var statusForegroundColor: Color {
+        normalizedStatus == "Inactive"
+            ? Color(red: 0.76, green: 0.25, blue: 0.30)
+            : Color(red: 0.22, green: 0.58, blue: 0.38)
+    }
+
+    var statusBackgroundColor: Color {
+        statusForegroundColor.opacity(0.14)
+    }
 }

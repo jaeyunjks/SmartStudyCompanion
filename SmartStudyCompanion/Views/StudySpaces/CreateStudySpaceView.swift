@@ -109,7 +109,7 @@ struct CreateStudySpaceView: View {
                     onLongPressColor: { colorToDelete = $0 }
                 )
 
-                StudySpaceStatusPickerView(selectedStatus: $selectedStatus, selectedColor: selectedColor)
+                StudySpaceStatusPickerView(selectedStatus: $selectedStatus)
 
                 StudySpaceDescriptionInputView(text: $descriptionText)
 
@@ -249,7 +249,8 @@ struct CreateStudySpaceView: View {
 
     private func handleCreate() {
         let colorHex = colorOptions.first(where: { $0.id == selectedColorID })?.color.hexString ?? "#388767"
-        onCreate?(workspaceName, selectedIconName, selectedCategory, descriptionText, selectedStatus, colorHex)
+        let statusToSave = initialSpace == nil ? "Active" : selectedStatus
+        onCreate?(workspaceName, selectedIconName, selectedCategory, descriptionText, statusToSave, colorHex)
         dismiss()
     }
 }

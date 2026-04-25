@@ -8,19 +8,20 @@
 import SwiftUI
 
 private enum SignUpTheme {
+    static let accent = Color(red: 0.25, green: 0.58, blue: 0.41)
     static let outline = Color(red: 0.17, green: 0.19, blue: 0.22)
     static let textPrimary = Color(red: 0.12, green: 0.15, blue: 0.20)
     static let textSecondary = Color(red: 0.12, green: 0.15, blue: 0.20).opacity(0.62)
 
     static let backgroundMint = Color(red: 0.90, green: 0.97, blue: 0.95)
-    static let backgroundBlue = Color(red: 0.91, green: 0.95, blue: 0.99)
-    static let backgroundCream = Color(red: 0.97, green: 0.97, blue: 0.94)
+    static let backgroundBlue = Color(red: 0.93, green: 0.97, blue: 0.94)
+    static let backgroundCream = Color(red: 0.96, green: 0.97, blue: 0.93)
 
     static let fieldBackground = Color.white.opacity(0.9)
     static let cardBackground = Color.white.opacity(0.92)
 
     static let primaryGradient = LinearGradient(
-        colors: [Color(red: 0.44, green: 0.80, blue: 0.74), Color(red: 0.43, green: 0.71, blue: 0.92)],
+        colors: [Color(red: 0.39, green: 0.78, blue: 0.58), Color(red: 0.24, green: 0.63, blue: 0.42)],
         startPoint: .leading,
         endPoint: .trailing
     )
@@ -57,11 +58,11 @@ struct SignUpView: View {
                     .frame(width: 220, height: 220)
                     .offset(x: -120, y: -270)
                 Circle()
-                    .fill(Color(red: 0.82, green: 0.91, blue: 0.98).opacity(0.22))
+                    .fill(Color(red: 0.84, green: 0.95, blue: 0.87).opacity(0.26))
                     .frame(width: 180, height: 180)
                     .offset(x: 80, y: -250)
                 Ellipse()
-                    .fill(Color(red: 0.86, green: 0.97, blue: 0.94).opacity(0.22))
+                    .fill(Color(red: 0.87, green: 0.96, blue: 0.90).opacity(0.24))
                     .frame(width: 240, height: 140)
                     .rotationEffect(.degrees(-14))
                     .offset(x: 120, y: -210)
@@ -90,6 +91,7 @@ struct SignUpView: View {
 
                                 TextField("John Doe", text: $fullName)
                                     .textInputAutocapitalization(.words)
+                                    .tint(SignUpTheme.accent)
                                     .padding(.horizontal, 14)
                                     .frame(height: 52)
                                     .background(SignUpTheme.fieldBackground)
@@ -108,6 +110,7 @@ struct SignUpView: View {
                                 TextField("john@example.com", text: $email)
                                     .textInputAutocapitalization(.never)
                                     .keyboardType(.emailAddress)
+                                    .tint(SignUpTheme.accent)
                                     .padding(.horizontal, 14)
                                     .frame(height: 52)
                                     .background(SignUpTheme.fieldBackground)
@@ -125,6 +128,7 @@ struct SignUpView: View {
 
                                 SecureField("At least 6 characters", text: $password)
                                     .textInputAutocapitalization(.never)
+                                    .tint(SignUpTheme.accent)
                                     .padding(.horizontal, 14)
                                     .frame(height: 52)
                                     .background(SignUpTheme.fieldBackground)
@@ -142,6 +146,7 @@ struct SignUpView: View {
 
                                 SecureField("••••••••", text: $confirmPassword)
                                     .textInputAutocapitalization(.never)
+                                    .tint(SignUpTheme.accent)
                                     .padding(.horizontal, 14)
                                     .frame(height: 52)
                                     .background(SignUpTheme.fieldBackground)
@@ -156,7 +161,7 @@ struct SignUpView: View {
                                 Button(action: { agreeToTerms.toggle() }) {
                                     Image(systemName: agreeToTerms ? "checkmark.square.fill" : "square")
                                         .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(agreeToTerms ? SignUpTheme.textPrimary : SignUpTheme.textSecondary)
+                                        .foregroundStyle(agreeToTerms ? SignUpTheme.accent : SignUpTheme.textSecondary)
                                 }
 
                                 HStack(spacing: 4) {
@@ -167,7 +172,7 @@ struct SignUpView: View {
                                     Button(action: {}) {
                                         Text("Terms")
                                             .font(.system(size: 13, weight: .semibold, design: .default))
-                                            .foregroundStyle(SignUpTheme.textPrimary)
+                                            .foregroundStyle(SignUpTheme.accent)
                                     }
 
                                     Text("&")
@@ -177,7 +182,7 @@ struct SignUpView: View {
                                     Button(action: {}) {
                                         Text("Privacy")
                                             .font(.system(size: 13, weight: .semibold, design: .default))
-                                            .foregroundStyle(SignUpTheme.textPrimary)
+                                            .foregroundStyle(SignUpTheme.accent)
                                     }
                                 }
 
@@ -202,7 +207,7 @@ struct SignUpView: View {
 
                             Button(action: {
                                 Task {
-                                    await authViewModel.signUp(email: email, password: password, username: fullName, fullName: fullName)
+                                    await authViewModel.signUp(email: email, password: password, username: fullName, fullName: fullName, rememberMe: true)
                                 }
                             }) {
                                 HStack(spacing: 8) {
@@ -241,8 +246,16 @@ struct SignUpView: View {
                             }
 
                             VStack(spacing: 10) {
-                                socialButton(title: "Continue with Google", icon: "globe")
-                                socialButton(title: "Continue with Apple", icon: "apple.logo")
+                                socialButton(title: "Continue with Google", icon: "globe") {
+                                    Task {
+                                        await authViewModel.loginWithGooglePlaceholder()
+                                    }
+                                }
+                                socialButton(title: "Continue with Apple", icon: "apple.logo") {
+                                    Task {
+                                        await authViewModel.loginWithApplePlaceholder()
+                                    }
+                                }
                             }
                         }
                         .padding(20)
@@ -263,7 +276,7 @@ struct SignUpView: View {
                             Button(action: { isShowingSignUp = false }) {
                                 Text("Log In")
                                     .font(.system(size: 14, weight: .semibold, design: .default))
-                                    .foregroundStyle(SignUpTheme.textPrimary)
+                                    .foregroundStyle(SignUpTheme.accent)
                             }
                         }
                         .padding(.bottom, 18)
@@ -276,8 +289,8 @@ struct SignUpView: View {
     }
 
     @ViewBuilder
-    private func socialButton(title: String, icon: String) -> some View {
-        Button(action: {}) {
+    private func socialButton(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .semibold))

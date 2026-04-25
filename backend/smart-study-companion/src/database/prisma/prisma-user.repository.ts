@@ -40,21 +40,23 @@ export class PrismaUserRepository implements UserRepository {
         })
     }
 
-    async updateById(id: string, fullname?: string): Promise<any> {
+    async updateById(id: string, fullname?: string, profileImage?: string): Promise<any> {
         return this.prisma.user.update({
             where: { id },
             data: {
                 fullname,
+                profileImage,
             },
         });
     }
 
-    async updateByUsername(username: string, fullname?: string, updatedUsername?: string): Promise<any> {
+    async updateByUsername(username: string, fullname?: string, updatedUsername?: string, profileImage?: string): Promise<any> {
         return this.prisma.user.update({
             where: { username },
             data: {
                 fullname,
                 username: updatedUsername,
+                profileImage,
             },
         });
     }

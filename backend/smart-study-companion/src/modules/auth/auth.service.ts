@@ -24,6 +24,7 @@ export class AuthService {
 
         return {
             access_token: this.jwtService.sign(payload),
+            user: this.serializeUserProfile(user),
         };
     }
 
@@ -47,6 +48,7 @@ export class AuthService {
 
         return {
             access_token: this.jwtService.sign(payload),
+            user: this.serializeUserProfile(user),
         };
     }
 
@@ -108,6 +110,18 @@ export class AuthService {
 
         return {
             access_token: this.jwtService.sign(payload),
+            user: this.serializeUserProfile(user),
+        };
+    }
+
+    private serializeUserProfile(user: any) {
+        return {
+            id: user.id,
+            email: user.email,
+            fullname: user.fullname,
+            username: user.username,
+            profileImage: user.profileImage,
+            createdAt: user.createdAt,
         };
     }
 

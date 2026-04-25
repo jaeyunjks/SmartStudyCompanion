@@ -10,8 +10,8 @@ struct AuthenticationFlowView: View {
             // Background gradient
             LinearGradient(
                 gradient: Gradient(colors: [
-                    Color(red: 0.95, green: 0.97, blue: 1.0),
-                    Color(red: 0.98, green: 0.96, blue: 1.0)
+                    Color(red: 0.94, green: 0.98, blue: 0.95),
+                    Color(red: 0.96, green: 0.98, blue: 0.94)
                 ]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing

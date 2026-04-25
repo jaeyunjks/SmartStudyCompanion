@@ -51,11 +51,16 @@ export class UserService {
         return this.userRepo.resetPassword(id, password);
     }
 
-    async updateProfileById(id: string, fullname?: string) {
-        return this.userRepo.updateById(id, fullname);
+    async updateProfileById(id: string, fullname?: string, profileImage?: string) {
+        return this.userRepo.updateById(id, fullname, profileImage);
     }
 
-    async updateProfileByUsername(username: string, fullname?: string, updatedUsername?: string) {
-        return this.userRepo.updateByUsername(username, fullname, updatedUsername);
+    async updateProfileByUsername(
+        username: string,
+        fullname?: string,
+        updatedUsername?: string,
+        profileImage?: string,
+    ) {
+        return this.userRepo.updateByUsername(username, fullname, updatedUsername, profileImage);
     }
 }

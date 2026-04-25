@@ -12,23 +12,16 @@ struct SmartStudyCompanionApp: App {
     // MARK: - Properties
     @StateObject private var authViewModel = AuthViewModel()
     @State private var coreDataManager = CoreDataManager.shared
-    @State private var hasSeenOnboarding: Bool
-
-    init() {
-        _hasSeenOnboarding = State(initialValue: UserDefaults.standard.bool(forKey: "hasSeenOnboarding"))
-    }
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if !hasSeenOnboarding {
-                    // First time -> Show onboarding carousel
-                    OnboardingView(hasSeenOnboarding: $hasSeenOnboarding)
-                } else if authViewModel.isAuthenticated {
-                    // User is logged in -> Go directly to the Home dashboard
+                if authViewModel.isAuthenticated {
+                    // Persisted authenticated user -> Open main app directly
                     HomeDashboardView()
+                        .environmentObject(authViewModel)
                 } else {
-                    // User has seen onboarding -> Show login/signup
+                    // No saved session -> Show login/signup
                     AuthenticationFlowView()
                         .environmentObject(authViewModel)
                 }
@@ -36,9 +29,6 @@ struct SmartStudyCompanionApp: App {
             .onAppear {
                 // Initialize CoreData
                 _ = coreDataManager
-
-                // Ensure latest persisted value drives launch routing
-                hasSeenOnboarding = UserDefaults.standard.bool(forKey: "hasSeenOnboarding")
             }
         }
     }

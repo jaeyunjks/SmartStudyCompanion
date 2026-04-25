@@ -21,6 +21,8 @@ class APIService {
     // MARK: - Configuration
     private let timeoutInterval: TimeInterval = 30.0
     private let lock = NSLock()
+    private let accessTokenDefaultsKey = "auth.token.access"
+    private let refreshTokenDefaultsKey = "auth.token.refresh"
     
     init(
         baseURL: URL = URL(string: "http://localhost:8000/api")!,
@@ -97,6 +99,35 @@ class APIService {
         authToken = nil
         refreshToken = nil
         clearStoredTokens()
+    }
+
+    // MARK: - User Profile Methods
+
+    /// Update the current user's profile details
+    /// - Parameters:
+    ///   - currentUsername: Existing username used by backend route
+    ///   - fullname: Optional new full name
+    ///   - username: Optional new username
+    ///   - profileImage: Optional Base64-encoded profile image
+    /// - Returns: Updated user profile
+    func updateUserProfile(
+        currentUsername: String,
+        fullname: String?,
+        username: String?,
+        profileImage: String?
+    ) async throws -> UserProfileResponse {
+        let endpoint = "/user/\(currentUsername)"
+        let payload = UpdateProfileRequest(
+            fullname: fullname,
+            username: username,
+            profileImage: profileImage
+        )
+        let response: UserProfileResponse = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: payload
+        )
+        return response
     }
     
     // MARK: - PDF Upload Methods
@@ -414,18 +445,26 @@ class APIService {
     
     /// Load stored tokens from secure storage
     private func loadStoredTokens() {
-        // TODO: Implement Keychain access for secure token storage
-        // For now, tokens are stored in memory only
+        lock.lock()
+        defer { lock.unlock() }
+        authToken = UserDefaults.standard.string(forKey: accessTokenDefaultsKey)
+        refreshToken = UserDefaults.standard.string(forKey: refreshTokenDefaultsKey)
     }
     
     /// Save tokens to Keychain
     private func saveTokensToKeychain(accessToken: String, refreshToken: String?) {
-        // TODO: Implement Keychain save for secure token storage
+        UserDefaults.standard.set(accessToken, forKey: accessTokenDefaultsKey)
+        if let refreshToken {
+            UserDefaults.standard.set(refreshToken, forKey: refreshTokenDefaultsKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: refreshTokenDefaultsKey)
+        }
     }
     
     /// Clear stored tokens
     private func clearStoredTokens() {
-        // TODO: Implement Keychain delete for secure token removal
+        UserDefaults.standard.removeObject(forKey: accessTokenDefaultsKey)
+        UserDefaults.standard.removeObject(forKey: refreshTokenDefaultsKey)
     }
 }
 

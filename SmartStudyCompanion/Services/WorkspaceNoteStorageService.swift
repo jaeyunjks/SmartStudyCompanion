@@ -1,4 +1,6 @@
 import Foundation
+import UIKit
+import ImageIO
 
 final class WorkspaceNoteStorageService {
     static let shared = WorkspaceNoteStorageService()
@@ -27,8 +29,14 @@ final class WorkspaceNoteStorageService {
         }
 
         let fileURL = baseFolder.appendingPathComponent("\(UUID().uuidString).jpg")
-        try data.write(to: fileURL, options: .atomic)
+        let optimized = try optimizedJPEGData(from: data, maxPixelSize: 1200, quality: 0.75)
+        try optimized.write(to: fileURL, options: .atomic)
         return fileURL.path
+    }
+
+    func deleteNoteImageIfExists(path: String) {
+        guard fileManager.fileExists(atPath: path) else { return }
+        try? fileManager.removeItem(atPath: path)
     }
 
     private func notesFileURL(workspaceID: UUID) throws -> URL {
@@ -61,5 +69,28 @@ final class WorkspaceNoteStorageService {
             .appendingPathComponent(workspaceID.uuidString, isDirectory: true)
             .appendingPathComponent("NoteImages", isDirectory: true)
             .appendingPathComponent(noteID.uuidString, isDirectory: true)
+    }
+
+    private func optimizedJPEGData(from data: Data, maxPixelSize: CGFloat, quality: CGFloat) throws -> Data {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCache: false,
+            kCGImageSourceThumbnailMaxPixelSize: Int(maxPixelSize)
+        ]
+
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+
+        let image = UIImage(cgImage: cgImage)
+        guard let jpeg = image.jpegData(compressionQuality: quality) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        return jpeg
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-struct StudySpace: Identifiable, Hashable {
+struct StudySpace: Identifiable, Hashable, Codable {
     let id: UUID
     let title: String
     let description: String
@@ -13,6 +13,49 @@ struct StudySpace: Identifiable, Hashable {
     let noteCount: Int
     let lastUpdated: String
     let lastOpened: String
+    let aiOutputCount: Int
+    let progress: Double
+}
+
+struct RemoteStudySpace: Codable {
+    let id: String
+    let userId: String
+    let title: String
+    let description: String
+    let iconName: String
+    let category: String
+    let status: String
+    let workspaceColorHex: String
+    let documentCount: Int
+    let noteCount: Int
+    let aiOutputCount: Int
+    let progress: Double
+    let createdAt: Date?
+    let updatedAt: Date?
+}
+
+struct CreateWorkspaceRequest: Codable {
+    let title: String
+    let description: String
+    let iconName: String
+    let category: String
+    let status: String
+    let workspaceColorHex: String
+    let documentCount: Int
+    let noteCount: Int
+    let aiOutputCount: Int
+    let progress: Double
+}
+
+struct UpdateWorkspaceRequest: Codable {
+    let title: String
+    let description: String
+    let iconName: String
+    let category: String
+    let status: String
+    let workspaceColorHex: String
+    let documentCount: Int
+    let noteCount: Int
     let aiOutputCount: Int
     let progress: Double
 }
@@ -95,6 +138,67 @@ extension StudySpace {
             progress: 1.0
         )
     ]
+}
+
+extension StudySpace {
+    static func fromRemote(_ remote: RemoteStudySpace) -> StudySpace {
+        StudySpace(
+            id: UUID(uuidString: remote.id) ?? UUID(),
+            title: remote.title,
+            description: remote.description,
+            iconName: remote.iconName,
+            category: remote.category,
+            status: remote.status,
+            workspaceColorHex: remote.workspaceColorHex,
+            documentCount: remote.documentCount,
+            noteCount: remote.noteCount,
+            lastUpdated: Self.relativeTimeLabel(from: remote.updatedAt),
+            lastOpened: "Opened just now",
+            aiOutputCount: remote.aiOutputCount,
+            progress: remote.progress
+        )
+    }
+
+    var createRequest: CreateWorkspaceRequest {
+        CreateWorkspaceRequest(
+            title: title,
+            description: description,
+            iconName: iconName,
+            category: category,
+            status: normalizedStatus,
+            workspaceColorHex: workspaceColorHex,
+            documentCount: documentCount,
+            noteCount: noteCount,
+            aiOutputCount: aiOutputCount,
+            progress: progress
+        )
+    }
+
+    var updateRequest: UpdateWorkspaceRequest {
+        UpdateWorkspaceRequest(
+            title: title,
+            description: description,
+            iconName: iconName,
+            category: category,
+            status: normalizedStatus,
+            workspaceColorHex: workspaceColorHex,
+            documentCount: documentCount,
+            noteCount: noteCount,
+            aiOutputCount: aiOutputCount,
+            progress: progress
+        )
+    }
+
+    private static func relativeTimeLabel(from date: Date?) -> String {
+        guard let date else { return "Just now" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        let value = formatter.localizedString(for: date, relativeTo: Date())
+        if value.lowercased() == "now" {
+            return "Just now"
+        }
+        return "Last updated \(value)"
+    }
 }
 
 extension StudySpace {

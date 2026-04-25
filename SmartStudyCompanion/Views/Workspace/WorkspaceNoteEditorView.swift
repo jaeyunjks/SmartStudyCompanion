@@ -1,39 +1,41 @@
 import SwiftUI
-import PhotosUI
 import UIKit
-
-private enum NoteWritingMode: String, CaseIterable, Identifiable {
-    case mobile = "Mobile View"
-    case paper = "Paper View"
-
-    var id: String { rawValue }
-}
+import ImageIO
 
 struct WorkspaceNoteEditorView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.workspaceThemePalette) private var palette
+    @Environment(\.colorScheme) private var colorScheme
+
+    private enum Mode: String, CaseIterable, Identifiable {
+        case mobile = "Mobile"
+        case paper = "Paper"
+
+        var id: String { rawValue }
+    }
 
     let note: WorkspaceNote
     let onSave: (WorkspaceNote) -> Void
     let onDelete: ((WorkspaceNote) -> Void)?
 
+    @StateObject private var richTextController = WorkspaceRichTextController()
+
     @State private var title: String
-    @State private var content: String
-    @State private var isBoldEnabled: Bool
+    @State private var blocks: [WorkspaceNoteBlock]
+    @State private var mode: Mode = .mobile
+    @State private var activeBlockID: UUID?
+    @State private var selectedImageBlockID: UUID?
+    @State private var selectedTableBlockID: UUID?
+    @State private var focusedTextBlockID: UUID?
+    @State private var imageActionBlockID: UUID?
+    @State private var tableActionBlockID: UUID?
+    @State private var textBlockHeights: [UUID: CGFloat] = [:]
+
     @State private var textSize: Double
     @State private var textAlignment: WorkspaceNoteTextAlignment
-    @State private var bulletListEnabled: Bool
-    @State private var numberedListEnabled: Bool
-    @State private var imagePaths: [String]
-    @State private var mode: NoteWritingMode = .mobile
 
-    @State private var isEditingTitle = false
-    @State private var showParagraphSheet = false
+    @State private var showFormatSheet = false
     @State private var showDeleteConfirmation = false
-    @State private var selectedPhotoItem: PhotosPickerItem?
-    @State private var showPhotoPicker = false
-    @State private var importError: String?
 
     init(
         note: WorkspaceNote,
@@ -43,18 +45,11 @@ struct WorkspaceNoteEditorView: View {
         self.note = note
         self.onSave = onSave
         self.onDelete = onDelete
+
         _title = State(initialValue: note.displayTitle)
-        _content = State(initialValue: note.content)
-        _isBoldEnabled = State(initialValue: note.isBoldEnabled)
+        _blocks = State(initialValue: note.blocks.isEmpty ? [WorkspaceNoteBlock.text(note.content)] : note.blocks)
         _textSize = State(initialValue: note.textSize)
         _textAlignment = State(initialValue: note.textAlignment)
-        _bulletListEnabled = State(initialValue: note.bulletListEnabled)
-        _numberedListEnabled = State(initialValue: note.numberedListEnabled)
-        _imagePaths = State(initialValue: note.imagePaths)
-    }
-
-    private var wordCount: Int {
-        content.split { $0.isWhitespace || $0.isNewline }.count
     }
 
     private var resolvedTitle: String {
@@ -62,75 +57,30 @@ struct WorkspaceNoteEditorView: View {
         return trimmed.isEmpty ? "Untitled Note" : trimmed
     }
 
-    private var textAlignmentValue: TextAlignment {
-        switch textAlignment {
-        case .left:
-            return .leading
-        case .center:
-            return .center
-        case .right:
-            return .trailing
-        }
-    }
-
     var body: some View {
         ZStack {
-            WorkspaceTheme.background.ignoresSafeArea()
+            Color(uiColor: colorScheme == .dark ? UIColor(red: 0.10, green: 0.12, blue: 0.11, alpha: 1) : UIColor(red: 0.97, green: 0.98, blue: 0.96, alpha: 1))
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 topBar
                 modePicker
 
-                Group {
-                    if mode == .mobile {
-                        editorSurface
+                ScrollView {
+                    if mode == .paper {
+                        paperCanvas
                     } else {
-                        ScrollView {
-                            HStack {
-                                Spacer(minLength: 0)
-                                editorSurface
-                                    .frame(maxWidth: 620)
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                        }
+                        mobileCanvas
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                toolbar
-                footer
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            bottomToolbar
         }
         .toolbar(.hidden, for: .navigationBar)
-        .photosPicker(
-            isPresented: $showPhotoPicker,
-            selection: $selectedPhotoItem,
-            matching: .images,
-            preferredItemEncoding: .automatic
-        )
-        .onChange(of: selectedPhotoItem) { _, item in
-            guard let item else { return }
-            Task {
-                do {
-                    guard let data = try await item.loadTransferable(type: Data.self) else {
-                        importError = "Could not load selected image."
-                        return
-                    }
-                    let path = try WorkspaceNoteStorageService.shared.persistNoteImage(
-                        data: data,
-                        workspaceID: note.workspaceID,
-                        noteID: note.id
-                    )
-                    imagePaths.append(path)
-                } catch {
-                    importError = "Image import failed. Please try again."
-                }
-            }
-        }
-        .sheet(isPresented: $showParagraphSheet) {
-            paragraphSettingsSheet
+        .sheet(isPresented: $showFormatSheet) {
+            formatSheet
                 .presentationDetents([.medium])
         }
         .alert("Delete Note?", isPresented: $showDeleteConfirmation) {
@@ -142,13 +92,44 @@ struct WorkspaceNoteEditorView: View {
         } message: {
             Text("This note will be removed from this workspace.")
         }
-        .alert("Import Error", isPresented: Binding(
-            get: { importError != nil },
-            set: { if !$0 { importError = nil } }
+        .confirmationDialog("Image Options", isPresented: Binding(
+            get: { imageActionBlockID != nil },
+            set: { if !$0 { imageActionBlockID = nil } }
         )) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(importError ?? "")
+            Button("Small") { setImageSize(.small) }
+            Button("Medium") { setImageSize(.medium) }
+            Button("Full Width") { setImageSize(.full) }
+            Button("Delete Image", role: .destructive) {
+                guard let id = imageActionBlockID else { return }
+                removeBlock(id)
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Table Options", isPresented: Binding(
+            get: { tableActionBlockID != nil },
+            set: { if !$0 { tableActionBlockID = nil } }
+        )) {
+            Button("Add Row") {
+                guard let id = tableActionBlockID else { return }
+                addTableRow(for: id)
+            }
+            Button("Add Column") {
+                guard let id = tableActionBlockID else { return }
+                addTableColumn(for: id)
+            }
+            Button("Delete Table", role: .destructive) {
+                guard let id = tableActionBlockID else { return }
+                removeBlock(id)
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .onAppear {
+            if let firstText = blocks.first(where: { $0.kind == .text }) {
+                activeBlockID = firstText.id
+                focusedTextBlockID = firstText.id
+            }
+            richTextController.currentFontSize = CGFloat(textSize)
+            applyAlignmentToController(textAlignment)
         }
     }
 
@@ -160,62 +141,36 @@ struct WorkspaceNoteEditorView: View {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(palette.primaryStrong)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 34, height: 34)
                     .background(WorkspaceTheme.secondaryBackground)
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
 
-            Spacer(minLength: 8)
+            TextField("Untitled Note", text: $title)
+                .font(.headline.weight(.semibold))
+                .multilineTextAlignment(.center)
 
-            Group {
-                if isEditingTitle {
-                    TextField("Untitled Note", text: $title)
-                        .font(.headline.weight(.bold))
-                        .multilineTextAlignment(.center)
-                        .submitLabel(.done)
-                        .onSubmit { isEditingTitle = false }
-                } else {
-                    Button {
-                        isEditingTitle = true
+            Menu {
+                if onDelete != nil {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
                     } label: {
-                        Text(resolvedTitle)
-                            .font(.headline.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
+                        Label("Delete Note", systemImage: "trash")
                     }
-                    .buttonStyle(.plain)
                 }
-            }
-            .frame(maxWidth: 220)
-
-            Spacer(minLength: 8)
-
-            if onDelete != nil {
-                Button {
-                    showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.red)
-                        .frame(width: 36, height: 36)
-                        .background(WorkspaceTheme.secondaryBackground)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-            }
-
-            Button {
-                saveNoteAndDismiss()
             } label: {
-                Text("Save")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(palette.primaryStrong)
-                    .clipShape(Capsule())
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(WorkspaceTheme.mutedText)
+                    .frame(width: 30, height: 30)
             }
+
+            Button("Save") {
+                saveAndDismiss()
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(palette.primaryStrong)
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
@@ -224,103 +179,268 @@ struct WorkspaceNoteEditorView: View {
     }
 
     private var modePicker: some View {
-        Picker("Writing mode", selection: $mode) {
-            ForEach(NoteWritingMode.allCases) { mode in
-                Text(mode.rawValue).tag(mode)
+        Picker("Mode", selection: $mode) {
+            ForEach(Mode.allCases) { option in
+                Text(option.rawValue).tag(option)
             }
         }
         .pickerStyle(.segmented)
+        .font(.footnote.weight(.medium))
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
-    private var editorSurface: some View {
-        VStack(spacing: 12) {
-            ZStack(alignment: alignmentForPlaceholder) {
-                if content.isEmpty {
-                    Text("Start writing your notes...")
-                        .font(.system(size: textSize, weight: .regular, design: .rounded))
-                        .foregroundStyle(WorkspaceTheme.mutedText)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
+    private var mobileCanvas: some View {
+        LazyVStack(alignment: .leading, spacing: 4) {
+            ForEach($blocks) { $block in
+                blockView(block: $block)
+            }
+
+            Color.clear
+                .frame(height: 80)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    focusTrailingTextBlock()
+                }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 18)
+    }
+
+    private var paperCanvas: some View {
+        VStack {
+            LazyVStack(alignment: .leading, spacing: 4) {
+                ForEach($blocks) { $block in
+                    blockView(block: $block)
                 }
 
-                TextEditor(text: $content)
-                    .scrollContentBackground(.hidden)
-                    .font(.system(size: textSize, weight: isBoldEnabled ? .semibold : .regular, design: .rounded))
-                    .multilineTextAlignment(textAlignmentValue)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 10)
-            }
-            .frame(minHeight: mode == .paper ? 420 : 280)
-
-            if !imagePaths.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(imagePaths, id: \.self) { path in
-                            imagePreview(path: path)
-                        }
+                Color.clear
+                    .frame(height: 80)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        focusTrailingTextBlock()
                     }
-                    .padding(.horizontal, 2)
-                }
-                .frame(height: 92)
             }
+            .padding(.horizontal, 26)
+            .padding(.vertical, 30)
+            .frame(maxWidth: 720)
+            .background(Color(uiColor: .systemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(Color.primary.opacity(0.07), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.10), radius: 16, x: 0, y: 8)
         }
-        .padding(14)
-        .background(mode == .paper ? Color(.systemBackground) : WorkspaceTheme.surfaceSecondary(for: colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.primary.opacity(mode == .paper ? 0.16 : 0.08), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(mode == .paper ? 0.12 : 0.05), radius: mode == .paper ? 16 : 8, x: 0, y: mode == .paper ? 8 : 4)
-        .padding(.horizontal, mode == .paper ? 0 : 16)
-        .padding(.top, 2)
-    }
-
-    private var toolbar: some View {
-        HStack(spacing: 14) {
-            toolbarIcon("bold", isActive: isBoldEnabled) {
-                isBoldEnabled.toggle()
-            }
-            toolbarIcon("photo", isActive: false) {
-                showPhotoPicker = true
-            }
-            toolbarIcon("tablecells", isActive: false) {
-                insertTablePlaceholder()
-            }
-            toolbarIcon("paragraph", isActive: bulletListEnabled || numberedListEnabled) {
-                showParagraphSheet = true
-            }
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial)
-        .clipShape(Capsule())
-        .overlay(
-            Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1)
-        )
-        .padding(.top, 10)
-    }
-
-    private var footer: some View {
-        HStack {
-            Text("\(wordCount) words")
-            Spacer()
-            Text(note.createdDisplayText)
-        }
-        .font(.caption)
-        .foregroundStyle(WorkspaceTheme.mutedText)
-        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
         .padding(.vertical, 12)
     }
 
-    private var paragraphSettingsSheet: some View {
+    @ViewBuilder
+    private func blockView(block: Binding<WorkspaceNoteBlock>) -> some View {
+        switch block.wrappedValue.kind {
+        case .text:
+            textBlockView(block: block)
+        case .image:
+            imageBlockView(block: block)
+        case .table:
+            tableBlockView(block: block)
+        case .checklist:
+            checklistBlockView(block: block)
+        }
+    }
+
+    private func textBlockView(block: Binding<WorkspaceNoteBlock>) -> some View {
+        WorkspaceRichTextView(
+            textDataBase64: Binding(
+                get: { block.wrappedValue.textDataBase64 ?? "" },
+                set: { block.wrappedValue.textDataBase64 = $0 }
+            ),
+            measuredHeight: Binding(
+                get: { textBlockHeights[block.wrappedValue.id] ?? 44 },
+                set: { textBlockHeights[block.wrappedValue.id] = $0 }
+            ),
+            focusedBlockID: $focusedTextBlockID,
+            blockID: block.wrappedValue.id,
+            textSize: textSize,
+            alignment: textAlignment,
+            controller: richTextController,
+            onTextChange: {
+                activeBlockID = block.wrappedValue.id
+            }
+        )
+        .frame(height: max(44, textBlockHeights[block.wrappedValue.id] ?? 44))
+        .onTapGesture {
+            activeBlockID = block.wrappedValue.id
+            focusedTextBlockID = block.wrappedValue.id
+            selectedImageBlockID = nil
+            selectedTableBlockID = nil
+        }
+    }
+
+    private func imageBlockView(block: Binding<WorkspaceNoteBlock>) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let path = block.wrappedValue.imagePath {
+                WorkspaceNoteImageView(
+                    path: path,
+                    maxWidth: imageWidth(for: block.wrappedValue.imageDisplaySize ?? .medium)
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onTapGesture {
+                    selectedImageBlockID = block.wrappedValue.id
+                    selectedTableBlockID = nil
+                    activeBlockID = block.wrappedValue.id
+                    imageActionBlockID = block.wrappedValue.id
+                }
+            }
+        }
+        .padding(.vertical, 1)
+    }
+
+    private func tableBlockView(block: Binding<WorkspaceNoteBlock>) -> some View {
+        VStack(spacing: 6) {
+            if let table = normalizedTable(block.wrappedValue.table) {
+                let rowCount = table.cells.count
+                let colCount = table.cells.first?.count ?? 0
+                Grid(horizontalSpacing: 6, verticalSpacing: 6) {
+                    ForEach(0..<rowCount, id: \.self) { row in
+                        GridRow {
+                            ForEach(0..<colCount, id: \.self) { col in
+                                TextField(
+                                    "",
+                                    text: Binding(
+                                        get: {
+                                            guard let current = normalizedTable(block.wrappedValue.table),
+                                                  row < current.cells.count,
+                                                  col < current.cells[row].count else { return "" }
+                                            return current.cells[row][col]
+                                        },
+                                        set: { newValue in
+                                            guard var current = normalizedTable(block.wrappedValue.table),
+                                                  row < current.cells.count,
+                                                  col < current.cells[row].count else { return }
+                                            current.cells[row][col] = newValue
+                                            current.rows = current.cells.count
+                                            current.columns = current.cells.first?.count ?? 0
+                                            block.wrappedValue.table = current
+                                        }
+                                    )
+                                )
+                                .textFieldStyle(.roundedBorder)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 1)
+        .onTapGesture {
+            selectedTableBlockID = block.wrappedValue.id
+            selectedImageBlockID = nil
+            activeBlockID = block.wrappedValue.id
+            tableActionBlockID = block.wrappedValue.id
+        }
+    }
+
+    private func checklistBlockView(block: Binding<WorkspaceNoteBlock>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let items = block.wrappedValue.checklist?.items {
+                ForEach(items.indices, id: \.self) { index in
+                    HStack(spacing: 8) {
+                        Button {
+                            block.wrappedValue.checklist?.items[index].isChecked.toggle()
+                        } label: {
+                            Image(systemName: (block.wrappedValue.checklist?.items[index].isChecked ?? false) ? "checkmark.circle.fill" : "circle")
+                                .font(.system(size: 18))
+                                .foregroundStyle(palette.primaryStrong)
+                        }
+                        .buttonStyle(.plain)
+
+                        TextField(
+                            "List item",
+                            text: Binding(
+                                get: { block.wrappedValue.checklist?.items[index].text ?? "" },
+                                set: { block.wrappedValue.checklist?.items[index].text = $0 }
+                            )
+                        )
+                        .font(.body)
+                        .onSubmit {
+                            if index == (block.wrappedValue.checklist?.items.count ?? 1) - 1 {
+                                block.wrappedValue.checklist?.items.append(WorkspaceChecklistItem(text: ""))
+                            }
+                        }
+                    }
+                }
+            }
+
+            HStack {
+                Button("Add item") {
+                    block.wrappedValue.checklist?.items.append(WorkspaceChecklistItem(text: ""))
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(palette.primaryStrong)
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Button("Remove checklist") {
+                    removeBlock(block.wrappedValue.id)
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.red)
+                .buttonStyle(.plain)
+            }
+            .padding(.leading, 26)
+            .padding(.top, 2)
+        }
+        .padding(.vertical, 1)
+    }
+
+    private var bottomToolbar: some View {
+        HStack(spacing: 18) {
+            toolbarIcon("checklist") { insertChecklistBlock() }
+            toolbarIcon("textformat") { showFormatSheet = true }
+
+            Spacer()
+
+            Text(note.createdDisplayText)
+                .font(.caption)
+                .foregroundStyle(WorkspaceTheme.mutedText)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Divider().opacity(0.3)
+        }
+    }
+
+    private var formatSheet: some View {
         NavigationStack {
             Form {
-                Section("Text Size") {
-                    Stepper(value: $textSize, in: 14...28, step: 1) {
-                        Text("\(Int(textSize)) pt")
+                Section("Text Style") {
+                    styleToggleButton(title: "Bold", isActive: richTextController.isBold) {
+                        richTextController.toggleBold()
+                    }
+                    styleToggleButton(title: "Italic", isActive: richTextController.isItalic) {
+                        richTextController.toggleItalic()
+                    }
+                    styleToggleButton(title: "Underline", isActive: richTextController.isUnderline) {
+                        richTextController.toggleUnderline()
+                    }
+                }
+
+                Section("Text Type") {
+                    Button("Heading") {
+                        textSize = 24
+                        richTextController.setFontSize(24)
+                    }
+                    Button("Body") {
+                        textSize = 18
+                        richTextController.setFontSize(18)
                     }
                 }
 
@@ -331,124 +451,349 @@ struct WorkspaceNoteEditorView: View {
                         Text("Right").tag(WorkspaceNoteTextAlignment.right)
                     }
                     .pickerStyle(.segmented)
+                    .onChange(of: textAlignment) { _, newValue in
+                        applyAlignmentToController(newValue)
+                    }
                 }
 
                 Section("Lists") {
-                    Toggle("Bullet list", isOn: Binding(
-                        get: { bulletListEnabled },
-                        set: { newValue in
-                            bulletListEnabled = newValue
-                            if newValue {
-                                numberedListEnabled = false
-                                insertListPrefixIfNeeded(prefix: "• ")
-                            }
-                        }
-                    ))
-                    Toggle("Numbered list", isOn: Binding(
-                        get: { numberedListEnabled },
-                        set: { newValue in
-                            numberedListEnabled = newValue
-                            if newValue {
-                                bulletListEnabled = false
-                                insertListPrefixIfNeeded(prefix: "1. ")
-                            }
-                        }
-                    ))
-                }
-            }
-            .navigationTitle("Paragraph")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        showParagraphSheet = false
+                    Button("Normal paragraph") {
+                        richTextController.applyListStyle(.paragraph)
+                    }
+                    Button("Bullet list") {
+                        richTextController.applyListStyle(.bullet)
+                    }
+                    Button("Numbered list") {
+                        richTextController.applyListStyle(.numbered)
+                    }
+                    Button("Checklist") {
+                        insertChecklistBlock()
                     }
                 }
             }
-        }
-    }
-
-    private func imagePreview(path: String) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Group {
-                if let image = UIImage(contentsOfFile: path) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    Rectangle()
-                        .fill(WorkspaceTheme.secondaryBackground)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .foregroundStyle(WorkspaceTheme.mutedText)
-                        )
+            .navigationTitle("Format")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { showFormatSheet = false }
                 }
             }
-            .frame(width: 84, height: 84)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-            Button {
-                imagePaths.removeAll { $0 == path }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(.white, Color.black.opacity(0.7))
-            }
-            .offset(x: 4, y: -4)
         }
     }
 
-    private func toolbarIcon(_ systemName: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+    private func toolbarIcon(_ icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(isActive ? .white : palette.primaryStrong)
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(palette.primaryStrong)
                 .frame(width: 30, height: 30)
-                .background(isActive ? palette.primaryStrong : palette.iconBackground)
-                .clipShape(Circle())
         }
         .buttonStyle(.plain)
     }
 
-    private var alignmentForPlaceholder: Alignment {
-        switch textAlignment {
+    private func styleToggleButton(title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                Spacer()
+                if isActive {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(palette.primaryStrong)
+                }
+            }
+        }
+    }
+
+    private func applyAlignmentToController(_ alignment: WorkspaceNoteTextAlignment) {
+        switch alignment {
         case .left:
-            return .topLeading
+            richTextController.setAlignment(.left)
         case .center:
-            return .top
+            richTextController.setAlignment(.center)
         case .right:
-            return .topTrailing
+            richTextController.setAlignment(.right)
         }
     }
 
-    private func insertTablePlaceholder() {
-        let table = "\n\n| Column 1 | Column 2 |\n|---|---|\n| Value | Value |\n"
-        content.append(table)
+    private func insertChecklistBlock() {
+        insertInlineBlockAtCursor(.checklist())
     }
 
-    private func insertListPrefixIfNeeded(prefix: String) {
-        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            content = prefix
+    private func insertInlineBlockAtCursor(_ block: WorkspaceNoteBlock) {
+        var trailingTextToFocusID: UUID?
+        if let activeID = activeBlockID,
+           let index = blocks.firstIndex(where: { $0.id == activeID }) {
+            if blocks[index].kind == .text {
+                let attributed = blocks[index].attributedText()
+                let (start, end) = clampedSelectionRange(
+                    richTextController.selectedRange,
+                    in: attributed.length
+                )
+
+                var replacements: [WorkspaceNoteBlock] = []
+                if start > 0 {
+                    let before = attributed.attributedSubstring(from: NSRange(location: 0, length: start))
+                    var beforeBlock = WorkspaceNoteBlock.text()
+                    beforeBlock.storeAttributedText(before)
+                    replacements.append(beforeBlock)
+                }
+
+                replacements.append(block)
+
+                if end < attributed.length {
+                    let after = attributed.attributedSubstring(from: NSRange(location: end, length: attributed.length - end))
+                    var afterBlock = WorkspaceNoteBlock.text()
+                    afterBlock.storeAttributedText(after)
+                    trailingTextToFocusID = afterBlock.id
+                    replacements.append(afterBlock)
+                } else {
+                    let trailing = WorkspaceNoteBlock.text()
+                    trailingTextToFocusID = trailing.id
+                    replacements.append(trailing)
+                }
+
+                blocks.replaceSubrange(index...index, with: replacements)
+            } else {
+                blocks.insert(block, at: index + 1)
+                let trailing = WorkspaceNoteBlock.text()
+                blocks.insert(trailing, at: index + 2)
+                trailingTextToFocusID = trailing.id
+            }
+        } else {
+            blocks.append(block)
+            let trailing = WorkspaceNoteBlock.text()
+            blocks.append(trailing)
+            trailingTextToFocusID = trailing.id
+        }
+        if let trailingTextToFocusID {
+            activeBlockID = trailingTextToFocusID
+            focusedTextBlockID = trailingTextToFocusID
+        } else {
+            activeBlockID = block.id
+        }
+        selectedImageBlockID = nil
+        selectedTableBlockID = nil
+    }
+
+    private func removeBlock(_ id: UUID) {
+        if let block = blocks.first(where: { $0.id == id }),
+           block.kind == .image,
+           let path = block.imagePath {
+            let isUsedElsewhere = blocks.contains { candidate in
+                candidate.id != id && candidate.kind == .image && candidate.imagePath == path
+            }
+            if !isUsedElsewhere {
+                WorkspaceNoteStorageService.shared.deleteNoteImageIfExists(path: path)
+                WorkspaceNoteImageCache.shared.remove(path: path)
+            }
+        }
+
+        blocks.removeAll { $0.id == id }
+        if blocks.isEmpty {
+            let fallback = WorkspaceNoteBlock.text()
+            blocks = [fallback]
+            activeBlockID = fallback.id
+        }
+        if selectedImageBlockID == id { selectedImageBlockID = nil }
+        if selectedTableBlockID == id { selectedTableBlockID = nil }
+    }
+
+    private func imageWidth(for size: WorkspaceImageDisplaySize) -> CGFloat? {
+        switch size {
+        case .small:
+            return mode == .paper ? 200 : 160
+        case .medium:
+            return mode == .paper ? 340 : 260
+        case .full:
+            return nil
         }
     }
 
-    private func saveNoteAndDismiss() {
+    private func setImageSize(_ size: WorkspaceImageDisplaySize) {
+        guard let id = imageActionBlockID,
+              let index = blocks.firstIndex(where: { $0.id == id }) else { return }
+        blocks[index].imageDisplaySize = size
+    }
+
+    private func addTableRow(for id: UUID) {
+        guard let index = blocks.firstIndex(where: { $0.id == id }),
+              var table = normalizedTable(blocks[index].table) else { return }
+        let columnCount = max(1, table.cells.first?.count ?? table.columns)
+        table.cells.append(Array(repeating: "", count: columnCount))
+        table.rows = table.cells.count
+        table.columns = columnCount
+        blocks[index].table = table
+    }
+
+    private func addTableColumn(for id: UUID) {
+        guard let index = blocks.firstIndex(where: { $0.id == id }),
+              var table = normalizedTable(blocks[index].table) else { return }
+        table.cells = table.cells.map { row in
+            var updated = row
+            updated.append("")
+            return updated
+        }
+        table.rows = table.cells.count
+        table.columns = table.cells.first?.count ?? max(1, table.columns + 1)
+        blocks[index].table = table
+    }
+
+    private func focusTrailingTextBlock() {
+        if let lastTextIndex = blocks.lastIndex(where: { $0.kind == .text }) {
+            activeBlockID = blocks[lastTextIndex].id
+            focusedTextBlockID = blocks[lastTextIndex].id
+            selectedImageBlockID = nil
+            selectedTableBlockID = nil
+            return
+        }
+
+        let trailing = WorkspaceNoteBlock.text()
+        blocks.append(trailing)
+        activeBlockID = trailing.id
+        focusedTextBlockID = trailing.id
+        selectedImageBlockID = nil
+        selectedTableBlockID = nil
+    }
+
+    private func normalizedTable(_ table: WorkspaceTableBlock?) -> WorkspaceTableBlock? {
+        guard var table else { return nil }
+        let expectedRows = max(1, table.rows)
+        let expectedColumns = max(1, table.columns)
+
+        if table.cells.isEmpty {
+            table.cells = Array(repeating: Array(repeating: "", count: expectedColumns), count: expectedRows)
+        }
+
+        table.cells = table.cells.map { row in
+            if row.count >= expectedColumns { return Array(row.prefix(expectedColumns)) }
+            return row + Array(repeating: "", count: expectedColumns - row.count)
+        }
+
+        if table.cells.count < expectedRows {
+            table.cells.append(contentsOf: Array(
+                repeating: Array(repeating: "", count: expectedColumns),
+                count: expectedRows - table.cells.count
+            ))
+        } else if table.cells.count > expectedRows {
+            table.cells = Array(table.cells.prefix(expectedRows))
+        }
+
+        table.rows = table.cells.count
+        table.columns = table.cells.first?.count ?? expectedColumns
+        return table
+    }
+
+    private func clampedSelectionRange(_ selection: NSRange, in textLength: Int) -> (Int, Int) {
+        guard textLength > 0 else { return (0, 0) }
+
+        // NSNotFound / invalid selection can appear when editor focus changes.
+        let rawLocation = selection.location == NSNotFound ? textLength : selection.location
+        let start = max(0, min(rawLocation, textLength))
+
+        // Prevent overflow from `location + length` on invalid ranges.
+        let safeLength: Int
+        if selection.length == NSNotFound {
+            safeLength = 0
+        } else {
+            safeLength = max(0, selection.length)
+        }
+
+        let maxTail = max(0, textLength - start)
+        let clampedLength = min(safeLength, maxTail)
+        let end = start + clampedLength
+        return (start, end)
+    }
+
+    private func saveAndDismiss() {
+        let plain = blocks.map { $0.plainTextSummary }
+            .joined(separator: "\n\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
         var updated = note
         updated.title = resolvedTitle
-        updated.content = content
-        updated.isBoldEnabled = isBoldEnabled
+        updated.blocks = blocks
+        updated.content = plain
         updated.textSize = textSize
         updated.textAlignment = textAlignment
-        updated.bulletListEnabled = bulletListEnabled
-        updated.numberedListEnabled = numberedListEnabled
-        updated.imagePaths = imagePaths
+        updated.isBoldEnabled = richTextController.isBold
         updated.updatedAt = Date()
+
         onSave(updated)
         dismiss()
     }
+
 }
 
 #Preview {
     WorkspaceNoteEditorView(note: WorkspaceNote(workspaceID: UUID()), onSave: { _ in }, onDelete: { _ in })
+}
+
+private struct WorkspaceNoteImageView: View {
+    let path: String
+    let maxWidth: CGFloat?
+
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.secondary.opacity(0.12))
+                    .overlay {
+                        ProgressView()
+                    }
+                    .frame(height: 140)
+            }
+        }
+        .frame(maxWidth: maxWidth, alignment: .leading)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .task(id: path) {
+            image = await WorkspaceNoteImageCache.shared.image(for: path, maxPixelSize: 1600)
+        }
+    }
+}
+
+private final class WorkspaceNoteImageCache {
+    static let shared = WorkspaceNoteImageCache()
+
+    private let cache = NSCache<NSString, UIImage>()
+
+    private init() {
+        cache.countLimit = 40
+        cache.totalCostLimit = 64 * 1024 * 1024
+    }
+
+    func image(for path: String, maxPixelSize: CGFloat) async -> UIImage? {
+        if let cached = cache.object(forKey: path as NSString) {
+            return cached
+        }
+
+        return await Task.detached(priority: .utility) { [cache] in
+            guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil) else {
+                return nil
+            }
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCache: false,
+                kCGImageSourceThumbnailMaxPixelSize: Int(maxPixelSize)
+            ]
+            guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+                return nil
+            }
+            let decoded = UIImage(cgImage: cgImage)
+            let bytesPerRow = cgImage.bytesPerRow
+            let cost = max(1, bytesPerRow * cgImage.height)
+            cache.setObject(decoded, forKey: path as NSString, cost: cost)
+            return decoded
+        }.value
+    }
+
+    func remove(path: String) {
+        cache.removeObject(forKey: path as NSString)
+    }
 }

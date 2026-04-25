@@ -6,6 +6,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PasswordResetTokenModule } from './modules/password-reset-token/password-reset-token.module';
+import { WorkspaceModule } from './modules/workspace/workspace.module';
 
 @Module({
     imports: [
@@ -29,6 +30,7 @@ import { PasswordResetTokenModule } from './modules/password-reset-token/passwor
         UserModule,
         AuthModule,
         PasswordResetTokenModule,
+        WorkspaceModule,
     ],
     controllers: [AppController],
     providers: [AppService],

@@ -129,6 +129,43 @@ class APIService {
         )
         return response
     }
+
+    // MARK: - Workspace Methods
+
+    func fetchWorkspaces() async throws -> [RemoteStudySpace] {
+        let endpoint = "/workspaces"
+        let response: [RemoteStudySpace] = try await performRequest(endpoint: endpoint, method: .get)
+        return response
+    }
+
+    func createWorkspace(request: CreateWorkspaceRequest) async throws -> RemoteStudySpace {
+        let endpoint = "/workspaces"
+        let response: RemoteStudySpace = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: request
+        )
+        return response
+    }
+
+    func updateWorkspace(id: UUID, request: UpdateWorkspaceRequest) async throws -> RemoteStudySpace {
+        let endpoint = "/workspaces/\(id.uuidString.lowercased())"
+        let response: RemoteStudySpace = try await performRequest(
+            endpoint: endpoint,
+            method: .put,
+            body: request
+        )
+        return response
+    }
+
+    func deleteWorkspace(id: UUID) async throws {
+        let endpoint = "/workspaces/\(id.uuidString.lowercased())"
+        struct EmptyResponse: Decodable {}
+        _ = try await performRequest(
+            endpoint: endpoint,
+            method: .delete
+        ) as EmptyResponse
+    }
     
     // MARK: - PDF Upload Methods
     

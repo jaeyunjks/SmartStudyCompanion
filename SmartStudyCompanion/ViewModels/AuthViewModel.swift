@@ -245,6 +245,7 @@ class AuthViewModel: ObservableObject {
         isAuthenticated = false
         errorMessage = nil
         rememberMeEnabled = false
+        StudySpaceStore.shared.clearLocalCache()
 
         UserDefaults.standard.removeObject(forKey: Self.loggedInKey)
         UserDefaults.standard.removeObject(forKey: Self.profileDataKey)
@@ -286,6 +287,10 @@ class AuthViewModel: ObservableObject {
         } else {
             UserDefaults.standard.removeObject(forKey: Self.rememberedEmailKey)
             UserDefaults.standard.removeObject(forKey: Self.rememberedPasswordKey)
+        }
+
+        Task {
+            await StudySpaceStore.shared.refreshFromBackend()
         }
     }
 

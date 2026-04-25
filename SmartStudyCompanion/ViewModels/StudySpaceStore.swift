@@ -3,11 +3,17 @@ import Combine
 
 final class StudySpaceStore: ObservableObject {
     static let shared = StudySpaceStore()
+    private static let storageKey = "studyspaces.saved.v1"
+    private let apiService = APIService.shared
 
     @Published private(set) var studySpaces: [StudySpace]
 
     init(seed: [StudySpace] = []) {
-        studySpaces = seed
+        let persisted = Self.loadPersistedStudySpaces()
+        studySpaces = persisted.isEmpty ? seed : persisted
+        Task {
+            await refreshFromBackend()
+        }
     }
 
     func addStudyWorkspace(
@@ -34,6 +40,12 @@ final class StudySpaceStore: ObservableObject {
             progress: 0.0
         )
         studySpaces.insert(newSpace, at: 0)
+        persistStudySpaces()
+
+        let temporaryId = newSpace.id
+        Task { [weak self] in
+            await self?.createWorkspaceOnBackend(localId: temporaryId, workspace: newSpace)
+        }
     }
 
     func updateStudyWorkspace(
@@ -62,6 +74,12 @@ final class StudySpaceStore: ObservableObject {
             aiOutputCount: existing.aiOutputCount,
             progress: existing.progress
         )
+        persistStudySpaces()
+
+        let updatedSpace = studySpaces[index]
+        Task { [weak self] in
+            await self?.updateWorkspaceOnBackend(workspace: updatedSpace)
+        }
     }
 
     func updateStatus(for id: UUID, status: String) {
@@ -82,9 +100,82 @@ final class StudySpaceStore: ObservableObject {
             aiOutputCount: existing.aiOutputCount,
             progress: existing.progress
         )
+        persistStudySpaces()
+
+        let updatedSpace = studySpaces[index]
+        Task { [weak self] in
+            await self?.updateWorkspaceOnBackend(workspace: updatedSpace)
+        }
     }
 
     func deleteStudySpace(id: UUID) {
         studySpaces.removeAll { $0.id == id }
+        persistStudySpaces()
+
+        Task { [weak self] in
+            await self?.deleteWorkspaceOnBackend(id: id)
+        }
+    }
+
+    func refreshFromBackend() async {
+        do {
+            let remote = try await apiService.fetchWorkspaces()
+            await MainActor.run {
+                self.studySpaces = remote.map(StudySpace.fromRemote(_:))
+                self.persistStudySpaces()
+            }
+        } catch {
+            // Keep local cached data when backend is unavailable or user is signed out.
+        }
+    }
+
+    func clearLocalCache() {
+        studySpaces = []
+        persistStudySpaces()
+    }
+
+    private func persistStudySpaces() {
+        guard let data = try? JSONEncoder().encode(studySpaces) else { return }
+        UserDefaults.standard.set(data, forKey: Self.storageKey)
+    }
+
+    private static func loadPersistedStudySpaces() -> [StudySpace] {
+        guard
+            let data = UserDefaults.standard.data(forKey: storageKey),
+            let decoded = try? JSONDecoder().decode([StudySpace].self, from: data)
+        else {
+            return []
+        }
+        return decoded
+    }
+
+    private func createWorkspaceOnBackend(localId: UUID, workspace: StudySpace) async {
+        do {
+            let remote = try await apiService.createWorkspace(request: workspace.createRequest)
+            let mapped = StudySpace.fromRemote(remote)
+            await MainActor.run {
+                guard let index = self.studySpaces.firstIndex(where: { $0.id == localId }) else { return }
+                self.studySpaces[index] = mapped
+                self.persistStudySpaces()
+            }
+        } catch {
+            // Keep local workspace if backend sync fails.
+        }
+    }
+
+    private func updateWorkspaceOnBackend(workspace: StudySpace) async {
+        do {
+            _ = try await apiService.updateWorkspace(id: workspace.id, request: workspace.updateRequest)
+        } catch {
+            // Silent failure for now; local value is preserved and can be retried.
+        }
+    }
+
+    private func deleteWorkspaceOnBackend(id: UUID) async {
+        do {
+            try await apiService.deleteWorkspace(id: id)
+        } catch {
+            // Silent failure for now; backend may already be in sync or unavailable.
+        }
     }
 }

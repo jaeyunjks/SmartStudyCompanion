@@ -6,6 +6,7 @@ struct WorkspaceNotesSectionView: View {
     let notes: [WorkspaceNote]
     let onCreateNote: () -> Void
     let onSelectNote: (WorkspaceNote) -> Void
+    let onViewAllNotes: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -48,11 +49,11 @@ struct WorkspaceNotesSectionView: View {
                             onSelectNote(note)
                         } label: {
                             VStack(alignment: .leading, spacing: 5) {
-                                Text(note.title)
+                                Text(note.displayTitle)
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.primary)
                                     .lineLimit(1)
-                                Text(note.updatedAt, style: .relative)
+                                Text(note.createdDisplayText)
                                     .font(.caption)
                                     .foregroundStyle(WorkspaceTheme.mutedText)
                             }
@@ -63,6 +64,17 @@ struct WorkspaceNotesSectionView: View {
                         }
                         .buttonStyle(WorkspacePressableButtonStyle())
                     }
+
+                    if notes.count > 3 {
+                        Button("View all notes") {
+                            onViewAllNotes()
+                        }
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(palette.primaryStrong)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
@@ -72,6 +84,6 @@ struct WorkspaceNotesSectionView: View {
 }
 
 #Preview {
-    WorkspaceNotesSectionView(notes: [], onCreateNote: {}, onSelectNote: { _ in })
+    WorkspaceNotesSectionView(notes: [], onCreateNote: {}, onSelectNote: { _ in }, onViewAllNotes: {})
         .padding()
 }

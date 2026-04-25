@@ -121,9 +121,8 @@ final class ActiveWorkspaceViewModel: ObservableObject {
 
     func saveNote(_ note: WorkspaceNote) {
         var updated = note
-        let trimmedContent = updated.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        let firstLine = trimmedContent.split(separator: "\n").first.map(String.init) ?? ""
-        updated.title = firstLine.isEmpty ? "Untitled Note" : String(firstLine.prefix(52))
+        let trimmedTitle = updated.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        updated.title = trimmedTitle.isEmpty ? "Untitled Note" : String(trimmedTitle.prefix(80))
         updated.updatedAt = Date()
 
         if let index = notes.firstIndex(where: { $0.id == updated.id }) {
@@ -136,6 +135,15 @@ final class ActiveWorkspaceViewModel: ObservableObject {
             try noteStorageService.saveNotes(notes, workspaceID: workspaceID)
         } catch {
             importErrorMessage = "Could not save note. Please try again."
+        }
+    }
+
+    func deleteNote(_ note: WorkspaceNote) {
+        notes.removeAll { $0.id == note.id }
+        do {
+            try noteStorageService.saveNotes(notes, workspaceID: workspaceID)
+        } catch {
+            importErrorMessage = "Could not delete note. Please try again."
         }
     }
 

@@ -71,6 +71,7 @@ struct ActiveWorkspaceView: View {
     @State private var showEditWorkspaceSheet = false
     @State private var activeNoteDraft: WorkspaceNote?
     @State private var showSummaryDetail = false
+    @State private var showAllNotes = false
     @State private var showAIChat = false
     @State private var showKnowledgeQuiz = false
     @State private var showFlashcardSession = false
@@ -138,7 +139,8 @@ struct ActiveWorkspaceView: View {
                             WorkspaceNotesSectionView(
                                 notes: viewModel.notes,
                                 onCreateNote: { activeNoteDraft = viewModel.makeDraftNote() },
-                                onSelectNote: { note in activeNoteDraft = note }
+                                onSelectNote: { note in activeNoteDraft = note },
+                                onViewAllNotes: { showAllNotes = true }
                             )
 
                             WorkspaceSectionLabel(title: "Materials")
@@ -246,6 +248,18 @@ struct ActiveWorkspaceView: View {
         .sheet(item: $viewModel.selectedMaterialForPreview) { material in
             WorkspaceMaterialPreviewView(material: material)
         }
+        .sheet(isPresented: $showAllNotes) {
+            WorkspaceAllNotesView(
+                notes: viewModel.notes,
+                onOpen: { note in
+                    activeNoteDraft = note
+                },
+                onDelete: { note in
+                    viewModel.deleteNote(note)
+                }
+            )
+            .presentationDetents([.medium, .large])
+        }
         .alert("Import Error", isPresented: Binding(
             get: { viewModel.importErrorMessage != nil },
             set: { newValue in
@@ -260,9 +274,15 @@ struct ActiveWorkspaceView: View {
             SummaryDetailView(summary: initialSummary)
         }
         .navigationDestination(item: $activeNoteDraft) { note in
-            WorkspaceNoteEditorView(note: note, onSave: { saved in
-                viewModel.saveNote(saved)
-            })
+            WorkspaceNoteEditorView(
+                note: note,
+                onSave: { saved in
+                    viewModel.saveNote(saved)
+                },
+                onDelete: { toDelete in
+                    viewModel.deleteNote(toDelete)
+                }
+            )
             .environment(\.workspaceThemePalette, workspacePalette)
         }
         .navigationDestination(isPresented: $showAIChat) {

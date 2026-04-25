@@ -20,6 +20,17 @@ final class WorkspaceNoteStorageService {
         try data.write(to: url, options: .atomic)
     }
 
+    func persistNoteImage(data: Data, workspaceID: UUID, noteID: UUID) throws -> String {
+        let baseFolder = try noteImagesFolderURL(workspaceID: workspaceID, noteID: noteID)
+        if !fileManager.fileExists(atPath: baseFolder.path) {
+            try fileManager.createDirectory(at: baseFolder, withIntermediateDirectories: true)
+        }
+
+        let fileURL = baseFolder.appendingPathComponent("\(UUID().uuidString).jpg")
+        try data.write(to: fileURL, options: .atomic)
+        return fileURL.path
+    }
+
     private func notesFileURL(workspaceID: UUID) throws -> URL {
         let documents = try fileManager.url(
             for: .documentDirectory,
@@ -36,5 +47,19 @@ final class WorkspaceNoteStorageService {
         }
 
         return workspaceFolder.appendingPathComponent("notes.json")
+    }
+
+    private func noteImagesFolderURL(workspaceID: UUID, noteID: UUID) throws -> URL {
+        let documents = try fileManager.url(
+            for: .documentDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        return documents
+            .appendingPathComponent("WorkspaceMaterials", isDirectory: true)
+            .appendingPathComponent(workspaceID.uuidString, isDirectory: true)
+            .appendingPathComponent("NoteImages", isDirectory: true)
+            .appendingPathComponent(noteID.uuidString, isDirectory: true)
     }
 }

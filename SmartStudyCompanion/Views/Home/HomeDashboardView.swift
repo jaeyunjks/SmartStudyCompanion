@@ -39,7 +39,7 @@ struct HomeDashboardView: View {
                         if selectedTab == .home {
                             VStack(spacing: 0) {
                                 HomeTopBarView(
-                                    appName: "Yafie",
+                                    appName: "[AppName]",
                                     userInitials: "Y",
                                     animateGreeting: animateGreeting
                                 )
@@ -122,11 +122,11 @@ private struct HomeGreetingSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Welcome back, Yafie.")
-                .font(.system(size: 30, weight: .bold, design: .rounded))
+            Text("Welcome back, Yafie!")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
             Text("Ready to pick up where you left off?")
-                .font(.system(size: 15, weight: .medium, design: .default))
+                .font(.system(size: 14, weight: .medium, design: .default))
                 .foregroundStyle(HomeTheme.mutedText)
         }
         .opacity(animateGreeting ? 1 : 0)

@@ -98,13 +98,12 @@ private struct ContinueLearningCardView: View {
                 .foregroundStyle(HomeTheme.mutedText)
                 .lineLimit(1)
 
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.right.circle.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                Text("Continue where you left off")
-                    .font(.caption.weight(.semibold))
+            HStack(spacing: 8) {
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(HomeTheme.mutedText.opacity(0.8))
             }
-            .foregroundStyle(accent)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

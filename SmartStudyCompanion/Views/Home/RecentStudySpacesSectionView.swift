@@ -22,11 +22,15 @@ struct RecentStudySpacesSectionView: View {
                 if spaces.isEmpty {
                     RecentWorkspacesEmptyState()
                 } else {
-                    ForEach(spaces) { space in
-                        Button(action: { onSelect(space) }) {
-                            RecentStudySpaceRow(space: space)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(Array(spaces.prefix(3))) { space in
+                                Button(action: { onSelect(space) }) {
+                                    RecentStudySpaceCard(space: space)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -51,7 +55,7 @@ private struct RecentWorkspacesEmptyState: View {
     }
 }
 
-private struct RecentStudySpaceRow: View {
+private struct RecentStudySpaceCard: View {
     let space: StudySpace
 
     private var accent: Color {
@@ -59,37 +63,41 @@ private struct RecentStudySpaceRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(Color(.systemBackground))
-                .frame(width: 42, height: 42)
-                .overlay(
-                    Image(systemName: space.iconName)
-                        .foregroundStyle(accent)
-                        .font(.system(size: 16, weight: .semibold))
-                )
-                .shadow(color: accent.opacity(0.12), radius: 6, x: 0, y: 4)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                Circle()
+                    .fill(Color(.systemBackground))
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        Image(systemName: space.iconName)
+                            .foregroundStyle(accent)
+                            .font(.system(size: 14, weight: .semibold))
+                    )
+                    .shadow(color: accent.opacity(0.12), radius: 6, x: 0, y: 4)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(space.title)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                Text(space.lastUpdated)
-                    .font(.caption)
-                    .foregroundStyle(HomeTheme.mutedText)
+                Spacer()
+
+                Text(space.normalizedStatus)
+                    .font(.caption2.weight(.bold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(space.statusBackgroundColor)
+                    .clipShape(Capsule())
+                    .foregroundStyle(space.statusForegroundColor)
             }
 
-            Spacer()
+            Text(space.title)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
 
-            Text(space.normalizedStatus)
-                .font(.caption2.weight(.bold))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(space.statusBackgroundColor)
-                .clipShape(Capsule())
-                .foregroundStyle(space.statusForegroundColor)
+            Text(space.lastUpdated)
+                .font(.caption)
+                .foregroundStyle(HomeTheme.mutedText)
+                .lineLimit(1)
         }
-        .padding(.horizontal, 14)
+        .frame(width: 164, alignment: .leading)
+        .padding(.horizontal, 12)
         .padding(.vertical, 12)
         .homeGlass(cornerRadius: HomeTheme.smallCornerRadius)
     }

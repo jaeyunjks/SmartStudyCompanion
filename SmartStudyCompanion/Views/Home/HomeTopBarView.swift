@@ -9,8 +9,15 @@ struct HomeTopBarView: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(appName)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(HomeTheme.accent)
+                    .font(.system(size: 24, weight: .semibold, design: .serif))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [HomeTheme.accent.opacity(0.95), HomeTheme.accent.opacity(0.72)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .tracking(0.3)
                     .lineLimit(1)
                     .minimumScaleFactor(0.9)
             }
@@ -36,7 +43,7 @@ struct HomeTopBarView: View {
 #Preview {
     HomeTopBarView(
         appName: "[AppName]",
-        userInitials: "Icon",
+        userInitials: "Y",
         animateGreeting: true
     )
 }

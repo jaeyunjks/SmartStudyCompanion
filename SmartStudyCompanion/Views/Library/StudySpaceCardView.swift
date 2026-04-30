@@ -1,22 +1,27 @@
 import SwiftUI
 
 struct StudySpaceCardView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let space: StudySpace
 
     private var accent: Color {
         space.workspaceAccentColor
     }
 
+    private var iconBackgroundOpacity: Double {
+        colorScheme == .dark ? 0.26 : 0.22
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(accent.opacity(0.12))
+                    .fill(accent.opacity(iconBackgroundOpacity))
                     .frame(width: 44, height: 44)
                     .overlay(
                         Image(systemName: space.iconName)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(accent)
+                            .foregroundStyle(accent.opacity(0.95))
                     )
 
                 Spacer()
@@ -55,27 +60,10 @@ struct StudySpaceCardView: View {
             }
             .font(.caption.weight(.semibold))
             .foregroundStyle(LibraryTheme.mutedText)
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("Progress")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(accent)
-                    Spacer()
-                    Text("\(Int(space.progress * 100))%")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(accent)
-                }
-
-                ProgressView(value: space.progress)
-                    .tint(accent)
-                    .background(accent.opacity(0.10))
-                    .clipShape(Capsule())
-            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .libraryGlass(cornerRadius: LibraryTheme.cardCornerRadius)
+        .workspaceTintCard(accent: accent, cornerRadius: LibraryTheme.cardCornerRadius)
     }
 }
 

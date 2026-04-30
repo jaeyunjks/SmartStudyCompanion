@@ -52,10 +52,15 @@ private struct EmptyContinueLearningCard: View {
 }
 
 private struct ContinueLearningCardView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let space: StudySpace
 
     private var accent: Color {
         space.workspaceAccentColor
+    }
+
+    private var iconBackgroundOpacity: Double {
+        colorScheme == .dark ? 0.26 : 0.22
     }
 
     var body: some View {
@@ -63,9 +68,9 @@ private struct ContinueLearningCardView: View {
             HStack(alignment: .top) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(accent.opacity(0.10))
+                        .fill(accent.opacity(iconBackgroundOpacity))
                     Image(systemName: space.iconName)
-                        .foregroundStyle(accent)
+                        .foregroundStyle(accent.opacity(0.95))
                         .font(.system(size: 17, weight: .semibold))
                 }
                 .frame(width: 42, height: 42)
@@ -108,7 +113,7 @@ private struct ContinueLearningCardView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .homeGlass(cornerRadius: HomeTheme.smallCornerRadius)
+        .workspaceTintCard(accent: accent, cornerRadius: HomeTheme.smallCornerRadius)
         .contentShape(RoundedRectangle(cornerRadius: HomeTheme.smallCornerRadius, style: .continuous))
     }
 }

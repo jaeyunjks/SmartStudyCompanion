@@ -56,24 +56,32 @@ private struct RecentWorkspacesEmptyState: View {
 }
 
 private struct RecentStudySpaceCard: View {
+    @Environment(\.colorScheme) private var colorScheme
     let space: StudySpace
 
     private var accent: Color {
         space.workspaceAccentColor
     }
 
+    private var iconBackgroundOpacity: Double {
+        colorScheme == .dark ? 0.26 : 0.22
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 Circle()
-                    .fill(Color(.systemBackground))
+                    .fill(accent.opacity(iconBackgroundOpacity))
                     .frame(width: 36, height: 36)
                     .overlay(
                         Image(systemName: space.iconName)
-                            .foregroundStyle(accent)
+                            .foregroundStyle(accent.opacity(0.95))
                             .font(.system(size: 14, weight: .semibold))
                     )
-                    .shadow(color: accent.opacity(0.12), radius: 6, x: 0, y: 4)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.gray.opacity(0.08), lineWidth: 1)
+                    )
 
                 Spacer()
 
@@ -99,7 +107,7 @@ private struct RecentStudySpaceCard: View {
         .frame(width: 164, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
-        .homeGlass(cornerRadius: HomeTheme.smallCornerRadius)
+        .workspaceTintCard(accent: accent, cornerRadius: HomeTheme.smallCornerRadius)
     }
 }
 

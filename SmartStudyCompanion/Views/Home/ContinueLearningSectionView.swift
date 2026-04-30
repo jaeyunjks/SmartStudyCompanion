@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContinueLearningSectionView: View {
     let spaces: [StudySpace]
+    let onViewAll: () -> Void
     let onSelect: (StudySpace) -> Void
 
     var body: some View {
@@ -12,12 +13,12 @@ struct ContinueLearningSectionView: View {
 
                 Spacer()
 
-                Button("View all", action: {})
+                Button("View all", action: onViewAll)
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(HomeTheme.accent)
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 14)], spacing: 14) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 10)], spacing: 10) {
                 if spaces.isEmpty {
                     EmptyContinueLearningCard()
                 } else {
@@ -58,7 +59,7 @@ private struct ContinueLearningCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -89,37 +90,36 @@ private struct ContinueLearningCardView: View {
             Text(space.description)
                 .font(.footnote)
                 .foregroundStyle(HomeTheme.mutedText)
-                .lineLimit(2)
+                .lineLimit(1)
                 .multilineTextAlignment(.leading)
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("Progress")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(accent)
+            Text(space.lastUpdated)
+                .font(.caption)
+                .foregroundStyle(HomeTheme.mutedText)
+                .lineLimit(1)
 
-                    Spacer()
-
-                    Text("\(Int(space.progress * 100))%")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(accent)
-                }
-
-                ProgressView(value: space.progress)
-                    .tint(accent)
-                    .background(accent.opacity(0.12))
-                    .clipShape(Capsule())
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Continue where you left off")
+                    .font(.caption.weight(.semibold))
             }
+            .foregroundStyle(accent)
         }
-        .padding(15)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .homeGlass(cornerRadius: HomeTheme.cardCornerRadius)
-        .contentShape(RoundedRectangle(cornerRadius: HomeTheme.cardCornerRadius, style: .continuous))
+        .homeGlass(cornerRadius: HomeTheme.smallCornerRadius)
+        .contentShape(RoundedRectangle(cornerRadius: HomeTheme.smallCornerRadius, style: .continuous))
     }
 }
 
 #Preview {
-    ContinueLearningSectionView(spaces: Array(StudySpace.sampleData.prefix(2)), onSelect: { _ in })
+    ContinueLearningSectionView(
+        spaces: Array(StudySpace.sampleData.prefix(2)),
+        onViewAll: {},
+        onSelect: { _ in }
+    )
         .padding()
         .background(HomeTheme.background)
 }

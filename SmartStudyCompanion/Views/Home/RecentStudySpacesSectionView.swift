@@ -2,12 +2,21 @@ import SwiftUI
 
 struct RecentStudySpacesSectionView: View {
     let spaces: [StudySpace]
+    let onViewAll: () -> Void
     let onSelect: (StudySpace) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Recent Study Workspaces")
-                .font(.title3.weight(.bold))
+            HStack {
+                Text("Recent Study Workspaces")
+                    .font(.title3.weight(.bold))
+
+                Spacer()
+
+                Button("View all", action: onViewAll)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(HomeTheme.accent)
+            }
 
             VStack(spacing: 10) {
                 if spaces.isEmpty {
@@ -87,7 +96,11 @@ private struct RecentStudySpaceRow: View {
 }
 
 #Preview {
-    RecentStudySpacesSectionView(spaces: Array(StudySpace.sampleData.suffix(3)), onSelect: { _ in })
+    RecentStudySpacesSectionView(
+        spaces: Array(StudySpace.sampleData.suffix(3)),
+        onViewAll: {},
+        onSelect: { _ in }
+    )
         .padding()
         .background(HomeTheme.background)
 }

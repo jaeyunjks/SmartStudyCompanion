@@ -39,26 +39,34 @@ struct HomeDashboardView: View {
                         if selectedTab == .home {
                             VStack(spacing: 0) {
                                 HomeTopBarView(
-                                    greetingText: authViewModel.welcomeBackText,
-                                    userInitials: authViewModel.userInitials,
-                                    animateGreeting: animateGreeting,
-                                    onSettingsTap: {}
+                                    appName: "Yafie",
+                                    userInitials: "Y",
+                                    animateGreeting: animateGreeting
                                 )
                                 .padding(.top, 8)
 
                                 ScrollView {
                                     LazyVStack(alignment: .leading, spacing: HomeTheme.sectionSpacing) {
+                                        HomeGreetingSectionView(animateGreeting: animateGreeting)
                                         HeroSectionView(
                                             onCreateStudySpace: {
                                                 showCreateStudySpaceSheet = true
                                             }
                                         )
-                                        ContinueLearningSectionView(spaces: viewModel.featuredStudySpaces) { space in
-                                            selectedStudySpace = space
-                                        }
-                                        RecentStudySpacesSectionView(spaces: viewModel.recentStudySpaces) { space in
-                                            selectedStudySpace = space
-                                        }
+                                        ContinueLearningSectionView(
+                                            spaces: viewModel.featuredStudySpaces,
+                                            onViewAll: { selectedTab = .library },
+                                            onSelect: { space in
+                                                selectedStudySpace = space
+                                            }
+                                        )
+                                        RecentStudySpacesSectionView(
+                                            spaces: viewModel.recentStudySpaces,
+                                            onViewAll: { selectedTab = .library },
+                                            onSelect: { space in
+                                                selectedStudySpace = space
+                                            }
+                                        )
                                     }
                                     .padding(.horizontal, HomeTheme.horizontalPadding)
                                     .padding(.top, 10)
@@ -106,6 +114,24 @@ struct HomeDashboardView: View {
                 }
             }
         }
+    }
+}
+
+private struct HomeGreetingSectionView: View {
+    let animateGreeting: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Welcome back, Yafie.")
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+            Text("Ready to pick up where you left off?")
+                .font(.system(size: 15, weight: .medium, design: .default))
+                .foregroundStyle(HomeTheme.mutedText)
+        }
+        .opacity(animateGreeting ? 1 : 0)
+        .offset(y: animateGreeting ? 0 : 8)
+        .padding(.top, 2)
     }
 }
 

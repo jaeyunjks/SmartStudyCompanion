@@ -10,6 +10,8 @@ import { StudySpaceModule } from './modules/study-space/study-space.module';
 import { NoteModule } from './modules/note/note.module';
 import { ImageModule } from './modules/image/image.module';
 import { FileModule } from './modules/file/file.module';
+import { AiModule } from './modules/ai/ai.module';
+import { StorageModule } from './modules/file-storage/file-storage.module';
 
 @Module({
     imports: [
@@ -33,10 +35,12 @@ import { FileModule } from './modules/file/file.module';
         UserModule,
         AuthModule,
         PasswordResetTokenModule,
+        StorageModule,
         StudySpaceModule,
         NoteModule,
         ImageModule,
         FileModule,
+        AiModule,
     ],
     controllers: [
         AppController

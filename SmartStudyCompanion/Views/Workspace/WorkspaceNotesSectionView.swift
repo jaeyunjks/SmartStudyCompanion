@@ -2,7 +2,6 @@ import SwiftUI
 
 struct WorkspaceNotesSectionView: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.workspaceThemePalette) private var palette
     let notes: [WorkspaceNote]
     let onCreateNote: () -> Void
     let onSelectNote: (WorkspaceNote) -> Void
@@ -16,10 +15,10 @@ struct WorkspaceNotesSectionView: View {
                 Spacer()
                 Text("\(notes.count)")
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(palette.primary)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(palette.chipBackground)
+                    .background(Color(uiColor: .secondarySystemBackground))
                     .clipShape(Capsule())
             }
 
@@ -35,7 +34,7 @@ struct WorkspaceNotesSectionView: View {
                         onCreateNote()
                     }
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(palette.primary)
+                    .foregroundStyle(.primary)
                     .buttonStyle(.plain)
                 }
                 .padding(16)
@@ -70,7 +69,7 @@ struct WorkspaceNotesSectionView: View {
                             onViewAllNotes()
                         }
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(palette.primaryStrong)
+                        .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 2)
                         .buttonStyle(.plain)

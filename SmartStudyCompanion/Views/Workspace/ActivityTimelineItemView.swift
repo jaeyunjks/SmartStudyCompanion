@@ -1,18 +1,18 @@
 import SwiftUI
 
 struct ActivityTimelineItemView: View {
-    @Environment(\.workspaceThemePalette) private var palette
+    @Environment(\.colorScheme) private var colorScheme
     let item: ActivityItem
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Circle()
-                .fill(palette.iconBackground.opacity(0.9))
+                .fill(Color(uiColor: .secondarySystemBackground))
                 .frame(width: 32, height: 32)
                 .overlay(
                     Image(systemName: item.iconName)
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(palette.primary)
+                        .foregroundStyle(.primary)
                 )
 
             VStack(alignment: .leading, spacing: 8) {
@@ -32,7 +32,7 @@ struct ActivityTimelineItemView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(WorkspaceTheme.secondaryBackground.opacity(0.65))
+            .background(Color(uiColor: colorScheme == .dark ? .secondarySystemBackground : .systemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
     }

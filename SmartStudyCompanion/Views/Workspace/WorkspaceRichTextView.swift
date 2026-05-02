@@ -184,8 +184,10 @@ struct WorkspaceRichTextView: UIViewRepresentable {
     let blockID: UUID
     let textSize: CGFloat
     let alignment: WorkspaceNoteTextAlignment
+    let isActive: Bool
     let controller: WorkspaceRichTextController
     let onTextChange: () -> Void
+    let onFocus: () -> Void
 
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -205,8 +207,10 @@ struct WorkspaceRichTextView: UIViewRepresentable {
             textView.attributedText = NSAttributedString(string: "")
         }
 
-        controller.textView = textView
-        controller.refreshSelectionState()
+        if isActive {
+            controller.textView = textView
+            controller.refreshSelectionState()
+        }
         context.coordinator.updateHeight(for: textView)
 
         return textView
@@ -225,7 +229,7 @@ struct WorkspaceRichTextView: UIViewRepresentable {
             uiView.selectedRange = selected
         }
 
-        if controller.textView !== uiView {
+        if isActive, controller.textView !== uiView {
             controller.textView = uiView
             controller.refreshSelectionState()
         }
@@ -258,6 +262,8 @@ struct WorkspaceRichTextView: UIViewRepresentable {
         }
 
         func textViewDidChangeSelection(_ textView: UITextView) {
+            parent.onFocus()
+            parent.controller.textView = textView
             parent.controller.refreshSelectionState()
             if parent.focusedBlockID != parent.blockID {
                 parent.focusedBlockID = parent.blockID
@@ -266,6 +272,9 @@ struct WorkspaceRichTextView: UIViewRepresentable {
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
+            parent.onFocus()
+            parent.controller.textView = textView
+            parent.controller.refreshSelectionState()
             if parent.focusedBlockID != parent.blockID {
                 parent.focusedBlockID = parent.blockID
             }

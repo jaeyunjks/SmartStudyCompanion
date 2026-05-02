@@ -7,13 +7,6 @@ struct WorkspaceNoteEditorView: View {
     @Environment(\.workspaceThemePalette) private var palette
     @Environment(\.colorScheme) private var colorScheme
 
-    private enum Mode: String, CaseIterable, Identifiable {
-        case mobile = "Mobile"
-        case paper = "Paper"
-
-        var id: String { rawValue }
-    }
-
     let note: WorkspaceNote
     let onSave: (WorkspaceNote) -> Void
     let onDelete: ((WorkspaceNote) -> Void)?
@@ -22,7 +15,6 @@ struct WorkspaceNoteEditorView: View {
 
     @State private var title: String
     @State private var blocks: [WorkspaceNoteBlock]
-    @State private var mode: Mode = .mobile
     @State private var activeBlockID: UUID?
     @State private var selectedImageBlockID: UUID?
     @State private var selectedTableBlockID: UUID?
@@ -33,9 +25,13 @@ struct WorkspaceNoteEditorView: View {
 
     @State private var textSize: Double
     @State private var textAlignment: WorkspaceNoteTextAlignment
+    @FocusState private var isTitleFocused: Bool
 
     @State private var showFormatSheet = false
     @State private var showDeleteConfirmation = false
+    @State private var showRenameSheet = false
+    @State private var renameDraft = ""
+    @State private var renameSeed = UUID()
 
     init(
         note: WorkspaceNote,
@@ -59,19 +55,14 @@ struct WorkspaceNoteEditorView: View {
 
     var body: some View {
         ZStack {
-            Color(uiColor: colorScheme == .dark ? UIColor(red: 0.10, green: 0.12, blue: 0.11, alpha: 1) : UIColor(red: 0.97, green: 0.98, blue: 0.96, alpha: 1))
+            Color(uiColor: .systemGroupedBackground)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 topBar
-                modePicker
 
                 ScrollView {
-                    if mode == .paper {
-                        paperCanvas
-                    } else {
-                        mobileCanvas
-                    }
+                    mobileCanvas
                 }
             }
         }
@@ -82,6 +73,19 @@ struct WorkspaceNoteEditorView: View {
         .sheet(isPresented: $showFormatSheet) {
             formatSheet
                 .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showRenameSheet) {
+            RenameNoteSheetView(
+                initialTitle: renameDraft,
+                onCancel: { showRenameSheet = false },
+                onSave: { newTitle in
+                    title = newTitle
+                    renameDraft = newTitle
+                    showRenameSheet = false
+                }
+            )
+            .id(renameSeed)
+            .presentationDetents([.fraction(0.28)])
         }
         .alert("Delete Note?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
@@ -140,7 +144,7 @@ struct WorkspaceNoteEditorView: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(palette.primaryStrong)
+                    .foregroundStyle(.primary)
                     .frame(width: 34, height: 34)
                     .background(WorkspaceTheme.secondaryBackground)
                     .clipShape(Circle())
@@ -150,8 +154,24 @@ struct WorkspaceNoteEditorView: View {
             TextField("Untitled Note", text: $title)
                 .font(.headline.weight(.semibold))
                 .multilineTextAlignment(.center)
+                .focused($isTitleFocused)
+                .onChange(of: isTitleFocused) { _, focused in
+                    if focused {
+                        focusedTextBlockID = nil
+                        activeBlockID = nil
+                    }
+                }
 
             Menu {
+                Button {
+                    renameDraft = title
+                    renameSeed = UUID()
+                    isTitleFocused = false
+                    showRenameSheet = true
+                } label: {
+                    Label("Rename Note", systemImage: "pencil")
+                }
+
                 if onDelete != nil {
                     Button(role: .destructive) {
                         showDeleteConfirmation = true
@@ -170,25 +190,12 @@ struct WorkspaceNoteEditorView: View {
                 saveAndDismiss()
             }
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(palette.primaryStrong)
+            .foregroundStyle(.primary)
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(.ultraThinMaterial)
-    }
-
-    private var modePicker: some View {
-        Picker("Mode", selection: $mode) {
-            ForEach(Mode.allCases) { option in
-                Text(option.rawValue).tag(option)
-            }
-        }
-        .pickerStyle(.segmented)
-        .font(.footnote.weight(.medium))
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
     }
 
     private var mobileCanvas: some View {
@@ -207,36 +214,6 @@ struct WorkspaceNoteEditorView: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
         .padding(.bottom, 18)
-    }
-
-    private var paperCanvas: some View {
-        VStack {
-            LazyVStack(alignment: .leading, spacing: 4) {
-                ForEach($blocks) { $block in
-                    blockView(block: $block)
-                }
-
-                Color.clear
-                    .frame(height: 80)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        focusTrailingTextBlock()
-                    }
-            }
-            .padding(.horizontal, 26)
-            .padding(.vertical, 30)
-            .frame(maxWidth: 720)
-            .background(Color(uiColor: .systemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .stroke(Color.primary.opacity(0.07), lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.10), radius: 16, x: 0, y: 8)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
     }
 
     @ViewBuilder
@@ -267,9 +244,14 @@ struct WorkspaceNoteEditorView: View {
             blockID: block.wrappedValue.id,
             textSize: textSize,
             alignment: textAlignment,
+            isActive: activeBlockID == block.wrappedValue.id,
             controller: richTextController,
             onTextChange: {
                 activeBlockID = block.wrappedValue.id
+            },
+            onFocus: {
+                activeBlockID = block.wrappedValue.id
+                isTitleFocused = false
             }
         )
         .frame(height: max(44, textBlockHeights[block.wrappedValue.id] ?? 44))
@@ -348,22 +330,29 @@ struct WorkspaceNoteEditorView: View {
     private func checklistBlockView(block: Binding<WorkspaceNoteBlock>) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             if let items = block.wrappedValue.checklist?.items {
-                ForEach(items.indices, id: \.self) { index in
+                ForEach(Array(items.enumerated()), id: \.offset) { index, _ in
                     HStack(spacing: 8) {
                         Button {
+                            guard block.wrappedValue.checklist?.items.indices.contains(index) == true else { return }
                             block.wrappedValue.checklist?.items[index].isChecked.toggle()
                         } label: {
-                            Image(systemName: (block.wrappedValue.checklist?.items[index].isChecked ?? false) ? "checkmark.circle.fill" : "circle")
+                            Image(systemName: (block.wrappedValue.checklist?.items.indices.contains(index) == true && (block.wrappedValue.checklist?.items[index].isChecked == true)) ? "checkmark.circle.fill" : "circle")
                                 .font(.system(size: 18))
-                                .foregroundStyle(palette.primaryStrong)
+                                .foregroundStyle(.primary)
                         }
                         .buttonStyle(.plain)
 
                         TextField(
                             "List item",
                             text: Binding(
-                                get: { block.wrappedValue.checklist?.items[index].text ?? "" },
-                                set: { block.wrappedValue.checklist?.items[index].text = $0 }
+                                get: {
+                                    guard block.wrappedValue.checklist?.items.indices.contains(index) == true else { return "" }
+                                    return block.wrappedValue.checklist?.items[index].text ?? ""
+                                },
+                                set: {
+                                    guard block.wrappedValue.checklist?.items.indices.contains(index) == true else { return }
+                                    block.wrappedValue.checklist?.items[index].text = $0
+                                }
                             )
                         )
                         .font(.body)
@@ -381,7 +370,7 @@ struct WorkspaceNoteEditorView: View {
                     block.wrappedValue.checklist?.items.append(WorkspaceChecklistItem(text: ""))
                 }
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(palette.primaryStrong)
+                .foregroundStyle(.primary)
                 .buttonStyle(.plain)
 
                 Spacer()
@@ -402,7 +391,9 @@ struct WorkspaceNoteEditorView: View {
     private var bottomToolbar: some View {
         HStack(spacing: 18) {
             toolbarIcon("checklist") { insertChecklistBlock() }
-            toolbarIcon("textformat") { showFormatSheet = true }
+            toolbarIcon("textformat") {
+                if !isTitleFocused { showFormatSheet = true }
+            }
 
             Spacer()
 
@@ -485,7 +476,7 @@ struct WorkspaceNoteEditorView: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(palette.primaryStrong)
+                .foregroundStyle(.primary)
                 .frame(width: 30, height: 30)
         }
         .buttonStyle(.plain)
@@ -498,7 +489,7 @@ struct WorkspaceNoteEditorView: View {
                 Spacer()
                 if isActive {
                     Image(systemName: "checkmark")
-                        .foregroundStyle(palette.primaryStrong)
+                        .foregroundStyle(.primary)
                 }
             }
         }
@@ -601,9 +592,9 @@ struct WorkspaceNoteEditorView: View {
     private func imageWidth(for size: WorkspaceImageDisplaySize) -> CGFloat? {
         switch size {
         case .small:
-            return mode == .paper ? 200 : 160
+            return 180
         case .medium:
-            return mode == .paper ? 340 : 260
+            return 280
         case .full:
             return nil
         }
@@ -753,6 +744,50 @@ private struct WorkspaceNoteImageView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .task(id: path) {
             image = await WorkspaceNoteImageCache.shared.image(for: path, maxPixelSize: 1600)
+        }
+    }
+}
+
+private struct RenameNoteSheetView: View {
+    let initialTitle: String
+    let onCancel: () -> Void
+    let onSave: (String) -> Void
+
+    @State private var draft: String
+    @FocusState private var isFocused: Bool
+
+    init(initialTitle: String, onCancel: @escaping () -> Void, onSave: @escaping (String) -> Void) {
+        self.initialTitle = initialTitle
+        self.onCancel = onCancel
+        self.onSave = onSave
+        _draft = State(initialValue: initialTitle)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Note title", text: $draft)
+                    .textInputAutocapitalization(.sentences)
+                    .disableAutocorrection(false)
+                    .focused($isFocused)
+            }
+            .navigationTitle("Rename Note")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel", action: onCancel)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        onSave(draft)
+                    }
+                }
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    isFocused = true
+                }
+            }
         }
     }
 }

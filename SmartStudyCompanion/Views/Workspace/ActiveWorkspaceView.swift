@@ -47,8 +47,8 @@ enum WorkspaceTheme {
 
     static func surfaceTertiary(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
-            ? Color(red: 0.17, green: 0.22, blue: 0.20)
-            : Color(red: 0.92, green: 0.95, blue: 0.93)
+            ? Color(uiColor: .tertiarySystemGroupedBackground)
+            : Color(uiColor: .tertiarySystemGroupedBackground)
     }
 }
 

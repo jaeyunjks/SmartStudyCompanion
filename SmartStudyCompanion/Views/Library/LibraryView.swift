@@ -3,7 +3,7 @@ import SwiftUI
 enum LibraryTheme {
     static let accent = Color(red: 0.22, green: 0.53, blue: 0.40)
     static let accentSoft = Color(red: 0.86, green: 0.94, blue: 0.89)
-    static let background = Color(red: 0.97, green: 0.98, blue: 0.97)
+    static let background = Color(uiColor: .systemGroupedBackground)
     static let cardBackground = Color(.systemBackground)
     static let mutedText = Color(.secondaryLabel)
     static let secondaryBackground = Color(.secondarySystemBackground)

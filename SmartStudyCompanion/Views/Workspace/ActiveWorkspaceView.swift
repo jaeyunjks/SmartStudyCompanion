@@ -26,8 +26,8 @@ enum WorkspaceTheme {
     })
     static let background = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.09, green: 0.13, blue: 0.12, alpha: 1)
-            : UIColor(red: 0.96, green: 0.97, blue: 0.95, alpha: 1)
+            ? UIColor.systemGroupedBackground
+            : UIColor.systemGroupedBackground
     })
     static let cardBackground = Color(.systemBackground)
     static let secondaryBackground = Color(uiColor: UIColor { trait in
@@ -41,8 +41,8 @@ enum WorkspaceTheme {
 
     static func surfaceSecondary(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
-            ? Color(red: 0.14, green: 0.18, blue: 0.17)
-            : Color(red: 0.95, green: 0.97, blue: 0.96)
+            ? Color(uiColor: .secondarySystemGroupedBackground)
+            : Color(uiColor: .secondarySystemGroupedBackground)
     }
 
     static func surfaceTertiary(for colorScheme: ColorScheme) -> Color {

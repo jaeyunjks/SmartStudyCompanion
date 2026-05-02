@@ -42,7 +42,7 @@ struct HomeTopBarView: View {
 
 #Preview {
     HomeTopBarView(
-        appName: "[AppName]",
+        appName: "Lumora",
         userInitials: "Y",
         animateGreeting: true
     )

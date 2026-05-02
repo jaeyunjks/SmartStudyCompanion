@@ -5,7 +5,7 @@ import UIKit
 enum HomeTheme {
     static let accent = Color(red: 0.22, green: 0.53, blue: 0.40)
     static let accentSoft = Color(red: 0.86, green: 0.94, blue: 0.89)
-    static let background = Color(red: 0.97, green: 0.98, blue: 0.97)
+    static let background = Color(uiColor: .systemGroupedBackground)
     static let cardBackground = Color(.systemBackground)
     static let mutedText = Color(.secondaryLabel)
     static let secondaryBackground = Color(.secondarySystemBackground)
@@ -143,14 +143,15 @@ private struct HomeGreetingSectionView: View {
 private enum ProfileTheme {
     static let accent = Color(red: 0.22, green: 0.53, blue: 0.40)
     static let accentSoft = Color(red: 0.86, green: 0.94, blue: 0.89)
-    static let background = Color(red: 0.97, green: 0.98, blue: 0.97)
-    static let cardBackground = Color.white.opacity(0.9)
-    static let textPrimary = Color(red: 0.12, green: 0.15, blue: 0.20)
-    static let textSecondary = Color(red: 0.12, green: 0.15, blue: 0.20).opacity(0.62)
+    static let background = Color(uiColor: .systemGroupedBackground)
+    static let cardBackground = Color(uiColor: .secondarySystemBackground).opacity(0.92)
+    static let textPrimary = Color(.label)
+    static let textSecondary = Color(.secondaryLabel)
 }
 
 private struct ProfileAccountView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @State private var showEditProfileSheet = false
 
     private let accountRows: [(String, String)] = [
@@ -207,7 +208,11 @@ private struct ProfileAccountView: View {
                     }
                     .padding(.horizontal, 14)
                     .frame(height: 52)
-                    .background(Color.white.opacity(0.82))
+                    .background(
+                        colorScheme == .dark
+                            ? Color(.secondarySystemBackground).opacity(0.92)
+                            : Color.white.opacity(0.82)
+                    )
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -228,7 +233,11 @@ private struct ProfileAccountView: View {
                 .foregroundStyle(ProfileTheme.accent)
                 .frame(maxWidth: .infinity)
                 .frame(height: 48)
-                .background(ProfileTheme.accentSoft.opacity(0.75))
+                .background(
+                    colorScheme == .dark
+                        ? ProfileTheme.accent.opacity(0.26)
+                        : ProfileTheme.accentSoft.opacity(0.75)
+                )
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)

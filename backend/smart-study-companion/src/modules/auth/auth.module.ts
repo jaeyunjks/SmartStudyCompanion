@@ -21,12 +21,8 @@ import { MailService } from '../mail/mail.service';
                 throw new Error('JWT_SECRET_KEY is not defined');
                 }
 
-                const expiresInRaw = configService.get<string>('JWT_EXPIRES_IN');
-                const expiresIn = expiresInRaw ? Number(expiresInRaw) : 86400;
-
                 return {
                     secret,
-                    signOptions: { expiresIn },
                 };
             },
         }),

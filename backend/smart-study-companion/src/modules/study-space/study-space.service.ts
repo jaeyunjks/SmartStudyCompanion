@@ -1,0 +1,70 @@
+import { Injectable, Inject, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { StudySpaceRepository } from './study-space.repository';
+
+@Injectable()
+export class StudySpaceService {
+    constructor(
+        @Inject('STUDY_SPACE_REPOSITORY')
+        private readonly studySpaceRepo: StudySpaceRepository,
+    ) {}
+
+    async createStudySpace (title: string, userId: string, color?: string, tag?: string) {
+        const studySpace = await this.studySpaceRepo.create(title, userId, color, tag);
+
+        if (!studySpace) {
+            throw new InternalServerErrorException("Couldn't create study space", "Couldn't create study space");
+        }
+
+        return studySpace;
+    }
+
+    async updateStudySpaceById (id: string, userId: string, title?: string, color?: string, tag?: string) {
+        const studySpace = await this.studySpaceRepo.updateById(id, userId, title, color, tag);
+
+        if (!studySpace) {
+            throw new InternalServerErrorException("Couldn't update this study space", "Couldn't update this study space");
+        }
+
+        return studySpace;
+    }
+
+    async updateStudySpaceSummaryById (id: string, userId: string, summary: any) {
+        const studySpace = await this.studySpaceRepo.updateSummaryById(id, userId, summary);
+
+        if (!studySpace) {
+            throw new InternalServerErrorException("Couldn't update this study space summary", "Couldn't update this study space summary");
+        }
+
+        return studySpace;
+    }
+
+    async deleteStudySpaceById (id: string, userId: string) {
+        const studySpace = await this.studySpaceRepo.delete(id, userId);
+
+        if (!studySpace) {
+            throw new InternalServerErrorException("Couldn't delete this study space", "Couldn't delete this study space");
+        }
+
+        return studySpace;
+    }
+
+    async getStudySpaceById (id: string) {
+        const studySpace = await this.studySpaceRepo.getById(id);
+
+        if (!studySpace) {
+            throw new NotFoundException("Study space not found", "Study space not found");
+        }
+
+        return studySpace; 
+    }
+
+    async getStudySpacesByUserId (userId: string) {
+        const studySpaces = await this.studySpaceRepo.getByUserId(userId);
+
+        if (!studySpaces) {
+            throw new NotFoundException("Study spaces not found", "Study spaces not found");
+        }
+
+        return studySpaces; 
+    }
+}

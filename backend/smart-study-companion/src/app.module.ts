@@ -7,6 +7,12 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PasswordResetTokenModule } from './modules/password-reset-token/password-reset-token.module';
 import { WorkspaceModule } from './modules/workspace/workspace.module';
+import { StudySpaceModule } from './modules/study-space/study-space.module';
+import { NoteModule } from './modules/note/note.module';
+import { ImageModule } from './modules/image/image.module';
+import { FileModule } from './modules/file/file.module';
+import { AiModule } from './modules/ai/ai.module';
+import { StorageModule } from './modules/file-storage/file-storage.module';
 
 @Module({
     imports: [
@@ -31,6 +37,12 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
         AuthModule,
         PasswordResetTokenModule,
         WorkspaceModule,
+        StorageModule,
+        StudySpaceModule,
+        NoteModule,
+        ImageModule,
+        FileModule,
+        AiModule,
     ],
     controllers: [AppController],
     providers: [AppService],

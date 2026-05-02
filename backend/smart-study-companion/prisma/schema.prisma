@@ -25,6 +25,11 @@ model User {
 
     passwordResetTokens     PasswordResetToken[]
     workspaces              StudyWorkspace[]
+    studySpace              StudySpace[]
+    files                   File[]
+    images                  Image[]
+    notes                   Note[]
+    chatHistories           ChatHistory[]
     
     @@map("user")
 }
@@ -52,15 +57,175 @@ model StudyWorkspace {
 }
 
 model PasswordResetToken {
-    id              String      @id @default(uuid())
-    userId          String
-    token           String
-    expiresAt       DateTime
-    used            Boolean     @default(false)
-    createdAt       DateTime    @default(now())
+    id                      String                  @id @default(uuid())
+    userId                  String
+    token                   String
+    expiresAt               DateTime
+    used                    Boolean                 @default(false)
+    createdAt               DateTime                @default(now())
 
-    user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId])
     @@map("password_reset_tokens")
+}
+
+model StudySpace {
+    id                      String                  @id @default(uuid())
+    title                   String
+    userId                  String
+    color                   String?
+    tag                     String?
+    summary                 Json?
+    createdAt               DateTime                @default(now())
+
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)    
+
+    notes                   Note[]
+    files                   File[]
+    images                  Image[]
+    chunks                  Chunk[]
+    chatHistories           ChatHistory[]
+
+    @@index([userId])
+    @@unique([title, userId])
+    @@map("study_space")
+}
+
+model Note {
+    id                      String                  @id @default(uuid())
+    title                   String
+    spaceId                 String
+    userId                  String
+    content                 Json                    @default("{}")
+
+    createdAt               DateTime                @default(now())
+
+    studySpace              StudySpace              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([spaceId])
+    @@unique([title, spaceId])
+    @@map("note")
+}
+
+model File {
+    id                      String                  @id @default(uuid())
+    name                    String
+    mimeType                String
+    size                    Int
+    userId                  String
+    spaceId                 String
+
+    createdAt               DateTime                @default(now())
+
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    studySpace              StudySpace              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+    chunks                  Chunk[]
+
+    @@index([spaceId])
+    @@unique([name, spaceId])
+
+    @@map("file")
+}
+
+model Chunk {
+    id                      String                  @id @default(uuid())
+    studySpaceId            String
+    fileId                  String
+    content                 String
+    chunkIndex              Int
+    startChar               Int
+    endChar                 Int
+    createdAt               DateTime                @default(now())
+
+    studySpace              StudySpace              @relation(fields: [studySpaceId], references: [id], onDelete: Cascade)
+    file                    File                    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+    embedding               ChunkEmbedding?
+
+    @@index([studySpaceId])
+    @@index([fileId])
+    @@unique([fileId, chunkIndex])
+    @@map("chunk")
+}
+
+model ChunkEmbedding {
+    id                      String                  @id @default(uuid())
+    chunkId                 String                  @unique
+    studySpaceId            String
+    fileId                  String
+    model                   String
+    vector                  Float[]
+    createdAt               DateTime                @default(now())
+
+    chunk                   Chunk                   @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+    @@index([studySpaceId])
+    @@index([fileId])
+    @@map("chunk_embedding")
+}
+
+model ChatHistory {
+    id                      String                  @id @default(uuid())
+    studySpaceId            String
+    userId                  String
+    title                   String?
+    createdAt               DateTime                @default(now())
+    updatedAt               DateTime                @updatedAt
+
+    studySpace              StudySpace              @relation(fields: [studySpaceId], references: [id], onDelete: Cascade)
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    messages                Message[]
+    summary                 ChatSummary?
+
+    @@index([studySpaceId])
+    @@index([userId])
+    @@map("chat_history")
+}
+
+model ChatSummary {
+    id                      String                  @id @default(uuid())
+    chatHistoryId           String                  @unique
+    content                 String
+    tokenLimit              Int
+    summarizedMessageCount  Int
+    createdAt               DateTime                @default(now())
+    updatedAt               DateTime                @updatedAt
+
+    chatHistory             ChatHistory             @relation(fields: [chatHistoryId], references: [id], onDelete: Cascade)
+
+    @@map("chat_summary")
+}
+
+model Message {
+    id                      String                  @id @default(uuid())
+    chatHistoryId           String
+    role                    String
+    content                 String
+    metadata                Json?
+    createdAt               DateTime                @default(now())
+
+    chatHistory             ChatHistory             @relation(fields: [chatHistoryId], references: [id], onDelete: Cascade)
+
+    @@index([chatHistoryId])
+    @@map("message")
+}
+
+model Image {
+    id                      String                  @id @default(uuid())
+    name                    String
+    mimeType                String
+    size                    Int
+    userId                  String
+    spaceId                 String
+
+    createdAt               DateTime                @default(now())
+
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    studySpace              StudySpace              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+    @@index([spaceId])
+    @@unique([name, spaceId])
+
+    @@map("image")
 }

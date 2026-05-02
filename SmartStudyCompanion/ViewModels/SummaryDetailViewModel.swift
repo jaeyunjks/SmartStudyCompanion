@@ -13,6 +13,7 @@ struct SummarySourceItem: Identifiable, Codable, Hashable {
     let name: String
     let kind: SummarySourceKind
     let content: String
+    let isReadable: Bool
 }
 
 struct SummaryVersion: Identifiable, Codable {
@@ -69,7 +70,7 @@ final class SummaryDetailViewModel: ObservableObject {
         self.shouldAutoRequestOnLoad = shouldAutoRequestOnLoad
         self.onSummarySaved = onSummarySaved
 
-        self.selectedSourceIDs = Set(sourceItems.map(\.id))
+        self.selectedSourceIDs = Set(sourceItems.filter(\.isReadable).map(\.id))
 
         loadPersistedHistory()
 
@@ -157,7 +158,7 @@ final class SummaryDetailViewModel: ObservableObject {
     }
 
     func selectAllSources() {
-        selectedSourceIDs = Set(availableSources.map(\.id))
+        selectedSourceIDs = Set(availableSources.filter(\.isReadable).map(\.id))
     }
 
     func clearAllSources() {
@@ -243,7 +244,11 @@ final class SummaryDetailViewModel: ObservableObject {
     }
 
     private func buildContentFromSelectedSources() -> String {
-        let selected = availableSources.filter { selectedSourceIDs.contains($0.id) }
+        let selected = availableSources.filter {
+            selectedSourceIDs.contains($0.id) &&
+            $0.isReadable &&
+            !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
         guard !selected.isEmpty else { return "" }
 
         let chunks = selected.map {

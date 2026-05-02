@@ -103,21 +103,20 @@ final class ActiveWorkspaceViewModel: ObservableObject {
                 id: note.id,
                 name: note.displayTitle,
                 kind: .note,
-                content: content
+                content: content,
+                isReadable: !content.isEmpty
             )
         }
 
         let materialItems: [SummarySourceItem] = materials.map { material in
-            let descriptor = material.type == .image ? "Photo" : "File"
-            let preview = material.previewText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let content = preview.isEmpty
-                ? "\(descriptor): \(material.title)"
-                : "\(descriptor): \(material.title)\n\(preview)"
+            let extracted = storageService.extractSummaryContent(for: material)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let content = extracted
             return SummarySourceItem(
                 id: material.id,
                 name: material.title,
                 kind: material.type == .image ? .photo : .file,
-                content: content
+                content: content,
+                isReadable: !content.isEmpty
             )
         }
 

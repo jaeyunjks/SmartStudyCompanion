@@ -15,9 +15,37 @@ final class WorkspaceMaterialStorageService {
 
         let data = try Data(contentsOf: metadataURL)
         let decoded = try JSONDecoder().decode([StudyMaterial].self, from: data)
-        let normalized = try normalizeLoadedMaterials(decoded, workspaceID: workspaceID)
+        var normalized = try normalizeLoadedMaterials(decoded, workspaceID: workspaceID)
 
-        if normalized != decoded {
+        // Backfill preview text for older entries so AI summaries can use real file content.
+        var didBackfill = false
+        normalized = normalized.map { material in
+            guard (material.previewText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return material
+            }
+
+            guard let extracted = extractSummaryContent(for: material),
+                  !extracted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return material
+            }
+
+            didBackfill = true
+            return StudyMaterial(
+                id: material.id,
+                workspaceID: material.workspaceID,
+                title: material.title,
+                type: material.type,
+                storedPath: material.storedPath,
+                createdAt: material.createdAt,
+                previewText: String(extracted.prefix(1200)),
+                thumbnailPath: material.thumbnailPath,
+                isUsableForAIContext: material.isUsableForAIContext,
+                isSelectedForAIContext: material.isSelectedForAIContext,
+                fileSizeInBytes: material.fileSizeInBytes
+            )
+        }
+
+        if normalized != decoded || didBackfill {
             try saveMaterials(normalized, workspaceID: workspaceID)
         }
 
@@ -137,23 +165,148 @@ final class WorkspaceMaterialStorageService {
         }
     }
 
+    func extractSummaryContent(for material: StudyMaterial) -> String? {
+        let url = URL(fileURLWithPath: material.storedPath)
+        let raw: String?
+
+        switch material.type {
+        case .text, .document:
+            raw = try? readTextDocument(at: url)
+        case .pdf:
+            raw = readPDFText(at: url)
+        case .image:
+            raw = readImageText(at: url)
+        case .other:
+            raw = nil
+        }
+
+        guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        let cleaned = sanitizeExtractedText(raw)
+        guard !isLowQualityExtraction(cleaned) else { return nil }
+        return cleaned
+    }
+
+    private func sanitizeExtractedText(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\u{00a0}", with: " ")
+            .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\b[a-zA-Z0-9_\\-./]+\\.xml\\b", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\b(_rels|word|docProps|styles|webSettings|numbering|theme)\\b", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func isLowQualityExtraction(_ text: String) -> Bool {
+        let lowered = text.lowercased()
+        let manifestSignals = [
+            "document.xml", "styles.xml", "websettings.xml", "numbering.xml",
+            "[content_types].xml", "_rels", "docprops", "word/"
+        ]
+        let signalCount = manifestSignals.reduce(0) { partial, signal in
+            partial + (lowered.contains(signal) ? 1 : 0)
+        }
+
+        let words = lowered
+            .split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            .map(String.init)
+            .filter { $0.count > 2 }
+        let uniqueWords = Set(words)
+
+        if signalCount >= 2 { return true }
+        if words.count < 20 { return true }
+        if uniqueWords.count < 12 { return true }
+        return false
+    }
+
     private func readTextDocument(at url: URL) throws -> String? {
         let ext = url.pathExtension.lowercased()
 
-        if ext == "txt" || ext == "md" || ext == "rtf" {
+        if ext == "txt" || ext == "md" {
             return try String(contentsOf: url, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        if ext == "docx" {
-            // Native docx parsing is not available in this lightweight local flow.
-            return nil
+        if ext == "rtf" {
+            if let richText = extractRichText(from: url), !richText.isEmpty {
+                return richText
+            }
+            return try? String(contentsOf: url, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        if ext == "doc" || ext == "pages" {
-            return nil
+        if ext == "docx" || ext == "doc" || ext == "pages" {
+            if let richTextFromURL = extractRichTextFromURL(url), !richTextFromURL.isEmpty {
+                return richTextFromURL
+            }
+            if let richText = extractRichText(from: url), !richText.isEmpty {
+                return richText
+            }
         }
 
         return try? String(contentsOf: url, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func extractRichText(from url: URL) -> String? {
+        guard let data = try? Data(contentsOf: url), !data.isEmpty else { return nil }
+
+        let optionSets: [[NSAttributedString.DocumentReadingOptionKey: Any]] = [
+            [:], // auto-detect first
+            [.documentType: NSAttributedString.DocumentType.rtf],
+            [.documentType: NSAttributedString.DocumentType.rtfd],
+            [.documentType: NSAttributedString.DocumentType.html],
+            [.documentType: NSAttributedString.DocumentType.plain]
+        ]
+
+        for var options in optionSets {
+            options[.characterEncoding] = String.Encoding.utf8.rawValue
+
+            if let attributed = try? NSAttributedString(
+                data: data,
+                options: options,
+                documentAttributes: nil
+            ) {
+                let text = attributed.string
+                    .replacingOccurrences(of: "\u{00a0}", with: " ")
+                    .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                if text.count > 40 {
+                    return text
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func extractRichTextFromURL(_ url: URL) -> String? {
+        let optionSets: [[NSAttributedString.DocumentReadingOptionKey: Any]] = [
+            [:], // auto-detect first
+            [.documentType: NSAttributedString.DocumentType.rtf],
+            [.documentType: NSAttributedString.DocumentType.rtfd],
+            [.documentType: NSAttributedString.DocumentType.html],
+            [.documentType: NSAttributedString.DocumentType.plain]
+        ]
+
+        for options in optionSets {
+            if let attributed = try? NSAttributedString(
+                url: url,
+                options: options,
+                documentAttributes: nil
+            ) {
+                let text = attributed.string
+                    .replacingOccurrences(of: "\u{00a0}", with: " ")
+                    .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                if text.count > 80 {
+                    return text
+                }
+            }
+        }
+
+        return nil
     }
 
     private func readPDFText(at url: URL) -> String? {

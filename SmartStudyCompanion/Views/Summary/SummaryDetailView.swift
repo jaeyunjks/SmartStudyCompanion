@@ -376,6 +376,7 @@ struct SummaryDetailView: View {
                     Section {
                         ForEach(viewModel.availableSources) { source in
                             Button {
+                                guard source.isReadable else { return }
                                 if viewModel.selectedSourceIDs.contains(source.id) {
                                     viewModel.selectedSourceIDs.remove(source.id)
                                 } else {
@@ -387,15 +388,26 @@ struct SummaryDetailView: View {
                                         Text(source.name)
                                             .font(.system(size: 15, weight: .medium, design: .rounded))
                                             .foregroundStyle(.primary)
+                                            .lineLimit(nil)
+                                            .multilineTextAlignment(.leading)
+                                            .fixedSize(horizontal: false, vertical: true)
                                         Text(source.kind.rawValue.capitalized)
                                             .font(.system(size: 12, weight: .medium, design: .rounded))
                                             .foregroundStyle(.secondary)
+                                        if !source.isReadable {
+                                            Text("No readable text found in this source yet")
+                                                .font(.system(size: 12, weight: .regular, design: .rounded))
+                                                .foregroundStyle(.orange)
+                                        }
                                     }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     Spacer()
                                     Image(systemName: viewModel.selectedSourceIDs.contains(source.id) ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(viewModel.selectedSourceIDs.contains(source.id) ? palette.accent : .secondary)
+                                        .foregroundStyle(source.isReadable ? (viewModel.selectedSourceIDs.contains(source.id) ? palette.accent : .secondary) : .secondary.opacity(0.45))
                                         .font(.system(size: 18, weight: .semibold))
                                 }
+                                .padding(.vertical, 4)
+                                .opacity(source.isReadable ? 1 : 0.65)
                             }
                             .buttonStyle(.plain)
                         }

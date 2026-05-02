@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct QuizOptionCard: View {
+    @Environment(\.quizPalette) private var palette
+
     let option: QuizOption
     let isSelected: Bool
     let hasCheckedAnswer: Bool
@@ -41,7 +43,7 @@ struct QuizOptionCard: View {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .stroke(borderColor, lineWidth: borderWidth)
             )
-            .shadow(color: QuizTheme.shadow, radius: 10, x: 0, y: 6)
+            .shadow(color: palette.shadow, radius: 8, x: 0, y: 4)
         }
         .buttonStyle(.plain)
         .disabled(hasCheckedAnswer)
@@ -49,28 +51,28 @@ struct QuizOptionCard: View {
 
     private var backgroundColor: Color {
         if hasCheckedAnswer && isCorrectOption {
-            return QuizTheme.accentSoft.opacity(0.50)
+            return palette.accentSoft.opacity(0.55)
         }
         if hasCheckedAnswer && isSelected && !isCorrectOption {
-            return QuizTheme.error.opacity(0.10)
+            return palette.error.opacity(0.12)
         }
         if isSelected {
-            return QuizTheme.accentSoft.opacity(0.42)
+            return palette.accentSoft.opacity(0.42)
         }
-        return QuizTheme.surface
+        return palette.surface
     }
 
     private var borderColor: Color {
         if hasCheckedAnswer && isCorrectOption {
-            return QuizTheme.accent
+            return palette.accent
         }
         if hasCheckedAnswer && isSelected && !isCorrectOption {
-            return QuizTheme.error
+            return palette.error
         }
         if isSelected {
-            return QuizTheme.accent
+            return palette.accent
         }
-        return .clear
+        return palette.border
     }
 
     private var borderWidth: CGFloat {
@@ -79,15 +81,15 @@ struct QuizOptionCard: View {
 
     private var badgeBackground: Color {
         if hasCheckedAnswer && isCorrectOption {
-            return QuizTheme.accent
+            return palette.accent
         }
         if hasCheckedAnswer && isSelected && !isCorrectOption {
-            return QuizTheme.error.opacity(0.9)
+            return palette.error.opacity(0.9)
         }
         if isSelected {
-            return QuizTheme.accent
+            return palette.accent
         }
-        return QuizTheme.surfaceStrong
+        return palette.surfaceStrong
     }
 
     private var badgeForeground: Color {
@@ -99,7 +101,7 @@ struct QuizOptionCard: View {
 
     private var textColor: Color {
         if hasCheckedAnswer && isCorrectOption {
-            return QuizTheme.accent
+            return palette.accent
         }
         return .primary
     }
@@ -123,9 +125,9 @@ struct QuizOptionCard: View {
 
     private var trailingIconColor: Color {
         if hasCheckedAnswer && isSelected && !isCorrectOption {
-            return QuizTheme.error
+            return palette.error
         }
-        return QuizTheme.accent
+        return palette.accent
     }
 }
 

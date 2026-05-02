@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct QuizBottomActionBar: View {
+    @Environment(\.quizPalette) private var palette
+
     let title: String
     let isEnabled: Bool
     let action: () -> Void
@@ -16,9 +18,9 @@ struct QuizBottomActionBar: View {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 62)
-            .background(QuizTheme.accent)
+            .background(palette.accent)
             .clipShape(Capsule())
-            .shadow(color: QuizTheme.accent.opacity(0.25), radius: 14, x: 0, y: 8)
+            .shadow(color: palette.accent.opacity(0.22), radius: 12, x: 0, y: 6)
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)

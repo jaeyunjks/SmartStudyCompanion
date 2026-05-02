@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct QuizProgressView: View {
+    @Environment(\.quizPalette) private var palette
     let progress: QuizProgress
 
     var body: some View {
@@ -9,7 +10,7 @@ struct QuizProgressView: View {
                 Text("PROGRESS")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .tracking(2)
-                    .foregroundStyle(QuizTheme.accent)
+                    .foregroundStyle(palette.accent)
 
                 Spacer()
 
@@ -21,12 +22,12 @@ struct QuizProgressView: View {
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(QuizTheme.surfaceStrong)
+                        .fill(palette.surfaceStrong)
 
                     Capsule()
                         .fill(
                             LinearGradient(
-                                colors: [QuizTheme.accent, QuizTheme.accentSoft],
+                                colors: [palette.accent, palette.accentSoft],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )

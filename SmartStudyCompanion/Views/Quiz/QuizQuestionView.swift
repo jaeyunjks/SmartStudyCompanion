@@ -3,16 +3,25 @@ import UIKit
 
 struct QuizQuestionView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+
     @StateObject private var viewModel: QuizQuestionViewModel
     @State private var showQuizCompleteAlert = false
+    @State private var showQuizSettings = false
+    @State private var selectedQuestionCount = 5
+    @State private var selectedDifficulty = "medium"
+
+    private let workspaceColorHex: String?
 
     @MainActor
-    init(viewModel: QuizQuestionViewModel) {
+    init(viewModel: QuizQuestionViewModel, workspaceColorHex: String? = nil) {
+        self.workspaceColorHex = workspaceColorHex
         _viewModel = StateObject(wrappedValue: viewModel)
     }
 
     @MainActor
-    init(workspaceTitle: String = "Knowledge") {
+    init(workspaceTitle: String = "Knowledge", workspaceColorHex: String? = nil) {
+        self.workspaceColorHex = workspaceColorHex
         _viewModel = StateObject(
             wrappedValue: QuizQuestionViewModel(
                 provider: MockQuizService(),
@@ -27,20 +36,35 @@ struct QuizQuestionView: View {
         )
     }
 
+    @MainActor
+    private var palette: QuizPalette {
+        let accentBase = workspaceColorHex.flatMap(Color.init(hex:)) ?? WorkspaceTheme.accent
+        return QuizPalette(base: accentBase, colorScheme: colorScheme)
+    }
+
+    private var difficultyLabel: String {
+        selectedDifficulty.capitalized
+    }
+
     var body: some View {
         ZStack {
-            QuizTheme.background
+            palette.background
                 .ignoresSafeArea()
 
             decorativeBackground
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 22) {
                     QuizProgressView(progress: viewModel.progress)
+
+                    HStack(spacing: 8) {
+                        settingsChip(title: "\(selectedQuestionCount) Questions")
+                        settingsChip(title: difficultyLabel)
+                    }
 
                     if let question = viewModel.currentQuestion {
                         Text(question.questionText)
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
+                            .font(.system(size: 34, weight: .bold, design: .rounded))
                             .foregroundStyle(.primary)
                             .lineSpacing(3)
                             .padding(.bottom, 4)
@@ -68,7 +92,7 @@ struct QuizQuestionView: View {
                         }
                     } else if viewModel.isLoading {
                         ProgressView("Loading quiz...")
-                            .tint(QuizTheme.accent)
+                            .tint(palette.accent)
                             .frame(maxWidth: .infinity, alignment: .center)
                     } else {
                         Text(viewModel.errorMessage ?? "No quiz questions available.")
@@ -82,8 +106,11 @@ struct QuizQuestionView: View {
                 .animation(.easeInOut(duration: 0.25), value: viewModel.hasCheckedAnswer)
             }
             .safeAreaInset(edge: .top) {
-                QuizTopBar(onClose: { dismiss() })
-                    .padding(.top, 4)
+                QuizTopBar(
+                    onClose: { dismiss() },
+                    onOpenSettings: { showQuizSettings = true }
+                )
+                .padding(.top, 4)
             }
             .safeAreaInset(edge: .bottom) {
                 QuizBottomActionBar(
@@ -98,7 +125,7 @@ struct QuizQuestionView: View {
                 .padding(.bottom, 8)
                 .background(
                     LinearGradient(
-                        colors: [QuizTheme.background.opacity(0), QuizTheme.background],
+                        colors: [palette.background.opacity(0), palette.background],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -106,6 +133,8 @@ struct QuizQuestionView: View {
             }
         }
         .task {
+            selectedQuestionCount = viewModel.configuredQuestionCount
+            selectedDifficulty = viewModel.configuredDifficulty
             if viewModel.questions.isEmpty {
                 await viewModel.loadQuiz()
             }
@@ -132,20 +161,44 @@ struct QuizQuestionView: View {
         } message: {
             Text("You scored \(viewModel.score) out of \(viewModel.questions.count).")
         }
+        .sheet(isPresented: $showQuizSettings) {
+            QuizSettingsSheet(
+                questionCount: $selectedQuestionCount,
+                difficulty: $selectedDifficulty,
+                onApply: {
+                    Task {
+                        await viewModel.regenerateQuiz(questionCount: selectedQuestionCount, difficulty: selectedDifficulty)
+                    }
+                }
+            )
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
+        .environment(\.quizPalette, palette)
         .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private func settingsChip(title: String) -> some View {
+        Text(title)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(palette.accent)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(palette.accentSubtle)
+            .clipShape(Capsule())
     }
 
     private var decorativeBackground: some View {
         GeometryReader { proxy in
             ZStack {
                 Circle()
-                    .fill(QuizTheme.accentSoft.opacity(0.30))
+                    .fill(palette.accentSoft.opacity(0.24))
                     .frame(width: 320)
                     .blur(radius: 90)
                     .position(x: -20, y: -40)
 
                 Circle()
-                    .fill(QuizTheme.accent.opacity(0.08))
+                    .fill(palette.accent.opacity(0.08))
                     .frame(width: 360)
                     .blur(radius: 110)
                     .position(x: proxy.size.width + 50, y: proxy.size.height - 80)
@@ -158,6 +211,54 @@ struct QuizQuestionView: View {
     private func triggerHaptic(success: Bool) {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(success ? .success : .error)
+    }
+}
+
+private struct QuizSettingsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @Binding var questionCount: Int
+    @Binding var difficulty: String
+    let onApply: () -> Void
+
+    private let availableQuestionCounts = [5, 10, 15, 20]
+    private let difficulties = ["easy", "medium", "hard"]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Number of Questions") {
+                    Picker("Questions", selection: $questionCount) {
+                        ForEach(availableQuestionCounts, id: \.self) { count in
+                            Text("\(count)").tag(count)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                Section("Difficulty") {
+                    Picker("Difficulty", selection: $difficulty) {
+                        ForEach(difficulties, id: \.self) { level in
+                            Text(level.capitalized).tag(level)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+            .navigationTitle("Quiz Filters")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Apply") {
+                        onApply()
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

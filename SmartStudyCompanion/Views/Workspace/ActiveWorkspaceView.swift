@@ -329,7 +329,10 @@ struct ActiveWorkspaceView: View {
             AIChatView(viewModel: AIChatViewModel(selectedContext: chatContext))
         }
         .navigationDestination(isPresented: $showKnowledgeQuiz) {
-            QuizQuestionView(workspaceTitle: viewModel.workspace.title)
+            QuizQuestionView(
+                workspaceTitle: viewModel.workspace.title,
+                workspaceColorHex: viewModel.workspace.workspaceColorHex
+            )
         }
         .navigationDestination(isPresented: $showFlashcardSession) {
             FlashcardSessionView(workspaceTitle: viewModel.workspace.title)

@@ -13,7 +13,7 @@ final class QuizQuestionViewModel: ObservableObject {
     @Published var isLoading = false
 
     private let provider: QuizProviderProtocol
-    private let request: QuizGenerationRequest
+    private var request: QuizGenerationRequest
 
     var onQuizCompleted: ((Int, Int) -> Void)?
 
@@ -35,6 +35,14 @@ final class QuizQuestionViewModel: ObservableObject {
                 workspaceTitle: "Knowledge"
             )
         )
+    }
+
+    var configuredQuestionCount: Int {
+        request.questionCount
+    }
+
+    var configuredDifficulty: String {
+        request.difficulty
     }
 
     var currentQuestion: QuizQuestion? {
@@ -92,6 +100,19 @@ final class QuizQuestionViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    func regenerateQuiz(questionCount: Int, difficulty: String) async {
+        guard questionCount != request.questionCount || difficulty != request.difficulty else { return }
+
+        request = QuizGenerationRequest(
+            pdfFileId: request.pdfFileId,
+            questionCount: questionCount,
+            difficulty: difficulty,
+            workspaceTitle: request.workspaceTitle,
+            preferredTopics: request.preferredTopics
+        )
+        await loadQuiz()
     }
 
     func selectOption(_ optionID: String) {

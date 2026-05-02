@@ -206,6 +206,77 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         selectedMaterialForPreview = material
     }
 
+    func renameMaterial(_ material: StudyMaterial, to newTitle: String) {
+        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard let index = materials.firstIndex(where: { $0.id == material.id }) else { return }
+
+        var updated = materials[index]
+        let ext = URL(fileURLWithPath: material.storedPath).pathExtension
+        updated = StudyMaterial(
+            id: updated.id,
+            workspaceID: updated.workspaceID,
+            title: String(trimmed.prefix(80)),
+            type: updated.type,
+            storedPath: updated.storedPath,
+            createdAt: updated.createdAt,
+            previewText: updated.previewText,
+            thumbnailPath: updated.thumbnailPath,
+            isUsableForAIContext: updated.isUsableForAIContext,
+            isSelectedForAIContext: updated.isSelectedForAIContext,
+            fileSizeInBytes: updated.fileSizeInBytes
+        )
+
+        if !ext.isEmpty {
+            let currentURL = URL(fileURLWithPath: material.storedPath)
+            let newFileName = "\(String(trimmed.prefix(80))).\(ext)"
+            let destinationURL = currentURL.deletingLastPathComponent().appendingPathComponent(newFileName)
+
+            if destinationURL.path != currentURL.path {
+                do {
+                    try FileManager.default.moveItem(at: currentURL, to: destinationURL)
+                    updated = StudyMaterial(
+                        id: updated.id,
+                        workspaceID: updated.workspaceID,
+                        title: updated.title,
+                        type: updated.type,
+                        storedPath: destinationURL.path,
+                        createdAt: updated.createdAt,
+                        previewText: updated.previewText,
+                        thumbnailPath: updated.thumbnailPath,
+                        isUsableForAIContext: updated.isUsableForAIContext,
+                        isSelectedForAIContext: updated.isSelectedForAIContext,
+                        fileSizeInBytes: updated.fileSizeInBytes
+                    )
+                } catch {
+                    importErrorMessage = "Could not rename material file."
+                    return
+                }
+            }
+        }
+
+        materials[index] = updated
+        do {
+            try persistMaterials()
+        } catch {
+            importErrorMessage = "Could not save material rename."
+        }
+    }
+
+    func deleteMaterial(_ material: StudyMaterial) {
+        guard let index = materials.firstIndex(where: { $0.id == material.id }) else { return }
+        materials.remove(at: index)
+
+        do {
+            if FileManager.default.fileExists(atPath: material.storedPath) {
+                try FileManager.default.removeItem(atPath: material.storedPath)
+            }
+            try persistMaterials()
+        } catch {
+            importErrorMessage = "Could not delete material."
+        }
+    }
+
     private func persistMaterials() throws {
         try storageService.saveMaterials(materials, workspaceID: workspaceID)
     }

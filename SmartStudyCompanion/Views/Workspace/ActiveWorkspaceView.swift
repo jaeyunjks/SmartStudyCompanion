@@ -77,6 +77,7 @@ struct ActiveWorkspaceView: View {
     @State private var activeNoteDraft: WorkspaceNote?
     @State private var summaryRoute: WorkspaceSummaryRoute?
     @State private var showAllNotes = false
+    @State private var showAllMaterials = false
     @State private var showAIChat = false
     @State private var showKnowledgeQuiz = false
     @State private var showFlashcardSession = false
@@ -84,7 +85,7 @@ struct ActiveWorkspaceView: View {
     @State private var showImportOptions = false
     @State private var showPhotoPicker = false
     @State private var showFileImporter = false
-    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
 
     init(studySpace: StudySpace) {
         _viewModel = StateObject(
@@ -155,6 +156,9 @@ struct ActiveWorkspaceView: View {
                                 },
                                 onToggleAISelection: { material in
                                     viewModel.toggleMaterialSelectionForAI(material.id)
+                                },
+                                onViewAllMaterials: {
+                                    showAllMaterials = true
                                 }
                             )
 
@@ -180,29 +184,37 @@ struct ActiveWorkspaceView: View {
         }
         .photosPicker(
             isPresented: $showPhotoPicker,
-            selection: $selectedPhotoItem,
+            selection: $selectedPhotoItems,
+            maxSelectionCount: 20,
             matching: .images,
             preferredItemEncoding: .automatic
         )
-        .onChange(of: selectedPhotoItem) { _, newItem in
-            guard let newItem else { return }
+        .onChange(of: selectedPhotoItems) { _, newItems in
+            guard !newItems.isEmpty else { return }
             Task {
-                if let data = try? await newItem.loadTransferable(type: Data.self) {
-                    await viewModel.importPhoto(data: data, fileName: nil)
-                } else {
-                    viewModel.importErrorMessage = "Could not load the selected photo."
+                for item in newItems {
+                    if let data = try? await item.loadTransferable(type: Data.self) {
+                        await viewModel.importPhoto(data: data, fileName: nil)
+                    } else {
+                        viewModel.importErrorMessage = "Could not load one of the selected photos."
+                    }
                 }
+                selectedPhotoItems = []
             }
         }
         .fileImporter(
             isPresented: $showFileImporter,
             allowedContentTypes: supportedDocumentTypes,
-            allowsMultipleSelection: false
+            allowsMultipleSelection: true
         ) { result in
             switch result {
             case .success(let urls):
-                guard let url = urls.first else { return }
-                Task { await viewModel.importDocument(from: url) }
+                guard !urls.isEmpty else { return }
+                Task {
+                    for url in urls {
+                        await viewModel.importDocument(from: url)
+                    }
+                }
             case .failure:
                 viewModel.importErrorMessage = "File import was cancelled or failed."
             }
@@ -260,6 +272,24 @@ struct ActiveWorkspaceView: View {
                 },
                 onDelete: { note in
                     viewModel.deleteNote(note)
+                }
+            )
+            .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showAllMaterials) {
+            WorkspaceAllMaterialsView(
+                materials: viewModel.materials,
+                onOpen: { material in
+                    viewModel.openPreview(for: material)
+                },
+                onToggleAISelection: { material in
+                    viewModel.toggleMaterialSelectionForAI(material.id)
+                },
+                onRename: { material, newTitle in
+                    viewModel.renameMaterial(material, to: newTitle)
+                },
+                onDelete: { material in
+                    viewModel.deleteMaterial(material)
                 }
             )
             .presentationDetents([.medium, .large])

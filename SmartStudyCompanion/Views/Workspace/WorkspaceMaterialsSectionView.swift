@@ -6,6 +6,7 @@ struct WorkspaceMaterialsSectionView: View {
     let materials: [StudyMaterial]
     let onTapMaterial: (StudyMaterial) -> Void
     let onToggleAISelection: (StudyMaterial) -> Void
+    let onViewAllMaterials: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -38,12 +39,22 @@ struct WorkspaceMaterialsSectionView: View {
                 .clipShape(RoundedRectangle(cornerRadius: WorkspaceTheme.cornerRadius, style: .continuous))
             } else {
                 VStack(spacing: 10) {
-                    ForEach(materials) { material in
+                    ForEach(materials.prefix(3)) { material in
                         WorkspaceMaterialCardView(
                             material: material,
                             onTap: { onTapMaterial(material) },
                             onToggleAISelection: { onToggleAISelection(material) }
                         )
+                    }
+
+                    if materials.count > 3 {
+                        Button("View all") {
+                            onViewAllMaterials()
+                        }
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -57,7 +68,8 @@ struct WorkspaceMaterialsSectionView: View {
     WorkspaceMaterialsSectionView(
         materials: [],
         onTapMaterial: { _ in },
-        onToggleAISelection: { _ in }
+        onToggleAISelection: { _ in },
+        onViewAllMaterials: {}
     )
     .padding()
 }

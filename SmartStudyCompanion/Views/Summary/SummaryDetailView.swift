@@ -78,6 +78,10 @@ struct SummaryDetailView: View {
                         emptyState
                     }
 
+                    if !viewModel.versions.isEmpty {
+                        historySection
+                    }
+
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
                             .font(.footnote.weight(.medium))
@@ -145,6 +149,9 @@ struct SummaryDetailView: View {
         }
         .task {
             viewModel.loadIfNeeded()
+            if !viewModel.availableSources.isEmpty {
+                showSourcePicker = true
+            }
         }
         .environment(\.summaryPalette, palette)
         .toolbar(.hidden, for: .navigationBar)
@@ -155,8 +162,8 @@ struct SummaryDetailView: View {
             Button {
                 showSourcePicker = true
             } label: {
-                Label("Sources", systemImage: "line.3.horizontal.decrease.circle")
-                    .font(.subheadline.weight(.semibold))
+                Label("Select Sources", systemImage: "line.3.horizontal.decrease.circle.fill")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(palette.accent)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -173,7 +180,7 @@ struct SummaryDetailView: View {
                     Text(currentVersionName)
                         .lineLimit(1)
                 }
-                .font(.subheadline.weight(.semibold))
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -318,48 +325,117 @@ struct SummaryDetailView: View {
                 .foregroundStyle(palette.accent)
                 .buttonStyle(.plain)
             }
+
         }
         .padding(20)
         .summaryGlassCard()
     }
 
-    private var sourcePickerSheet: some View {
-        NavigationStack {
-            List {
-                ForEach(viewModel.availableSources) { source in
+    private var historySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Summary History")
+                .font(.headline.weight(.semibold))
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(viewModel.versions.prefix(5)) { version in
                     Button {
-                        if viewModel.selectedSourceIDs.contains(source.id) {
-                            viewModel.selectedSourceIDs.remove(source.id)
-                        } else {
-                            viewModel.selectedSourceIDs.insert(source.id)
-                        }
+                        viewModel.selectVersion(version.id)
                     } label: {
                         HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(source.name)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(version.name)
+                                    .font(.subheadline.weight(.medium))
                                     .foregroundStyle(.primary)
-                                Text(source.kind.rawValue.capitalized)
+                                Text(version.createdAt.formatted(date: .abbreviated, time: .shortened))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Image(systemName: viewModel.selectedSourceIDs.contains(source.id) ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(viewModel.selectedSourceIDs.contains(source.id) ? palette.accent : .secondary)
+                            if viewModel.selectedVersionID == version.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(palette.accent)
+                            } else {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                     .buttonStyle(.plain)
                 }
             }
+        }
+        .padding(16)
+        .summaryGlassCard()
+    }
+
+    private var sourcePickerSheet: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                List {
+                    Section {
+                        ForEach(viewModel.availableSources) { source in
+                            Button {
+                                if viewModel.selectedSourceIDs.contains(source.id) {
+                                    viewModel.selectedSourceIDs.remove(source.id)
+                                } else {
+                                    viewModel.selectedSourceIDs.insert(source.id)
+                                }
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(source.name)
+                                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                                            .foregroundStyle(.primary)
+                                        Text(source.kind.rawValue.capitalized)
+                                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: viewModel.selectedSourceIDs.contains(source.id) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(viewModel.selectedSourceIDs.contains(source.id) ? palette.accent : .secondary)
+                                        .font(.system(size: 18, weight: .semibold))
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .listStyle(.insetGrouped)
+
+                VStack(spacing: 10) {
+                    Button {
+                        showSourcePicker = false
+                        viewModel.generateSummaryFromSelectedSources()
+                    } label: {
+                        Text("Generate Summary")
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 13)
+                            .background(palette.accent)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.selectedSourceIDs.isEmpty || viewModel.isLoading)
+                    .opacity((viewModel.selectedSourceIDs.isEmpty || viewModel.isLoading) ? 0.55 : 1)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 14)
+                .background(.ultraThinMaterial)
+            }
             .navigationTitle("Select Sources")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { showSourcePicker = false }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Generate") {
-                        showSourcePicker = false
-                        viewModel.generateSummaryFromSelectedSources()
-                    }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Clear All") { viewModel.clearAllSources() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Select All") { viewModel.selectAllSources() }
                 }
             }
         }
@@ -383,25 +459,21 @@ struct SummaryDetailView: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundStyle(palette.accent)
                         }
-
-                        Menu {
-                            Button("Rename") {
-                                renameVersionID = version.id
-                                renameText = version.name
-                            }
-                            Button("Delete", role: .destructive) {
-                                viewModel.deleteVersion(version.id)
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 30, height: 30)
-                        }
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
                         viewModel.selectVersion(version.id)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button("Rename") {
+                            renameVersionID = version.id
+                            renameText = version.name
+                        }
+                        .tint(.blue)
+
+                        Button("Delete", role: .destructive) {
+                            viewModel.deleteVersion(version.id)
+                        }
                     }
                 }
             }

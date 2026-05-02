@@ -1,6 +1,6 @@
 import Foundation
 
-struct StudySummary: Identifiable, Equatable {
+struct StudySummary: Identifiable, Equatable, Codable {
     let id: UUID
     let category: String
     let estimatedReadTime: String
@@ -63,7 +63,7 @@ struct StudySummary: Identifiable, Equatable {
     }
 }
 
-struct SummaryMainIdea: Identifiable, Equatable {
+struct SummaryMainIdea: Identifiable, Equatable, Codable {
     let id: UUID
     let text: String
 
@@ -73,7 +73,7 @@ struct SummaryMainIdea: Identifiable, Equatable {
     }
 }
 
-struct KeyConcept: Identifiable, Equatable {
+struct KeyConcept: Identifiable, Equatable, Codable {
     let id: UUID
     let term: String
     let definition: String
@@ -85,7 +85,7 @@ struct KeyConcept: Identifiable, Equatable {
     }
 }
 
-struct ImportantPoint: Identifiable, Equatable {
+struct ImportantPoint: Identifiable, Equatable, Codable {
     let id: UUID
     let text: String
     let highlights: [String]

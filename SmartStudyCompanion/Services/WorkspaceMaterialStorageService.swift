@@ -1,4 +1,6 @@
 import Foundation
+import PDFKit
+import Vision
 
 final class WorkspaceMaterialStorageService {
     static let shared = WorkspaceMaterialStorageService()
@@ -111,9 +113,73 @@ final class WorkspaceMaterialStorageService {
     }
 
     private func previewTextIfAvailable(for url: URL, type: StudyMaterialType) throws -> String? {
-        guard type == .text else { return nil }
-        let content = try String(contentsOf: url, encoding: .utf8)
-        return String(content.prefix(240))
+        switch type {
+        case .text:
+            if let text = try readTextDocument(at: url), !text.isEmpty {
+                return String(text.prefix(1200))
+            }
+            return nil
+        case .pdf:
+            if let text = readPDFText(at: url), !text.isEmpty {
+                return String(text.prefix(1200))
+            }
+            return nil
+        case .image:
+            if let text = readImageText(at: url), !text.isEmpty {
+                return String(text.prefix(1200))
+            }
+            return nil
+        case .document, .other:
+            if let text = try readTextDocument(at: url), !text.isEmpty {
+                return String(text.prefix(1200))
+            }
+            return nil
+        }
+    }
+
+    private func readTextDocument(at url: URL) throws -> String? {
+        let ext = url.pathExtension.lowercased()
+
+        if ext == "txt" || ext == "md" || ext == "rtf" {
+            return try String(contentsOf: url, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        if ext == "docx" {
+            // Native docx parsing is not available in this lightweight local flow.
+            return nil
+        }
+
+        if ext == "doc" || ext == "pages" {
+            return nil
+        }
+
+        return try? String(contentsOf: url, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func readPDFText(at url: URL) -> String? {
+        guard let doc = PDFDocument(url: url) else { return nil }
+        let pages = (0..<doc.pageCount).compactMap { doc.page(at: $0)?.string?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        return pages.joined(separator: "\n\n")
+    }
+
+    private func readImageText(at url: URL) -> String? {
+        guard let imageData = try? Data(contentsOf: url),
+              let cgImageSource = CGImageSourceCreateWithData(imageData as CFData, nil),
+              let cgImage = CGImageSourceCreateImageAtIndex(cgImageSource, 0, nil) else { return nil }
+
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = true
+
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        do {
+            try handler.perform([request])
+            let observations = request.results ?? []
+            let text = observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+            return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            return nil
+        }
     }
 
     private func normalizeLoadedMaterials(_ materials: [StudyMaterial], workspaceID: UUID) throws -> [StudyMaterial] {

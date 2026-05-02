@@ -15,7 +15,7 @@ struct SummarySourceItem: Identifiable, Codable, Hashable {
     let content: String
 }
 
-struct SummaryVersion: Identifiable {
+struct SummaryVersion: Identifiable, Codable {
     let id: UUID
     var name: String
     let createdAt: Date
@@ -43,6 +43,7 @@ final class SummaryDetailViewModel: ObservableObject {
     private let workspaceTitle: String
     private let workspaceContent: String
     private let apiService: APIService
+    private let summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService
     private let shouldAutoRequestOnLoad: Bool
     private let onSummarySaved: () -> Void
     private var hasRequestedInitialSummary = false
@@ -53,6 +54,7 @@ final class SummaryDetailViewModel: ObservableObject {
         workspaceContent: String,
         sourceItems: [SummarySourceItem] = [],
         apiService: APIService? = nil,
+        summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService = .shared,
         initialSummary: StudySummary? = nil,
         shouldAutoRequestOnLoad: Bool = true,
         onSummarySaved: @escaping () -> Void = {}
@@ -63,12 +65,15 @@ final class SummaryDetailViewModel: ObservableObject {
         self.workspaceContent = workspaceContent
         self.availableSources = sourceItems
         self.apiService = apiService ?? APIService.shared
+        self.summaryHistoryStorageService = summaryHistoryStorageService
         self.shouldAutoRequestOnLoad = shouldAutoRequestOnLoad
         self.onSummarySaved = onSummarySaved
 
         self.selectedSourceIDs = Set(sourceItems.map(\.id))
 
-        if let initialSummary {
+        loadPersistedHistory()
+
+        if versions.isEmpty, let initialSummary {
             let version = SummaryVersion(
                 id: UUID(),
                 name: "Initial Summary",
@@ -78,6 +83,8 @@ final class SummaryDetailViewModel: ObservableObject {
             )
             self.versions = [version]
             self.selectedVersionID = version.id
+            self.summary = initialSummary
+            persistHistory()
         }
     }
 
@@ -85,7 +92,9 @@ final class SummaryDetailViewModel: ObservableObject {
         guard shouldAutoRequestOnLoad else { return }
         guard !hasRequestedInitialSummary else { return }
         hasRequestedInitialSummary = true
-        regenerateSummary()
+        if summary == nil, let selectedID = selectedVersionID {
+            selectVersion(selectedID)
+        }
     }
 
     func simplifySummary() {
@@ -111,6 +120,7 @@ final class SummaryDetailViewModel: ObservableObject {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let index = versions.firstIndex(where: { $0.id == id }) else { return }
         versions[index].name = String(trimmed.prefix(60))
+        persistHistory()
     }
 
     func deleteVersion(_ id: UUID) {
@@ -119,6 +129,7 @@ final class SummaryDetailViewModel: ObservableObject {
             selectedVersionID = versions.first?.id
             summary = versions.first?.summary
         }
+        persistHistory()
     }
 
     func selectVersion(_ id: UUID) {
@@ -126,6 +137,7 @@ final class SummaryDetailViewModel: ObservableObject {
         selectedVersionID = id
         selectedSourceIDs = version.sourceIDs
         summary = version.summary
+        persistHistory()
     }
 
     func toggleBookmark() {
@@ -138,6 +150,18 @@ final class SummaryDetailViewModel: ObservableObject {
 
     func shareSummaryText() -> String {
         summary?.shareText ?? "No summary available yet."
+    }
+
+    var shouldPromptForSourceSelection: Bool {
+        summary == nil && versions.isEmpty
+    }
+
+    func selectAllSources() {
+        selectedSourceIDs = Set(availableSources.map(\.id))
+    }
+
+    func clearAllSources() {
+        selectedSourceIDs.removeAll()
     }
 
     private func requestSummary(mode: SummaryGenerationMode) {
@@ -178,20 +202,6 @@ final class SummaryDetailViewModel: ObservableObject {
                     summary = normalized
                     appendVersion(summary: normalized, fallbackName: mode == .regenerate ? "Regenerated" : "Summary")
                 }
-
-                do {
-                    try await apiService.saveWorkspaceSummaryOutput(
-                        workspaceId: workspaceId,
-                        title: normalized.title,
-                        content: normalized.shareText
-                    )
-                } catch {
-                    // Non-blocking: UI summary is already generated.
-                }
-
-                if let workspaceUUID = UUID(uuidString: workspaceId) {
-                    StudySpaceStore.shared.incrementAIOutputCount(for: workspaceUUID)
-                }
                 onSummarySaved()
             } catch let error as NetworkError {
                 errorMessage = userFriendlyErrorMessage(for: error)
@@ -229,6 +239,7 @@ final class SummaryDetailViewModel: ObservableObject {
         )
         versions.insert(version, at: 0)
         selectedVersionID = version.id
+        persistHistory()
     }
 
     private func buildContentFromSelectedSources() -> String {
@@ -267,6 +278,42 @@ final class SummaryDetailViewModel: ObservableObject {
             return "Unable to generate summary: \(message)"
         default:
             return "Unable to generate a summary right now. Please try again."
+        }
+    }
+
+    private func loadPersistedHistory() {
+        guard let workspaceUUID = UUID(uuidString: workspaceId) else { return }
+        do {
+            let snapshot = try summaryHistoryStorageService.loadHistory(workspaceID: workspaceUUID)
+            versions = snapshot.versions.sorted { $0.createdAt > $1.createdAt }
+            selectedVersionID = snapshot.selectedVersionID
+
+            if let selectedID = selectedVersionID,
+               let selectedVersion = versions.first(where: { $0.id == selectedID }) {
+                summary = selectedVersion.summary
+                selectedSourceIDs = selectedVersion.sourceIDs
+            } else if let latest = versions.first {
+                summary = latest.summary
+                selectedVersionID = latest.id
+                selectedSourceIDs = latest.sourceIDs
+            }
+        } catch {
+            versions = []
+            selectedVersionID = nil
+        }
+    }
+
+    private func persistHistory() {
+        guard let workspaceUUID = UUID(uuidString: workspaceId) else { return }
+        let snapshot = WorkspaceSummaryHistorySnapshot(
+            versions: versions.sorted { $0.createdAt > $1.createdAt },
+            selectedVersionID: selectedVersionID
+        )
+
+        do {
+            try summaryHistoryStorageService.saveHistory(snapshot, workspaceID: workspaceUUID)
+        } catch {
+            // Best effort persistence.
         }
     }
 }

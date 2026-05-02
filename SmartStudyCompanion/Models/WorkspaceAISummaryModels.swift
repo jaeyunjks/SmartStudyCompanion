@@ -10,12 +10,6 @@ struct WorkspaceAISummaryResponse: Codable {
     let summary: WorkspaceAISummaryDTO
 }
 
-struct SaveWorkspaceSummaryRequest: Codable {
-    let workspaceId: String
-    let title: String
-    let content: String
-}
-
 struct WorkspaceAISummaryDTO: Codable {
     let overview: String
     let keyConcepts: [String]

@@ -39,6 +39,6 @@ struct ActivityTimelineItemView: View {
 }
 
 #Preview {
-    ActivityTimelineItemView(item: .init(iconName: "doc.text", title: "Key Concepts", timestamp: "2h ago", detail: "Short summary."))
+    ActivityTimelineItemView(item: .init(id: UUID(), iconName: "doc.text", title: "Key Concepts", timestamp: "2h ago", detail: "Short summary."))
         .padding()
 }

@@ -53,7 +53,7 @@ enum WorkspaceTheme {
 }
 
 struct ActivityItem: Identifiable {
-    let id = UUID()
+    let id: UUID
     let iconName: String
     let title: String
     let timestamp: String
@@ -95,6 +95,7 @@ struct ActiveWorkspaceView: View {
                 studySpace: studySpace,
                 storageService: .shared,
                 noteStorageService: .shared,
+                summaryHistoryStorageService: .shared,
                 store: .shared
             )
         )
@@ -318,7 +319,10 @@ struct ActiveWorkspaceView: View {
                 workspaceTitle: route.request.workspaceTitle,
                 workspaceContent: route.request.workspaceContent,
                 workspaceColorHex: route.workspaceColorHex,
-                sourceItems: route.sourceItems
+                sourceItems: route.sourceItems,
+                onSummarySaved: {
+                    viewModel.registerGeneratedSummaryOutput()
+                }
             )
         }
         .navigationDestination(item: $activeNoteDraft) { note in
@@ -388,24 +392,42 @@ struct ActiveWorkspaceView: View {
 
     private var recentActivityItems: [ActivityItem] {
         let noteItems = viewModel.notes.prefix(3).map { note in
-            ActivityItem(
+            WorkspaceActivityRecord(
+                id: note.id,
+                kind: .note,
                 iconName: "square.and.pencil",
                 title: note.title,
-                timestamp: note.updatedAt.formattedActivityTimestamp,
-                detail: "Note updated in this workspace."
+                detail: "Note updated in this workspace.",
+                occurredAt: note.updatedAt
             )
         }
 
         let materialItems = viewModel.materials.prefix(3).map { material in
-            ActivityItem(
+            WorkspaceActivityRecord(
+                id: material.id,
+                kind: .material,
                 iconName: materialIconName(for: material.type),
                 title: material.title,
-                timestamp: material.createdAt.formattedActivityTimestamp,
-                detail: materialDetailText(for: material)
+                detail: materialDetailText(for: material),
+                occurredAt: material.createdAt
             )
         }
 
-        return Array((noteItems + materialItems).prefix(5))
+        let summaryItems = viewModel.summaryActivityRecords(limit: 3)
+
+        let merged = (noteItems + materialItems + summaryItems)
+            .sorted { $0.occurredAt > $1.occurredAt }
+            .prefix(5)
+
+        return merged.map {
+            ActivityItem(
+                id: $0.id,
+                iconName: $0.iconName,
+                title: $0.title,
+                timestamp: $0.occurredAt.formattedActivityTimestamp,
+                detail: $0.detail
+            )
+        }
     }
 
     private func materialIconName(for type: StudyMaterialType) -> String {

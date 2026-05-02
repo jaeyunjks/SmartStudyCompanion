@@ -21,8 +21,8 @@ struct RecentActivitySectionView: View {
 
 #Preview {
     RecentActivitySectionView(items: [
-        .init(iconName: "doc.text", title: "Key Concepts", timestamp: "2h ago", detail: "Short summary."),
-        .init(iconName: "photo", title: "Architecture Diagram", timestamp: "3d ago", detail: "Updated diagram.")
+        .init(id: UUID(), iconName: "doc.text", title: "Key Concepts", timestamp: "2h ago", detail: "Short summary."),
+        .init(id: UUID(), iconName: "photo", title: "Architecture Diagram", timestamp: "3d ago", detail: "Updated diagram.")
     ])
     .padding()
 }

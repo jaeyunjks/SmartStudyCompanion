@@ -2,6 +2,21 @@ import Foundation
 import SwiftUI
 import Combine
 
+struct WorkspaceActivityRecord: Identifiable {
+    enum Kind {
+        case note
+        case material
+        case summary
+    }
+
+    let id: UUID
+    let kind: Kind
+    let iconName: String
+    let title: String
+    let detail: String
+    let occurredAt: Date
+}
+
 @MainActor
 final class ActiveWorkspaceViewModel: ObservableObject {
     @Published var workspace: StudySpace
@@ -15,21 +30,26 @@ final class ActiveWorkspaceViewModel: ObservableObject {
     private let store: StudySpaceStore
     private let storageService: WorkspaceMaterialStorageService
     private let noteStorageService: WorkspaceNoteStorageService
+    private let summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService
+    private var summaryVersions: [SummaryVersion] = []
     private var cancellables = Set<AnyCancellable>()
 
     init(
         studySpace: StudySpace,
         storageService: WorkspaceMaterialStorageService,
         noteStorageService: WorkspaceNoteStorageService,
+        summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService = .shared,
         store: StudySpaceStore
     ) {
         self.workspace = studySpace
         self.store = store
         self.storageService = storageService
         self.noteStorageService = noteStorageService
+        self.summaryHistoryStorageService = summaryHistoryStorageService
         bindWorkspaceUpdates()
         loadMaterials()
         loadNotes()
+        loadSummaryHistory()
     }
 
     var workspaceID: UUID {
@@ -293,6 +313,27 @@ final class ActiveWorkspaceViewModel: ObservableObject {
 
     func registerGeneratedSummaryOutput() {
         store.incrementAIOutputCount(for: workspace.id)
+        loadSummaryHistory()
+    }
+
+    func summaryActivityRecords(limit: Int = 3) -> [WorkspaceActivityRecord] {
+        summaryVersions
+            .sorted { $0.createdAt > $1.createdAt }
+            .prefix(limit)
+            .map { version in
+                WorkspaceActivityRecord(
+                    id: version.id,
+                    kind: .summary,
+                    iconName: "sparkles",
+                    title: version.name,
+                    detail: "AI summary generated from selected sources.",
+                    occurredAt: version.createdAt
+                )
+            }
+    }
+
+    func refreshSummaryHistory() {
+        loadSummaryHistory()
     }
 
     func deleteMaterial(_ material: StudyMaterial) {
@@ -390,5 +431,14 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         }
 
         return note.content
+    }
+
+    private func loadSummaryHistory() {
+        do {
+            let snapshot = try summaryHistoryStorageService.loadHistory(workspaceID: workspaceID)
+            summaryVersions = snapshot.versions
+        } catch {
+            summaryVersions = []
+        }
     }
 }

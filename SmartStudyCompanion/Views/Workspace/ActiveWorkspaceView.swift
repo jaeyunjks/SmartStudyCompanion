@@ -159,6 +159,12 @@ struct ActiveWorkspaceView: View {
                                 onToggleAISelection: { material in
                                     viewModel.toggleMaterialSelectionForAI(material.id)
                                 },
+                                onRenameMaterial: { material, newTitle in
+                                    viewModel.renameMaterial(material, to: newTitle)
+                                },
+                                onDeleteMaterial: { material in
+                                    viewModel.deleteMaterial(material)
+                                },
                                 onViewAllMaterials: {
                                     showAllMaterials = true
                                 }

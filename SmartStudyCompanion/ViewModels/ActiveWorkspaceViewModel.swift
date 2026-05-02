@@ -291,6 +291,10 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         }
     }
 
+    func registerGeneratedSummaryOutput() {
+        store.incrementAIOutputCount(for: workspace.id)
+    }
+
     func deleteMaterial(_ material: StudyMaterial) {
         guard let index = materials.firstIndex(where: { $0.id == material.id }) else { return }
         materials.remove(at: index)

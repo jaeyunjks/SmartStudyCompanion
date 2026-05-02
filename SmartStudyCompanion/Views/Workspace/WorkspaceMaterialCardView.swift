@@ -7,6 +7,8 @@ struct WorkspaceMaterialCardView: View {
     let material: StudyMaterial
     let onTap: () -> Void
     let onToggleAISelection: () -> Void
+    let onRename: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         Button(action: onTap) {
@@ -39,6 +41,19 @@ struct WorkspaceMaterialCardView: View {
                 Button(action: onToggleAISelection) {
                     Image(systemName: material.isSelectedForAIContext ? "sparkles" : "sparkles.slash")
                         .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(palette.primary)
+                        .frame(width: 30, height: 30)
+                        .background(palette.iconBackground)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+
+                Menu {
+                    Button("Rename", action: onRename)
+                    Button("Delete", role: .destructive, action: onDelete)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(palette.primary)
                         .frame(width: 30, height: 30)
                         .background(palette.iconBackground)
@@ -88,7 +103,9 @@ struct WorkspaceMaterialCardView: View {
             createdAt: Date()
         ),
         onTap: {},
-        onToggleAISelection: {}
+        onToggleAISelection: {},
+        onRename: {},
+        onDelete: {}
     )
     .padding()
 }

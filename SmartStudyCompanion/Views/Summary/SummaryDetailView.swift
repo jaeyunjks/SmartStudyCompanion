@@ -34,7 +34,8 @@ struct SummaryDetailView: View {
         workspaceTitle: String,
         workspaceContent: String,
         workspaceColorHex: String? = nil,
-        sourceItems: [SummarySourceItem] = []
+        sourceItems: [SummarySourceItem] = [],
+        onSummarySaved: @escaping () -> Void = {}
     ) {
         self.workspaceColorHex = workspaceColorHex
         _viewModel = StateObject(
@@ -42,7 +43,8 @@ struct SummaryDetailView: View {
                 workspaceId: workspaceId,
                 workspaceTitle: workspaceTitle,
                 workspaceContent: workspaceContent,
-                sourceItems: sourceItems
+                sourceItems: sourceItems,
+                onSummarySaved: onSummarySaved
             )
         )
     }

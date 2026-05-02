@@ -44,6 +44,7 @@ final class SummaryDetailViewModel: ObservableObject {
     private let workspaceContent: String
     private let apiService: APIService
     private let shouldAutoRequestOnLoad: Bool
+    private let onSummarySaved: () -> Void
     private var hasRequestedInitialSummary = false
 
     init(
@@ -53,7 +54,8 @@ final class SummaryDetailViewModel: ObservableObject {
         sourceItems: [SummarySourceItem] = [],
         apiService: APIService? = nil,
         initialSummary: StudySummary? = nil,
-        shouldAutoRequestOnLoad: Bool = true
+        shouldAutoRequestOnLoad: Bool = true,
+        onSummarySaved: @escaping () -> Void = {}
     ) {
         self.summary = initialSummary
         self.workspaceId = workspaceId
@@ -62,6 +64,7 @@ final class SummaryDetailViewModel: ObservableObject {
         self.availableSources = sourceItems
         self.apiService = apiService ?? APIService.shared
         self.shouldAutoRequestOnLoad = shouldAutoRequestOnLoad
+        self.onSummarySaved = onSummarySaved
 
         self.selectedSourceIDs = Set(sourceItems.map(\.id))
 
@@ -175,6 +178,21 @@ final class SummaryDetailViewModel: ObservableObject {
                     summary = normalized
                     appendVersion(summary: normalized, fallbackName: mode == .regenerate ? "Regenerated" : "Summary")
                 }
+
+                do {
+                    try await apiService.saveWorkspaceSummaryOutput(
+                        workspaceId: workspaceId,
+                        title: normalized.title,
+                        content: normalized.shareText
+                    )
+                } catch {
+                    // Non-blocking: UI summary is already generated.
+                }
+
+                if let workspaceUUID = UUID(uuidString: workspaceId) {
+                    StudySpaceStore.shared.incrementAIOutputCount(for: workspaceUUID)
+                }
+                onSummarySaved()
             } catch let error as NetworkError {
                 errorMessage = userFriendlyErrorMessage(for: error)
             } catch {

@@ -272,6 +272,27 @@ class APIService {
         )
         return response.summary.toStudySummary(workspaceTitle: workspaceTitle)
     }
+
+    /// Persist generated workspace summary as AI output in backend.
+    func saveWorkspaceSummaryOutput(
+        workspaceId: String,
+        title: String,
+        content: String
+    ) async throws {
+        let endpoint = "/ai/summary/save"
+        let payload = SaveWorkspaceSummaryRequest(
+            workspaceId: workspaceId,
+            title: title,
+            content: content
+        )
+
+        struct EmptyResponse: Decodable {}
+        _ = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: payload
+        ) as EmptyResponse
+    }
     
     // MARK: - Flashcard Methods
     

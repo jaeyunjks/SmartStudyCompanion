@@ -117,6 +117,34 @@ final class StudySpaceStore: ObservableObject {
         }
     }
 
+    func incrementAIOutputCount(for id: UUID) {
+        guard let index = studySpaces.firstIndex(where: { $0.id == id }) else { return }
+        let existing = studySpaces[index]
+        let nextCount = max(existing.aiOutputCount + 1, 1)
+
+        studySpaces[index] = StudySpace(
+            id: existing.id,
+            title: existing.title,
+            description: existing.description,
+            iconName: existing.iconName,
+            category: existing.category,
+            status: existing.status,
+            workspaceColorHex: existing.workspaceColorHex,
+            documentCount: existing.documentCount,
+            noteCount: existing.noteCount,
+            lastUpdated: "Last updated just now",
+            lastOpened: existing.lastOpened,
+            aiOutputCount: nextCount,
+            progress: existing.progress
+        )
+        persistStudySpaces()
+
+        let updatedSpace = studySpaces[index]
+        Task { [weak self] in
+            await self?.updateWorkspaceOnBackend(workspace: updatedSpace)
+        }
+    }
+
     func refreshFromBackend() async {
         do {
             let remote = try await apiService.fetchWorkspaces()

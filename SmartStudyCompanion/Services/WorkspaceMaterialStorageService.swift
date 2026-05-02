@@ -12,7 +12,14 @@ final class WorkspaceMaterialStorageService {
         guard fileManager.fileExists(atPath: metadataURL.path) else { return [] }
 
         let data = try Data(contentsOf: metadataURL)
-        return try JSONDecoder().decode([StudyMaterial].self, from: data)
+        let decoded = try JSONDecoder().decode([StudyMaterial].self, from: data)
+        let normalized = try normalizeLoadedMaterials(decoded, workspaceID: workspaceID)
+
+        if normalized != decoded {
+            try saveMaterials(normalized, workspaceID: workspaceID)
+        }
+
+        return normalized
     }
 
     func saveMaterials(_ materials: [StudyMaterial], workspaceID: UUID) throws {
@@ -107,5 +114,37 @@ final class WorkspaceMaterialStorageService {
         guard type == .text else { return nil }
         let content = try String(contentsOf: url, encoding: .utf8)
         return String(content.prefix(240))
+    }
+
+    private func normalizeLoadedMaterials(_ materials: [StudyMaterial], workspaceID: UUID) throws -> [StudyMaterial] {
+        let workspaceFolder = try materialsDirectoryURL(workspaceID: workspaceID)
+        let metadataPath = workspaceFolder.appendingPathComponent("materials.json").path
+
+        return materials.map { material in
+            guard !fileManager.fileExists(atPath: material.storedPath) else { return material }
+
+            let originalURL = URL(fileURLWithPath: material.storedPath)
+            let fallbackURL = workspaceFolder.appendingPathComponent(originalURL.lastPathComponent)
+
+            guard fallbackURL.path != metadataPath,
+                  fileManager.fileExists(atPath: fallbackURL.path)
+            else {
+                return material
+            }
+
+            return StudyMaterial(
+                id: material.id,
+                workspaceID: material.workspaceID,
+                title: material.title,
+                type: material.type,
+                storedPath: fallbackURL.path,
+                createdAt: material.createdAt,
+                previewText: material.previewText,
+                thumbnailPath: material.thumbnailPath,
+                isUsableForAIContext: material.isUsableForAIContext,
+                isSelectedForAIContext: material.isSelectedForAIContext,
+                fileSizeInBytes: material.fileSizeInBytes
+            )
+        }
     }
 }

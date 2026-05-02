@@ -3,10 +3,16 @@ import SwiftUI
 struct WorkspaceMaterialsSectionView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.workspaceThemePalette) private var palette
+
     let materials: [StudyMaterial]
     let onTapMaterial: (StudyMaterial) -> Void
     let onToggleAISelection: (StudyMaterial) -> Void
+    let onRenameMaterial: (StudyMaterial, String) -> Void
+    let onDeleteMaterial: (StudyMaterial) -> Void
     let onViewAllMaterials: () -> Void
+
+    @State private var renameMaterial: StudyMaterial?
+    @State private var renameDraft = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -43,7 +49,12 @@ struct WorkspaceMaterialsSectionView: View {
                         WorkspaceMaterialCardView(
                             material: material,
                             onTap: { onTapMaterial(material) },
-                            onToggleAISelection: { onToggleAISelection(material) }
+                            onToggleAISelection: { onToggleAISelection(material) },
+                            onRename: {
+                                renameMaterial = material
+                                renameDraft = material.title
+                            },
+                            onDelete: { onDeleteMaterial(material) }
                         )
                     }
 
@@ -61,6 +72,28 @@ struct WorkspaceMaterialsSectionView: View {
         }
         .padding(16)
         .workspaceSurface(prominence: .secondary)
+        .alert("Rename Material", isPresented: Binding(
+            get: { renameMaterial != nil },
+            set: { newValue in if !newValue { renameMaterial = nil } }
+        )) {
+            TextField("Material name", text: $renameDraft)
+            Button("Save") {
+                if let material = renameMaterial {
+                    onRenameMaterial(material, renameDraft)
+                }
+                renameMaterial = nil
+            }
+            Button("Cancel", role: .cancel) {
+                renameMaterial = nil
+            }
+        } message: {
+            Text("Rename \(renameMaterial?.title ?? "material")")
+        }
+        .onChange(of: renameMaterial) { _, newValue in
+            if let newValue {
+                renameDraft = newValue.title
+            }
+        }
     }
 }
 
@@ -69,6 +102,8 @@ struct WorkspaceMaterialsSectionView: View {
         materials: [],
         onTapMaterial: { _ in },
         onToggleAISelection: { _ in },
+        onRenameMaterial: { _, _ in },
+        onDeleteMaterial: { _ in },
         onViewAllMaterials: {}
     )
     .padding()

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SummaryTopBar: View {
+    @Environment(\.summaryPalette) private var palette
     let isBookmarked: Bool
     let shareText: String
     let onBack: () -> Void
@@ -14,7 +15,7 @@ struct SummaryTopBar: View {
 
                 Text("Summary")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(SummaryTheme.accent)
+                    .foregroundStyle(palette.accent)
             }
 
             Spacer()
@@ -26,7 +27,7 @@ struct SummaryTopBar: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
-        .background(SummaryTheme.background.opacity(0.85))
+        .background(palette.background.opacity(0.85))
         .background(.ultraThinMaterial)
     }
 
@@ -34,9 +35,9 @@ struct SummaryTopBar: View {
         Button(action: action) {
             Image(systemName: iconName)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(SummaryTheme.accent)
+                .foregroundStyle(palette.accent)
                 .frame(width: 36, height: 36)
-                .background(SummaryTheme.accentSoft.opacity(0.8))
+                .background(palette.accentSoft.opacity(0.8))
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)
@@ -44,6 +45,8 @@ struct SummaryTopBar: View {
 }
 
 private struct SummaryShareButton: View {
+    @Environment(\.summaryPalette) private var palette
+
     let shareText: String
     let onFallbackShare: () -> Void
 
@@ -52,9 +55,9 @@ private struct SummaryShareButton: View {
             ShareLink(item: shareText) {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(SummaryTheme.accent)
+                    .foregroundStyle(palette.accent)
                     .frame(width: 36, height: 36)
-                    .background(SummaryTheme.accentSoft.opacity(0.8))
+                    .background(palette.accentSoft.opacity(0.8))
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
@@ -62,9 +65,9 @@ private struct SummaryShareButton: View {
             Button(action: onFallbackShare) {
                 Image(systemName: "square.and.arrow.up")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(SummaryTheme.accent)
+                    .foregroundStyle(palette.accent)
                     .frame(width: 36, height: 36)
-                    .background(SummaryTheme.accentSoft.opacity(0.8))
+                    .background(palette.accentSoft.opacity(0.8))
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)

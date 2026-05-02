@@ -2,8 +2,16 @@ import SwiftUI
 
 struct SummaryDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel: SummaryDetailViewModel
     @State private var showFallbackShareSheet = false
+    private let workspaceColorHex: String?
+
+    @MainActor
+    private var palette: SummaryPalette {
+        let accentBase = workspaceColorHex.flatMap(Color.init(hex:)) ?? WorkspaceTheme.accent
+        return SummaryPalette(base: accentBase, colorScheme: colorScheme)
+    }
 
     private let keyConceptColumns = [
         GridItem(.adaptive(minimum: 160), spacing: 12)
@@ -12,8 +20,10 @@ struct SummaryDetailView: View {
     init(
         workspaceId: String,
         workspaceTitle: String,
-        workspaceContent: String
+        workspaceContent: String,
+        workspaceColorHex: String? = nil
     ) {
+        self.workspaceColorHex = workspaceColorHex
         _viewModel = StateObject(
             wrappedValue: SummaryDetailViewModel(
                 workspaceId: workspaceId,
@@ -25,6 +35,7 @@ struct SummaryDetailView: View {
 
 #if DEBUG
     init(previewSummary: StudySummary) {
+        self.workspaceColorHex = nil
         _viewModel = StateObject(
             wrappedValue: SummaryDetailViewModel(
                 workspaceId: UUID().uuidString,
@@ -39,7 +50,7 @@ struct SummaryDetailView: View {
 
     var body: some View {
         ZStack {
-            SummaryTheme.background
+            palette.background
                 .ignoresSafeArea()
 
             backgroundGlow
@@ -84,14 +95,14 @@ struct SummaryDetailView: View {
                                 .font(.title3.weight(.bold))
                             Text("We’ll generate a summary from notes in this workspace.")
                                 .font(.subheadline)
-                                .foregroundStyle(SummaryTheme.textSecondary)
+                                .foregroundStyle(palette.textSecondary)
 
                             if !viewModel.isLoading {
                                 Button("Try Again") {
                                     viewModel.regenerateSummary()
                                 }
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(SummaryTheme.accent)
+                                .foregroundStyle(palette.accent)
                                 .buttonStyle(.plain)
                             }
                         }
@@ -131,6 +142,7 @@ struct SummaryDetailView: View {
         .task {
             viewModel.loadIfNeeded()
         }
+        .environment(\.summaryPalette, palette)
         .toolbar(.hidden, for: .navigationBar)
     }
 
@@ -138,13 +150,13 @@ struct SummaryDetailView: View {
         GeometryReader { proxy in
             ZStack {
                 Circle()
-                    .fill(SummaryTheme.accentSoft.opacity(0.32))
+                    .fill(palette.accentSoft.opacity(0.28))
                     .frame(width: 320)
                     .blur(radius: 90)
                     .position(x: proxy.size.width - 40, y: proxy.size.height - 80)
 
                 Circle()
-                    .fill(SummaryTheme.accent.opacity(0.07))
+                    .fill(palette.accent.opacity(0.08))
                     .frame(width: 260)
                     .blur(radius: 80)
                     .position(x: 24, y: 80)
@@ -161,10 +173,10 @@ struct SummaryDetailView: View {
 
             VStack(spacing: 10) {
                 ProgressView()
-                    .tint(SummaryTheme.accent)
+                    .tint(palette.accent)
                 Text("Generating updated summary...")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(SummaryTheme.accent)
+                    .foregroundStyle(palette.accent)
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 14)

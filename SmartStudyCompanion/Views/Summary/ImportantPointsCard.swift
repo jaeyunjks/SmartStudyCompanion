@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ImportantPointsCard: View {
+    @Environment(\.summaryPalette) private var palette
     let points: [ImportantPoint]
 
     var body: some View {
@@ -17,7 +18,7 @@ struct ImportantPointsCard: View {
                         .background(alignment: .leading) {
                             if index == 0 {
                                 Capsule()
-                                    .fill(SummaryTheme.accent)
+                                    .fill(palette.accent)
                                     .frame(width: 4)
                             }
                         }
@@ -34,8 +35,8 @@ struct ImportantPointsCard: View {
         for phrase in point.highlights {
             if let range = result.range(of: phrase, options: .caseInsensitive) {
                 result[range].font = .system(size: 17, weight: .semibold, design: .rounded)
-                result[range].foregroundColor = SummaryTheme.accentStrong
-                result[range].backgroundColor = SummaryTheme.accentSoft.opacity(0.90)
+                result[range].foregroundColor = palette.accentStrong
+                result[range].backgroundColor = palette.accentSoft.opacity(0.75)
             }
         }
 

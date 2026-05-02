@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SummaryActionButtons: View {
+    @Environment(\.summaryPalette) private var palette
     let isLoading: Bool
     let onRegenerate: () -> Void
     let onSimplify: () -> Void
@@ -11,7 +12,7 @@ struct SummaryActionButtons: View {
                 HStack(spacing: 8) {
                     if isLoading {
                         ProgressView()
-                            .tint(SummaryTheme.accent)
+                            .tint(palette.accent)
                     } else {
                         Image(systemName: "arrow.clockwise")
                     }
@@ -19,13 +20,13 @@ struct SummaryActionButtons: View {
                     Text(isLoading ? "Regenerating..." : "Regenerate")
                 }
                 .font(.headline.weight(.bold))
-                .foregroundStyle(SummaryTheme.accent)
+                .foregroundStyle(palette.accent)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
                 .background(Color.clear)
                 .overlay(
                     RoundedRectangle(cornerRadius: 27, style: .continuous)
-                        .stroke(SummaryTheme.accent.opacity(0.45), lineWidth: 1.8)
+                        .stroke(palette.accent.opacity(0.45), lineWidth: 1.8)
                 )
             }
             .buttonStyle(.plain)
@@ -40,9 +41,9 @@ struct SummaryActionButtons: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
-                .background(SummaryTheme.accent)
+                .background(palette.accent)
                 .clipShape(Capsule())
-                .shadow(color: SummaryTheme.accent.opacity(0.24), radius: 12, x: 0, y: 8)
+                .shadow(color: palette.accent.opacity(0.20), radius: 10, x: 0, y: 6)
             }
             .buttonStyle(.plain)
             .disabled(isLoading)

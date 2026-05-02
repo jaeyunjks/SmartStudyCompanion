@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct VisualReferenceCard: View {
+    @Environment(\.summaryPalette) private var palette
+
     let title: String
     let caption: String
     let imageName: String?
@@ -9,7 +11,7 @@ struct VisualReferenceCard: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             RoundedRectangle(cornerRadius: SummaryTheme.cornerLarge, style: .continuous)
-                .fill(SummaryTheme.secondarySurface)
+                .fill(palette.secondarySurface)
                 .overlay {
                     if let imageName {
                         Image(imageName)
@@ -17,7 +19,7 @@ struct VisualReferenceCard: View {
                             .scaledToFill()
                     } else {
                         LinearGradient(
-                            colors: [SummaryTheme.accentSoft.opacity(0.55), SummaryTheme.secondarySurface],
+                            colors: [palette.accentSoft.opacity(0.55), palette.secondarySurface],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -26,7 +28,7 @@ struct VisualReferenceCard: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 120)
-                                .foregroundStyle(SummaryTheme.accent.opacity(0.5))
+                                .foregroundStyle(palette.accent.opacity(0.5))
                         }
                     }
                 }
@@ -52,7 +54,7 @@ struct VisualReferenceCard: View {
             }
             .padding(20)
         }
-        .shadow(color: SummaryTheme.cardShadow, radius: 16, x: 0, y: 8)
+        .shadow(color: palette.cardShadow, radius: 16, x: 0, y: 8)
     }
 }
 

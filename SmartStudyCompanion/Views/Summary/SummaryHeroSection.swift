@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SummaryHeroSection: View {
+    @Environment(\.summaryPalette) private var palette
     let summary: StudySummary
 
     var body: some View {
@@ -8,25 +9,25 @@ struct SummaryHeroSection: View {
             HStack(spacing: 10) {
                 Text(summary.category)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(SummaryTheme.accentStrong)
+                    .foregroundStyle(palette.accentStrong)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(SummaryTheme.accentSoft)
+                    .background(palette.accentSoft)
                     .clipShape(Capsule())
 
                 Text(summary.estimatedReadTime)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(SummaryTheme.textSecondary)
+                    .foregroundStyle(palette.textSecondary)
             }
 
             Text(summary.title)
                 .font(.system(size: 38, weight: .heavy, design: .rounded))
-                .foregroundStyle(SummaryTheme.accent)
+                .foregroundStyle(palette.accent)
                 .lineSpacing(2)
 
             Text(summary.overview)
                 .font(.body)
-                .foregroundStyle(SummaryTheme.textSecondary)
+                .foregroundStyle(palette.textSecondary)
                 .lineSpacing(4)
         }
     }

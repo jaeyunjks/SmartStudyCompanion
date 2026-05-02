@@ -17,7 +17,9 @@ struct WorkspaceAISummaryDTO: Codable {
     let reviewNext: [String]
 
     func toStudySummary(workspaceTitle: String) -> StudySummary {
-        let mergedMainIdeas = (importantDetails + reviewNext)
+        let cleanedOverview = overview.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let keyPoints = importantDetails
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
@@ -33,29 +35,25 @@ struct WorkspaceAISummaryDTO: Codable {
                 }
             }
 
-            return KeyConcept(term: trimmed, definition: "Review this concept in your workspace notes.")
+            return KeyConcept(term: trimmed, definition: "Review this concept from your selected materials.")
         }
 
-        let points = importantDetails.map {
-            ImportantPoint(
-                text: $0.trimmingCharacters(in: .whitespacesAndNewlines),
-                highlights: []
-            )
-        }.filter { !$0.text.isEmpty }
+        let takeaways = reviewNext
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
 
         return StudySummary(
             id: UUID(),
             category: "Workspace Notes",
             estimatedReadTime: "Auto summary",
             title: "\(workspaceTitle) Summary",
-            overview: overview.trimmingCharacters(in: .whitespacesAndNewlines),
-            mainIdeas: mergedMainIdeas.prefix(3).map { SummaryMainIdea(text: $0) },
-            visualReferenceTitle: "Generated from workspace notes",
-            visualReferenceCaption: "AI Summary",
-            imageName: nil,
-            imageSystemName: "text.book.closed.fill",
+            overview: cleanedOverview,
+            mainIdeas: keyPoints.prefix(6).map { SummaryMainIdea(text: $0) },
             keyConcepts: concepts,
-            importantPoints: points,
+            importantPoints: keyPoints.map { ImportantPoint(text: $0, highlights: []) },
+            examples: [],
+            quickTakeaways: Array(takeaways.prefix(5)),
+            suggestedNextActions: Array(takeaways.prefix(5)),
             isBookmarked: false
         )
     }

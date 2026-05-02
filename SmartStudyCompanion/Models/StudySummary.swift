@@ -4,67 +4,62 @@ struct StudySummary: Identifiable, Equatable {
     let id: UUID
     let category: String
     let estimatedReadTime: String
-    let title: String
+    var title: String
     let overview: String
     let mainIdeas: [SummaryMainIdea]
-    let visualReferenceTitle: String
-    let visualReferenceCaption: String
-    let imageName: String?
-    let imageSystemName: String
     let keyConcepts: [KeyConcept]
     let importantPoints: [ImportantPoint]
+    let examples: [String]
+    let quickTakeaways: [String]
+    let suggestedNextActions: [String]
     var isBookmarked: Bool
 
     func simplifiedVersion() -> StudySummary {
         StudySummary(
-            id: id,
+            id: UUID(),
             category: category,
-            estimatedReadTime: "5 min read",
+            estimatedReadTime: "Quick read",
             title: "\(title) (Simplified)",
-            overview: simplifiedOverview,
-            mainIdeas: mainIdeas.prefix(2).map { idea in
-                SummaryMainIdea(text: idea.text.shortened(maxWords: 16))
+            overview: overview.shortened(maxWords: 45),
+            mainIdeas: mainIdeas.prefix(4).map { SummaryMainIdea(text: $0.text.shortened(maxWords: 14)) },
+            keyConcepts: keyConcepts.prefix(4).map {
+                KeyConcept(term: $0.term, definition: $0.definition.shortened(maxWords: 14))
             },
-            visualReferenceTitle: visualReferenceTitle,
-            visualReferenceCaption: visualReferenceCaption,
-            imageName: imageName,
-            imageSystemName: imageSystemName,
-            keyConcepts: keyConcepts.prefix(3).map { concept in
-                KeyConcept(term: concept.term, definition: concept.definition.shortened(maxWords: 14))
+            importantPoints: importantPoints.prefix(5).map {
+                ImportantPoint(text: $0.text.shortened(maxWords: 16), highlights: [])
             },
-            importantPoints: importantPoints.prefix(2).map { point in
-                ImportantPoint(text: point.text.shortened(maxWords: 22), highlights: point.highlights)
-            },
+            examples: examples.prefix(2).map { $0.shortened(maxWords: 18) },
+            quickTakeaways: quickTakeaways.prefix(5).map { $0.shortened(maxWords: 12) },
+            suggestedNextActions: suggestedNextActions.prefix(5).map { $0.shortened(maxWords: 12) },
             isBookmarked: isBookmarked
         )
     }
 
     var shareText: String {
-        let ideas = mainIdeas.map { "- \($0.text)" }.joined(separator: "\n")
+        let keyPoints = mainIdeas.map { "- \($0.text)" }.joined(separator: "\n")
         let concepts = keyConcepts.map { "- \($0.term): \($0.definition)" }.joined(separator: "\n")
-        let points = importantPoints.map { "- \($0.text)" }.joined(separator: "\n")
+        let takeaways = quickTakeaways.map { "- \($0)" }.joined(separator: "\n")
+        let actions = suggestedNextActions.map { "- \($0)" }.joined(separator: "\n")
+        let exampleText = examples.isEmpty ? "" : "\nExamples\n" + examples.map { "- \($0)" }.joined(separator: "\n")
 
         return """
         \(title)
-        \(category) • \(estimatedReadTime)
 
         Overview
         \(overview)
 
-        Main Ideas
-        \(ideas)
+        Key Points
+        \(keyPoints)
 
         Key Concepts
-        \(concepts)
+        \(concepts)\(exampleText)
 
-        Important Points
-        \(points)
+        Quick Takeaways
+        \(takeaways)
+
+        Suggested Next Actions
+        \(actions)
         """
-    }
-
-    private var simplifiedOverview: String {
-        let sentence = overview.split(separator: ".").first.map(String.init) ?? overview
-        return sentence.trimmingCharacters(in: .whitespacesAndNewlines) + "."
     }
 }
 
@@ -103,61 +98,40 @@ struct ImportantPoint: Identifiable, Equatable {
 }
 
 extension StudySummary {
-    /// Development-only sample summaries for SwiftUI previews.
     static let previewSummaries: [StudySummary] = [
         StudySummary(
             id: UUID(),
-            category: "Computer Science",
-            estimatedReadTime: "10 min read",
-            title: "Cloud Computing Architecture",
-            overview: "A comprehensive look at service models, deployment options, and infrastructure abstractions that power scalable cloud-native systems.",
+            category: "Workspace",
+            estimatedReadTime: "3 min read",
+            title: "Cloud Architecture Notes",
+            overview: "Cloud architecture separates concerns across compute, networking, and data layers. This helps teams scale safely and maintain reliability as demand changes.",
             mainIdeas: [
-                SummaryMainIdea(text: "Service models segment cloud offerings into IaaS, PaaS, and SaaS, each abstracting a different layer of responsibility."),
-                SummaryMainIdea(text: "Deployment models define governance boundaries across public, private, and hybrid environments."),
-                SummaryMainIdea(text: "Virtualization and orchestration enable efficient resource pooling and workload portability across distributed infrastructure.")
+                SummaryMainIdea(text: "Service models define which layer you manage: IaaS, PaaS, or SaaS."),
+                SummaryMainIdea(text: "Resilience comes from redundancy, failover, and observability."),
+                SummaryMainIdea(text: "Cost control depends on right-sizing and usage monitoring.")
             ],
-            visualReferenceTitle: "Distributed Network Topology",
-            visualReferenceCaption: "Visual Reference",
-            imageName: nil,
-            imageSystemName: "point.3.connected.trianglepath.dotted",
             keyConcepts: [
-                KeyConcept(term: "Scalability", definition: "The ability to handle increased workloads by adding compute, storage, or networking resources."),
-                KeyConcept(term: "Elasticity", definition: "Automatic expansion and contraction of resources based on real-time demand."),
-                KeyConcept(term: "High Availability", definition: "System design that minimizes downtime through redundancy, failover, and resilient architecture."),
-                KeyConcept(term: "Fault Tolerance", definition: "A system's capacity to continue functioning correctly even when some components fail.")
+                KeyConcept(term: "Scalability", definition: "Ability to handle more workload by adding resources."),
+                KeyConcept(term: "Elasticity", definition: "Automatically scale resources up or down based on demand."),
+                KeyConcept(term: "High Availability", definition: "Design to reduce downtime through redundancy and recovery.")
             ],
             importantPoints: [
-                ImportantPoint(text: "The Shared Responsibility Model separates provider duties for cloud security from customer duties for workload and data protection.", highlights: ["Shared Responsibility Model"]),
-                ImportantPoint(text: "Pay-as-you-go pricing shifts infrastructure costs from CapEx to OpEx and improves financial flexibility.", highlights: ["Pay-as-you-go pricing", "CapEx", "OpEx"]),
-                ImportantPoint(text: "Edge Computing reduces latency by processing data closer to users and connected devices.", highlights: ["Edge Computing"])
+                ImportantPoint(text: "Shared responsibility defines provider vs customer security duties.", highlights: []),
+                ImportantPoint(text: "Monitoring and alerting reduce incident response time.", highlights: [])
             ],
-            isBookmarked: false
-        ),
-        StudySummary(
-            id: UUID(),
-            category: "Information Systems",
-            estimatedReadTime: "9 min read",
-            title: "Database Systems Fundamentals",
-            overview: "An organized summary of relational design, transaction control, and indexing strategies used to build reliable data platforms.",
-            mainIdeas: [
-                SummaryMainIdea(text: "Normalization reduces redundancy and update anomalies by structuring data into well-defined relational forms."),
-                SummaryMainIdea(text: "ACID transactions enforce consistency through atomicity, isolation, and durable commit protocols."),
-                SummaryMainIdea(text: "Index design and query planning are major determinants of read performance at scale.")
+            examples: [
+                "Use autoscaling groups to absorb sudden traffic spikes.",
+                "Deploy databases across zones for failover."
             ],
-            visualReferenceTitle: "Relational Data Flow",
-            visualReferenceCaption: "Visual Reference",
-            imageName: nil,
-            imageSystemName: "cylinder.split.1x2",
-            keyConcepts: [
-                KeyConcept(term: "Normalization", definition: "A schema design process that organizes attributes and tables to minimize redundancy."),
-                KeyConcept(term: "ACID", definition: "Transaction guarantees that preserve correctness during concurrent operations and failures."),
-                KeyConcept(term: "Index", definition: "Auxiliary data structure that accelerates lookup and filtering without scanning full tables."),
-                KeyConcept(term: "Query Optimizer", definition: "Engine component that selects the lowest-cost execution plan for SQL statements.")
+            quickTakeaways: [
+                "Pick the right cloud service model.",
+                "Design for failure from day one.",
+                "Track cost and performance together."
             ],
-            importantPoints: [
-                ImportantPoint(text: "The Isolation level directly impacts contention, read phenomena, and throughput under concurrency.", highlights: ["Isolation level"]),
-                ImportantPoint(text: "Composite indexes should match common filter and sort patterns to avoid expensive scans.", highlights: ["Composite indexes"]),
-                ImportantPoint(text: "Backup and replication policies are mandatory for recovery objectives and business continuity.", highlights: ["Backup", "replication"])
+            suggestedNextActions: [
+                "Review your current architecture diagram.",
+                "List single points of failure.",
+                "Set basic SLA and alert thresholds."
             ],
             isBookmarked: false
         )

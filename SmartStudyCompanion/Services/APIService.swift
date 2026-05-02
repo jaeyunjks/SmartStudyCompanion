@@ -206,7 +206,7 @@ class APIService {
         request.timeoutInterval = timeoutInterval
         
         let (data, response) = try await session.data(for: request)
-        try validateResponse(response)
+        try validateResponse(response, data: data)
         
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -447,7 +447,7 @@ class APIService {
         } catch {
             throw NetworkError.unknown(error)
         }
-        try validateResponse(response)
+        try validateResponse(response, data: data)
         
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -471,10 +471,12 @@ class APIService {
     }
     
     /// Validate HTTP response
-    private func validateResponse(_ response: URLResponse) throws {
+    private func validateResponse(_ response: URLResponse, data: Data?) throws {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
+
+        let serverMessage = parseServerMessage(from: data)
         
         switch httpResponse.statusCode {
         case 200...299:
@@ -485,10 +487,34 @@ class APIService {
         case 404:
             throw NetworkError.notFound
         case 500...599:
-            throw NetworkError.serverError(statusCode: httpResponse.statusCode, message: "Server error")
+            throw NetworkError.serverError(
+                statusCode: httpResponse.statusCode,
+                message: serverMessage ?? "Server error"
+            )
         default:
-            throw NetworkError.serverError(statusCode: httpResponse.statusCode, message: "HTTP \(httpResponse.statusCode)")
+            throw NetworkError.serverError(
+                statusCode: httpResponse.statusCode,
+                message: serverMessage ?? "HTTP \(httpResponse.statusCode)"
+            )
         }
+    }
+
+    private func parseServerMessage(from data: Data?) -> String? {
+        guard let data, !data.isEmpty else { return nil }
+
+        if let messageObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let message = messageObject["message"] as? String {
+                return message
+            }
+            if let messages = messageObject["message"] as? [String], !messages.isEmpty {
+                return messages.joined(separator: ", ")
+            }
+            if let error = messageObject["error"] as? String {
+                return error
+            }
+        }
+
+        return nil
     }
     
     /// Store authentication tokens

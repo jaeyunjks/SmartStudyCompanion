@@ -68,12 +68,40 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         )
     }
 
-    func workspaceSummaryRequest() -> WorkspaceAISummaryRequest {
+    func workspaceSummaryRequest(selectedSourceIDs: Set<UUID>? = nil) -> WorkspaceAISummaryRequest {
         WorkspaceAISummaryRequest(
             workspaceId: workspaceID.uuidString,
             workspaceTitle: workspace.title,
-            workspaceContent: buildWorkspaceSummaryContent() ?? ""
+            workspaceContent: buildWorkspaceSummaryContent(selectedSourceIDs: selectedSourceIDs) ?? ""
         )
+    }
+
+    func summarySourceItems() -> [SummarySourceItem] {
+        let noteItems: [SummarySourceItem] = notes.map { note in
+            let content = extractNoteTextForSummary(note).trimmingCharacters(in: .whitespacesAndNewlines)
+            return SummarySourceItem(
+                id: note.id,
+                name: note.displayTitle,
+                kind: .note,
+                content: content
+            )
+        }
+
+        let materialItems: [SummarySourceItem] = materials.map { material in
+            let descriptor = material.type == .image ? "Photo" : "File"
+            let preview = material.previewText?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let content = preview.isEmpty
+                ? "\(descriptor): \(material.title)"
+                : "\(descriptor): \(material.title)\n\(preview)"
+            return SummarySourceItem(
+                id: material.id,
+                name: material.title,
+                kind: material.type == .image ? .photo : .file,
+                content: content
+            )
+        }
+
+        return (noteItems + materialItems).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     func editWorkspace(
@@ -304,24 +332,26 @@ final class ActiveWorkspaceViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    private func buildWorkspaceSummaryContent() -> String? {
-        let noteChunks: [String] = notes.compactMap { note in
-            let title = note.displayTitle
-            let content = extractNoteTextForSummary(note)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+    private func buildWorkspaceSummaryContent(selectedSourceIDs: Set<UUID>? = nil) -> String? {
+        let selected = selectedSourceIDs ?? Set(summarySourceItems().map(\.id))
+        let chosenSources = summarySourceItems().filter { selected.contains($0.id) }
 
-            guard !content.isEmpty else { return nil }
-            return "Title: \(title)\n\(content)"
+        guard !chosenSources.isEmpty else { return nil }
+
+        let chunks = chosenSources.compactMap { source -> String? in
+            let body = source.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !body.isEmpty else { return nil }
+            return "[\(source.kind.rawValue.capitalized)] \(source.name)\n\(body)"
         }
 
-        guard !noteChunks.isEmpty else { return nil }
+        guard !chunks.isEmpty else { return nil }
 
         return """
         Workspace: \(workspace.title)
 
-        Notes:
+        Selected sources:
 
-        \(noteChunks.joined(separator: "\n\n"))
+        \(chunks.joined(separator: "\n\n"))
         """
         .trimmingCharacters(in: .whitespacesAndNewlines)
     }

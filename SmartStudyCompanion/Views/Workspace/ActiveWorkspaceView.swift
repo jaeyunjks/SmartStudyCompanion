@@ -64,6 +64,7 @@ private struct WorkspaceSummaryRoute: Identifiable, Hashable {
     let id = UUID()
     let request: WorkspaceAISummaryRequest
     let workspaceColorHex: String
+    let sourceItems: [SummarySourceItem]
 }
 
 struct ActiveWorkspaceView: View {
@@ -310,7 +311,8 @@ struct ActiveWorkspaceView: View {
                 workspaceId: route.request.workspaceId,
                 workspaceTitle: route.request.workspaceTitle,
                 workspaceContent: route.request.workspaceContent,
-                workspaceColorHex: route.workspaceColorHex
+                workspaceColorHex: route.workspaceColorHex,
+                sourceItems: route.sourceItems
             )
         }
         .navigationDestination(item: $activeNoteDraft) { note in
@@ -421,9 +423,11 @@ struct ActiveWorkspaceView: View {
 
     private func handleAction(_ title: String) {
         if title == "Summarise Knowledge" {
+            let sources = viewModel.summarySourceItems()
             summaryRoute = WorkspaceSummaryRoute(
                 request: viewModel.workspaceSummaryRequest(),
-                workspaceColorHex: viewModel.workspace.workspaceColorHex
+                workspaceColorHex: viewModel.workspace.workspaceColorHex,
+                sourceItems: sources
             )
             return
         }

@@ -110,7 +110,6 @@ export class AiService {
 
         const completion = await this.getOpenAiClient().chat.completions.create({
             model: this.configService.get<string>('GPT_MODEL') ?? 'gpt-4o-mini',
-            temperature: 0.2,
             response_format: {
                 type: 'json_object',
             },
@@ -380,7 +379,6 @@ export class AiService {
 
         const completion = await this.getOpenAiClient().chat.completions.create({
             model: this.configService.get<string>('GPT_MODEL') ?? 'gpt-4o-mini',
-            temperature: 0.1,
             messages: [
                 {
                     role: 'system',
@@ -631,7 +629,6 @@ export class AiService {
 
         const completion = await this.getOpenAiClient().chat.completions.create({
             model: this.configService.get<string>('GPT_MODEL') ?? 'gpt-4o-mini',
-            temperature: 0.2,
             messages,
         });
 

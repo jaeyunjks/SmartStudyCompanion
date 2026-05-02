@@ -39,7 +39,7 @@ struct HomeDashboardView: View {
                         if selectedTab == .home {
                             VStack(spacing: 0) {
                                 HomeTopBarView(
-                                    appName: "[AppName]",
+                                    appName: "Lumora",
                                     userInitials: "Y",
                                     animateGreeting: animateGreeting
                                 )

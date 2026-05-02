@@ -2,7 +2,11 @@ import SwiftUI
 
 struct AIChatView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel: AIChatViewModel
+    @State private var showConversations = false
+    @State private var renameConversationID: UUID?
+    @State private var renameDraft = ""
 
     @MainActor
     init(viewModel: AIChatViewModel) {
@@ -20,19 +24,23 @@ struct AIChatView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(spacing: 16) {
-                        dayDivider
+                    VStack(spacing: 14) {
+                        if viewModel.messages.isEmpty {
+                            Text("Hey! how can i help you?")
+                                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
+                                .transition(.opacity)
+                        }
 
-                        modeBadge
-
-                        ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
-                            ChatBubbleView(message: message)
+                        ForEach(viewModel.messages) { message in
+                            ChatBubbleView(
+                                message: message,
+                                onRegenerate: {
+                                    viewModel.regenerateFromAssistantMessage(message.id)
+                                }
+                            )
                                 .id(message.id)
-
-                            if index == 1 {
-                                ContextCardView(context: viewModel.selectedContext)
-                                    .padding(.vertical, 6)
-                            }
                         }
 
                         if let errorMessage = viewModel.errorMessage {
@@ -41,9 +49,8 @@ struct AIChatView: View {
                                 .foregroundStyle(.red)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
-                                .background(Color.red.opacity(0.08))
+                                .background(Color.red.opacity(0.10))
                                 .clipShape(Capsule())
-                                .frame(maxWidth: .infinity, alignment: .center)
                         }
 
                         Color.clear
@@ -51,8 +58,11 @@ struct AIChatView: View {
                             .id("bottom-anchor")
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.top, 14)
                     .padding(.bottom, 90)
+                    .id(viewModel.activeConversationID)
+                    .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .trailing)), removal: .opacity))
+                    .animation(.easeInOut(duration: 0.22), value: viewModel.activeConversationID)
                 }
                 .safeAreaInset(edge: .top) {
                     topBar
@@ -61,6 +71,7 @@ struct AIChatView: View {
                     bottomInput
                 }
                 .onAppear {
+                    viewModel.ensureCleanLandingIfNeeded()
                     scrollToBottom(proxy)
                 }
                 .onChange(of: viewModel.messages.count) { _, _ in
@@ -68,66 +79,77 @@ struct AIChatView: View {
                 }
             }
         }
+        .sheet(isPresented: $showConversations) {
+            conversationsSheet
+        }
+        .alert("Rename Conversation", isPresented: Binding(
+            get: { renameConversationID != nil },
+            set: { newValue in
+                if !newValue { renameConversationID = nil }
+            }
+        )) {
+            TextField("Conversation title", text: $renameDraft)
+            Button("Save") {
+                if let id = renameConversationID {
+                    viewModel.renameConversation(id, title: renameDraft)
+                }
+                renameConversationID = nil
+            }
+            Button("Cancel", role: .cancel) {
+                renameConversationID = nil
+            }
+        }
         .toolbar(.hidden, for: .navigationBar)
     }
 
     private var topBar: some View {
-        HStack {
-            HStack(spacing: 12) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(AIChatTheme.accent)
-                        .frame(width: 36, height: 36)
-                        .background(AIChatTheme.accentSoft.opacity(0.8))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-
-                Text("AI Study Assistant")
-                    .font(.system(size: 19, weight: .bold, design: .rounded))
-                    .foregroundStyle(AIChatTheme.accent)
+        HStack(spacing: 12) {
+            Button(action: { dismiss() }) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 34, height: 34)
+                    .background(AIChatTheme.surfaceSecondary)
+                    .clipShape(Circle())
             }
+            .buttonStyle(.plain)
+
+            Text(viewModel.messages.isEmpty ? "Lumora AI" : currentConversationTitle)
+                .font(.system(size: 17, weight: .semibold))
+                .lineLimit(1)
 
             Spacer()
 
-            Circle()
-                .fill(AIChatTheme.accentSoft)
-                .frame(width: 30, height: 30)
-                .overlay {
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AIChatTheme.accent)
+            Button(action: {
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+                    viewModel.startNewConversation()
                 }
+            }) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 34, height: 34)
+                    .background(AIChatTheme.surfaceSecondary)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+
+            Button(action: { showConversations = true }) {
+                Image(systemName: "list.bullet")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 34, height: 34)
+                    .background(AIChatTheme.surfaceSecondary)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
-        .background(AIChatTheme.background.opacity(0.85))
-        .background(.ultraThinMaterial)
-    }
-
-    private var dayDivider: some View {
-        HStack {
-            Text("Today")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(AIChatTheme.secondaryText)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(AIChatTheme.accentSoft.opacity(0.55))
-                .clipShape(Capsule())
+        .background(AIChatTheme.background.opacity(colorScheme == .dark ? 0.95 : 0.90))
+        .overlay(alignment: .bottom) {
+            Divider().opacity(0.2)
         }
-        .frame(maxWidth: .infinity)
-    }
-
-    private var modeBadge: some View {
-        Text("Mode: \(viewModel.selectedMode.displayName)")
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(AIChatTheme.accent)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 5)
-            .background(AIChatTheme.accentSoft.opacity(0.6))
-            .clipShape(Capsule())
-            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var bottomInput: some View {
@@ -140,14 +162,10 @@ struct AIChatView: View {
                 },
                 onSend: viewModel.sendCurrentMessage
             )
-
-            SuggestedPromptChips(prompts: viewModel.suggestedPrompts) { prompt in
-                viewModel.sendSuggestedPrompt(prompt)
-            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
-        .padding(.bottom, 8)
+        .padding(.bottom, 10)
         .background(
             LinearGradient(
                 colors: [AIChatTheme.background.opacity(0), AIChatTheme.background],
@@ -155,6 +173,84 @@ struct AIChatView: View {
                 endPoint: .bottom
             )
         )
+    }
+
+    private var conversationsSheet: some View {
+        NavigationStack {
+            List {
+                ForEach(viewModel.conversations) { conversation in
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(conversation.title)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Text(conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Menu {
+                            Button("Rename") {
+                                renameConversationID = conversation.id
+                                renameDraft = conversation.title
+                            }
+
+                            Button("Delete", role: .destructive) {
+                                viewModel.deleteConversation(conversation.id)
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 30, height: 30)
+                                .background(AIChatTheme.surfaceSecondary)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .contentShape(Rectangle())
+                    .padding(.vertical, 4)
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.22)) {
+                            viewModel.selectConversation(conversation.id)
+                        }
+                        showConversations = false
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button("Rename") {
+                            renameConversationID = conversation.id
+                            renameDraft = conversation.title
+                        }
+                        .tint(.blue)
+
+                        Button("Delete", role: .destructive) {
+                            viewModel.deleteConversation(conversation.id)
+                        }
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(AIChatTheme.background)
+            .navigationTitle("Conversations")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("New") {
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
+                            viewModel.startNewConversation()
+                        }
+                        showConversations = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var currentConversationTitle: String {
+        viewModel.conversations.first(where: { $0.id == viewModel.activeConversationID })?.title ?? "Conversation"
     }
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {

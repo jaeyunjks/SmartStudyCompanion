@@ -45,6 +45,28 @@ struct ChatMessage: Identifiable, Codable, Equatable {
     }
 }
 
+struct ChatConversation: Identifiable, Codable, Equatable {
+    let id: UUID
+    var title: String
+    var createdAt: Date
+    var updatedAt: Date
+    var messages: [ChatMessage]
+
+    init(
+        id: UUID = UUID(),
+        title: String,
+        createdAt: Date = Date(),
+        updatedAt: Date = Date(),
+        messages: [ChatMessage]
+    ) {
+        self.id = id
+        self.title = title
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+        self.messages = messages
+    }
+}
+
 struct SuggestedPrompt: Identifiable, Equatable {
     let id: UUID
     let title: String

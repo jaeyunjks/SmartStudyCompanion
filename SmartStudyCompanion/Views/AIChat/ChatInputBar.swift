@@ -37,14 +37,13 @@ struct ChatInputBar: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
         .background(AIChatTheme.surface)
         .clipShape(Capsule())
         .overlay(
             Capsule()
-                .stroke(AIChatTheme.accent.opacity(0.08), lineWidth: 1)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         )
-        .shadow(color: AIChatTheme.shadow, radius: 14, x: 0, y: 8)
+        .shadow(color: AIChatTheme.shadow.opacity(0.38), radius: 10, x: 0, y: 5)
     }
 }
 

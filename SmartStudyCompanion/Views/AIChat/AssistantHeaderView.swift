@@ -4,15 +4,15 @@ struct AssistantHeaderView: View {
     var body: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(AIChatTheme.accentSoft)
+                .fill(AIChatTheme.surfaceSecondary)
                 .frame(width: 24, height: 24)
                 .overlay {
-                    Image(systemName: "sparkles")
+                    Image(systemName: "cpu.fill")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(AIChatTheme.accent)
                 }
 
-            Text("Assistant")
+            Text("Lumora AI")
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundStyle(AIChatTheme.accent)
         }

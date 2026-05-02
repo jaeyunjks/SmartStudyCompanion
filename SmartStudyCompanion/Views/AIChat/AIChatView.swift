@@ -29,7 +29,7 @@ struct AIChatView: View {
                             Text("Hey! how can i help you?")
                                 .font(.system(size: 24, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.primary)
-                                .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
+                                .frame(maxWidth: .infinity, minHeight: 420, alignment: .center)
                                 .transition(.opacity)
                         }
 

@@ -32,8 +32,8 @@ enum WorkspaceTheme {
     static let cardBackground = Color(.systemBackground)
     static let secondaryBackground = Color(uiColor: UIColor { trait in
         trait.userInterfaceStyle == .dark
-            ? UIColor(red: 0.13, green: 0.17, blue: 0.16, alpha: 1)
-            : UIColor(red: 0.94, green: 0.96, blue: 0.95, alpha: 1)
+            ? UIColor.secondarySystemBackground
+            : UIColor.secondarySystemBackground
     })
     static let mutedText = Color(.secondaryLabel)
     static let cornerRadius: CGFloat = 20
@@ -133,7 +133,6 @@ struct ActiveWorkspaceView: View {
                                 aiOutputCount: viewModel.aiOutputCount
                             )
 
-                            WorkspaceSectionLabel(title: "Capture & AI")
                             WorkspaceStudyToolsSectionView(
                                 onCreateNote: { activeNoteDraft = viewModel.makeDraftNote() },
                                 onPrimaryAction: { handleAction("Summarise Knowledge") },

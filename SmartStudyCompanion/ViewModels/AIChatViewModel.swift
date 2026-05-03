@@ -13,20 +13,24 @@ final class AIChatViewModel: ObservableObject {
     @Published var selectedContext: WorkspaceContext
     @Published var selectedMode: ChatMode
     @Published var suggestedPrompts: [SuggestedPrompt]
+    @Published var mentionSuggestions: [ReferencedMaterial] = []
 
     private let service: AIChatServiceProtocol
+    private let chatHistoryStorageService: WorkspaceChatHistoryStorageService
     private var hasPreparedLanding = false
 
     init(
         service: AIChatServiceProtocol,
         selectedContext: WorkspaceContext,
         selectedMode: ChatMode,
-        suggestedPrompts: [SuggestedPrompt]
+        suggestedPrompts: [SuggestedPrompt],
+        chatHistoryStorageService: WorkspaceChatHistoryStorageService = .shared
     ) {
         self.service = service
         self.selectedContext = selectedContext
         self.selectedMode = selectedMode
         self.suggestedPrompts = suggestedPrompts
+        self.chatHistoryStorageService = chatHistoryStorageService
         let initialConversation = ChatConversation(
             title: "New conversation",
             messages: []
@@ -34,6 +38,10 @@ final class AIChatViewModel: ObservableObject {
         self.conversations = [initialConversation]
         self.activeConversationID = initialConversation.id
         self.messages = initialConversation.messages
+        self.mentionSuggestions = selectedContext.referencedMaterials.sorted {
+            $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+        }
+        loadPersistedHistory()
     }
 
     convenience init() {
@@ -57,6 +65,15 @@ final class AIChatViewModel: ObservableObject {
     func ensureCleanLandingIfNeeded() {
         guard !hasPreparedLanding else { return }
         hasPreparedLanding = true
+
+        if !conversations.isEmpty {
+            if conversations.contains(where: { $0.id == activeConversationID }) {
+                selectConversation(activeConversationID)
+            } else if let first = conversations.first {
+                selectConversation(first.id)
+            }
+            return
+        }
 
         if let emptyConversation = conversations.first(where: { $0.messages.isEmpty }) {
             selectConversation(emptyConversation.id)
@@ -88,6 +105,7 @@ final class AIChatViewModel: ObservableObject {
             messages = []
             errorMessage = nil
         }
+        persistHistory()
     }
 
     func selectConversation(_ id: UUID) {
@@ -97,6 +115,7 @@ final class AIChatViewModel: ObservableObject {
             messages = conversation.messages
             errorMessage = nil
         }
+        persistHistory()
     }
 
     func renameConversation(_ id: UUID, title: String) {
@@ -105,6 +124,7 @@ final class AIChatViewModel: ObservableObject {
         guard let index = conversations.firstIndex(where: { $0.id == id }) else { return }
         conversations[index].title = normalized
         conversations[index].updatedAt = Date()
+        persistHistory()
     }
 
     func deleteConversation(_ id: UUID) {
@@ -117,6 +137,7 @@ final class AIChatViewModel: ObservableObject {
                 activeConversationID = firstID
                 messages = []
             }
+            persistHistory()
             return
         }
 
@@ -127,6 +148,7 @@ final class AIChatViewModel: ObservableObject {
                 messages = first.messages
             }
         }
+        persistHistory()
     }
 
     func regenerateFromAssistantMessage(_ messageID: UUID) {
@@ -198,6 +220,7 @@ final class AIChatViewModel: ObservableObject {
         guard let index = conversations.firstIndex(where: { $0.id == activeConversationID }) else { return }
         conversations[index].messages = messages
         conversations[index].updatedAt = Date()
+        persistHistory()
     }
 
     private func updateActiveConversationTitleIfNeeded(using text: String) {
@@ -207,6 +230,7 @@ final class AIChatViewModel: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         conversations[index].title = String(trimmed.prefix(36))
+        persistHistory()
     }
 
     private func currentConversationBackendHistoryID() -> String? {
@@ -222,5 +246,48 @@ final class AIChatViewModel: ObservableObject {
     private func setCurrentConversationBackendHistoryID(_ id: String) {
         guard let index = conversations.firstIndex(where: { $0.id == activeConversationID }) else { return }
         conversations[index].backendChatHistoryId = id
+        persistHistory()
+    }
+
+    func insertMention(_ material: ReferencedMaterial) {
+        let token = "@\(material.title.replacingOccurrences(of: " ", with: "_")) "
+        if inputText.isEmpty {
+            inputText = token
+        } else {
+            inputText += token
+        }
+    }
+
+    func filteredMentionSuggestions() -> [ReferencedMaterial] {
+        guard let token = currentMentionToken() else { return [] }
+        if token.isEmpty { return mentionSuggestions.prefix(6).map { $0 } }
+        return mentionSuggestions.filter {
+            $0.title.localizedCaseInsensitiveContains(token)
+        }.prefix(6).map { $0 }
+    }
+
+    private func currentMentionToken() -> String? {
+        guard let atRange = inputText.range(of: "@", options: .backwards) else { return nil }
+        let suffix = inputText[atRange.upperBound...]
+        if suffix.contains(" ") { return nil }
+        return suffix.replacingOccurrences(of: "_", with: " ")
+    }
+
+    private func loadPersistedHistory() {
+        guard let workspaceID = selectedContext.aiContextSource?.workspaceID else { return }
+        guard let snapshot = try? chatHistoryStorageService.loadHistory(workspaceID: workspaceID) else { return }
+        guard !snapshot.conversations.isEmpty else { return }
+        conversations = snapshot.conversations.sorted { $0.updatedAt > $1.updatedAt }
+        activeConversationID = snapshot.activeConversationID ?? conversations[0].id
+        messages = conversations.first(where: { $0.id == activeConversationID })?.messages ?? []
+    }
+
+    private func persistHistory() {
+        guard let workspaceID = selectedContext.aiContextSource?.workspaceID else { return }
+        let snapshot = WorkspaceChatHistorySnapshot(
+            conversations: conversations.sorted { $0.updatedAt > $1.updatedAt },
+            activeConversationID: activeConversationID
+        )
+        try? chatHistoryStorageService.saveHistory(snapshot, workspaceID: workspaceID)
     }
 }

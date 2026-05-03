@@ -26,11 +26,15 @@ struct AIChatView: View {
                 ScrollView {
                     VStack(spacing: 14) {
                         if viewModel.messages.isEmpty {
-                            Text("Hey! how can i help you?")
-                                .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.primary)
-                                .frame(maxWidth: .infinity, minHeight: 420, alignment: .center)
-                                .transition(.opacity)
+                            VStack {
+                                Spacer(minLength: 0)
+                                Text("Hey! how can i help you?")
+                                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.primary)
+                                Spacer(minLength: 0)
+                            }
+                            .frame(maxWidth: .infinity, minHeight: 520)
+                            .transition(.opacity)
                         }
 
                         ForEach(viewModel.messages) { message in
@@ -154,12 +158,33 @@ struct AIChatView: View {
 
     private var bottomInput: some View {
         VStack(spacing: 10) {
+            let mentions = viewModel.filteredMentionSuggestions()
+            if !mentions.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(mentions, id: \.materialID) { material in
+                            Button {
+                                viewModel.insertMention(material)
+                            } label: {
+                                Text("@\(material.title)")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(AIChatTheme.accent)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(AIChatTheme.accentSoft.opacity(0.9))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                }
+            }
+
             ChatInputBar(
                 text: $viewModel.inputText,
                 isLoading: viewModel.isLoading,
-                onAttach: {
-                    viewModel.errorMessage = "Attachment support can be added next."
-                },
+                onMentionTap: { viewModel.inputText += "@" },
                 onSend: viewModel.sendCurrentMessage
             )
         }
@@ -212,7 +237,10 @@ struct AIChatView: View {
                         .buttonStyle(.plain)
                     }
                     .contentShape(Rectangle())
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 5)
+                    .padding(.horizontal, 4)
+                    .background(AIChatTheme.surfaceSecondary.opacity(0.65))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .onTapGesture {
                         withAnimation(.easeInOut(duration: 0.22)) {
                             viewModel.selectConversation(conversation.id)
@@ -231,10 +259,12 @@ struct AIChatView: View {
                         }
                     }
                 }
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             }
             .scrollContentBackground(.hidden)
             .background(AIChatTheme.background)
-            .navigationTitle("Conversations")
+            .navigationTitle("Recents")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("New") {

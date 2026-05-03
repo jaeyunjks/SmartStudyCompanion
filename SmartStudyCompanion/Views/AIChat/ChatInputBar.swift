@@ -3,20 +3,20 @@ import SwiftUI
 struct ChatInputBar: View {
     @Binding var text: String
     let isLoading: Bool
-    let onAttach: () -> Void
+    let onMentionTap: () -> Void
     let onSend: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
-            Button(action: onAttach) {
-                Image(systemName: "plus.circle")
-                    .font(.system(size: 22, weight: .regular))
+            Button(action: onMentionTap) {
+                Text("@")
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
                     .foregroundStyle(.secondary)
                     .frame(width: 42, height: 42)
             }
             .buttonStyle(.plain)
 
-            TextField("Ask anything about your study material", text: $text, axis: .vertical)
+            TextField("Chat with LumoraAI", text: $text, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.body)
                 .lineLimit(1...4)
@@ -48,6 +48,6 @@ struct ChatInputBar: View {
 }
 
 #Preview {
-    ChatInputBar(text: .constant(""), isLoading: false, onAttach: {}, onSend: {})
+    ChatInputBar(text: .constant(""), isLoading: false, onMentionTap: {}, onSend: {})
         .padding()
 }

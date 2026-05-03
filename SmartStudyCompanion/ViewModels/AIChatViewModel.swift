@@ -251,10 +251,14 @@ final class AIChatViewModel: ObservableObject {
 
     func insertMention(_ material: ReferencedMaterial) {
         let token = "@\(material.title.replacingOccurrences(of: " ", with: "_")) "
-        if inputText.isEmpty {
-            inputText = token
-        } else {
+        if let range = currentMentionRange() {
+            inputText.replaceSubrange(range, with: token)
+            return
+        }
+        if inputText.isEmpty || inputText.hasSuffix(" ") {
             inputText += token
+        } else {
+            inputText += " " + token
         }
     }
 
@@ -271,6 +275,13 @@ final class AIChatViewModel: ObservableObject {
         let suffix = inputText[atRange.upperBound...]
         if suffix.contains(" ") { return nil }
         return suffix.replacingOccurrences(of: "_", with: " ")
+    }
+
+    private func currentMentionRange() -> Range<String.Index>? {
+        guard let atRange = inputText.range(of: "@", options: .backwards) else { return nil }
+        let suffix = inputText[atRange.upperBound...]
+        if suffix.contains(" ") { return nil }
+        return atRange.lowerBound..<inputText.endIndex
     }
 
     private func loadPersistedHistory() {

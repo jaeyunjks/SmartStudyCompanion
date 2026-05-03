@@ -184,7 +184,17 @@ struct AIChatView: View {
             ChatInputBar(
                 text: $viewModel.inputText,
                 isLoading: viewModel.isLoading,
-                onMentionTap: { viewModel.inputText += "@" },
+                onMentionTap: {
+                    if viewModel.inputText.isEmpty {
+                        viewModel.inputText = "@"
+                    } else if viewModel.inputText.hasSuffix("@") {
+                        return
+                    } else if viewModel.inputText.hasSuffix(" ") {
+                        viewModel.inputText += "@"
+                    } else {
+                        viewModel.inputText += " @"
+                    }
+                },
                 onSend: viewModel.sendCurrentMessage
             )
         }
@@ -202,67 +212,75 @@ struct AIChatView: View {
 
     private var conversationsSheet: some View {
         NavigationStack {
-            List {
-                ForEach(viewModel.conversations) { conversation in
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(conversation.title)
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Text(conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Recent chats")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
 
-                        Spacer()
+                    ForEach(viewModel.conversations) { conversation in
+                        HStack(spacing: 12) {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(AIChatTheme.surfaceSecondary)
+                                .frame(width: 34, height: 34)
+                                .overlay {
+                                    Image(systemName: "message")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(AIChatTheme.accent)
+                                }
 
-                        Menu {
-                            Button("Rename") {
-                                renameConversationID = conversation.id
-                                renameDraft = conversation.title
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(conversation.title)
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                Text(conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
 
-                            Button("Delete", role: .destructive) {
-                                viewModel.deleteConversation(conversation.id)
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 30, height: 30)
-                                .background(AIChatTheme.surfaceSecondary)
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .contentShape(Rectangle())
-                    .padding(.vertical, 5)
-                    .padding(.horizontal, 4)
-                    .background(AIChatTheme.surfaceSecondary.opacity(0.65))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.22)) {
-                            viewModel.selectConversation(conversation.id)
-                        }
-                        showConversations = false
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button("Rename") {
-                            renameConversationID = conversation.id
-                            renameDraft = conversation.title
-                        }
-                        .tint(.blue)
+                            Spacer()
 
-                        Button("Delete", role: .destructive) {
-                            viewModel.deleteConversation(conversation.id)
+                            Menu {
+                                Button("Rename") {
+                                    renameConversationID = conversation.id
+                                    renameDraft = conversation.title
+                                }
+
+                                Button("Delete", role: .destructive) {
+                                    viewModel.deleteConversation(conversation.id)
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 28, height: 28)
+                                    .background(AIChatTheme.surfaceSecondary)
+                                    .clipShape(Circle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(12)
+                        .background(AIChatTheme.surfaceSecondary.opacity(0.72))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.22)) {
+                                viewModel.selectConversation(conversation.id)
+                            }
+                            showConversations = false
                         }
                     }
                 }
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
-            .scrollContentBackground(.hidden)
             .background(AIChatTheme.background)
             .navigationTitle("Recents")
             .toolbar {

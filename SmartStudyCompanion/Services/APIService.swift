@@ -273,6 +273,47 @@ class APIService {
         return response.summary.toStudySummary(workspaceTitle: workspaceTitle)
     }
 
+    /// Chat with AI using a workspace-backed context on the backend.
+    func chatWithStudySpace(
+        workspaceId: String,
+        prompt: String,
+        chatHistoryId: String?,
+        title: String?
+    ) async throws -> StudySpaceChatResponse {
+        let endpoint = "/ai/study-space/\(workspaceId)/chat"
+        let request = StudySpaceChatRequest(
+            prompt: prompt,
+            chatHistoryId: chatHistoryId,
+            title: title
+        )
+        let response: StudySpaceChatResponse = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: request
+        )
+        return response
+    }
+
+    /// Chat with AI using workspace title + context payload (does not require study-space id).
+    func chatWithWorkspaceContext(
+        workspaceTitle: String,
+        prompt: String,
+        workspaceContext: String?
+    ) async throws -> WorkspaceContextChatResponse {
+        let endpoint = "/ai/workspace/chat"
+        let request = WorkspaceContextChatRequest(
+            workspaceTitle: workspaceTitle,
+            prompt: prompt,
+            workspaceContext: workspaceContext
+        )
+        let response: WorkspaceContextChatResponse = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: request
+        )
+        return response
+    }
+
     // MARK: - Flashcard Methods
     
     /// Generate flashcards from a PDF

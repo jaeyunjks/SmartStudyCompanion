@@ -38,7 +38,7 @@ final class AIChatViewModel: ObservableObject {
 
     convenience init() {
         self.init(
-            service: MockAIChatService(),
+            service: BackendAIChatService(),
             selectedContext: .mockCloudContext,
             selectedMode: .guide,
             suggestedPrompts: SuggestedPrompt.defaultPrompts
@@ -47,7 +47,7 @@ final class AIChatViewModel: ObservableObject {
 
     convenience init(selectedContext: WorkspaceContext) {
         self.init(
-            service: MockAIChatService(),
+            service: BackendAIChatService(),
             selectedContext: selectedContext,
             selectedMode: .guide,
             suggestedPrompts: SuggestedPrompt.defaultPrompts
@@ -156,6 +156,8 @@ final class AIChatViewModel: ObservableObject {
                     message: text,
                     context: selectedContext,
                     mode: selectedMode,
+                    chatHistoryId: currentConversationBackendHistoryID(),
+                    conversationTitle: currentConversationTitle(),
                     conversationHistory: messages.filter { !$0.isTyping }
                 )
 
@@ -170,6 +172,9 @@ final class AIChatViewModel: ObservableObject {
 
                 if let suggestedMode = response.suggestedMode {
                     selectedMode = suggestedMode
+                }
+                if let chatHistoryId = response.chatHistoryId {
+                    setCurrentConversationBackendHistoryID(chatHistoryId)
                 }
 
                 messages.append(ChatMessage(role: .assistant, text: finalText))
@@ -202,5 +207,20 @@ final class AIChatViewModel: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         conversations[index].title = String(trimmed.prefix(36))
+    }
+
+    private func currentConversationBackendHistoryID() -> String? {
+        conversations.first(where: { $0.id == activeConversationID })?.backendChatHistoryId
+    }
+
+    private func currentConversationTitle() -> String? {
+        let title = conversations.first(where: { $0.id == activeConversationID })?.title ?? ""
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed == "New conversation" ? nil : trimmed
+    }
+
+    private func setCurrentConversationBackendHistoryID(_ id: String) {
+        guard let index = conversations.firstIndex(where: { $0.id == activeConversationID }) else { return }
+        conversations[index].backendChatHistoryId = id
     }
 }

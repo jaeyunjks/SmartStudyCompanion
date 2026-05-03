@@ -142,6 +142,70 @@ export class AiService {
         };
     }
 
+    async chatWithWorkspaceContext(workspaceTitle: string, prompt: string, workspaceContext?: string) {
+        const trimmedTitle = workspaceTitle?.trim() || 'Workspace';
+        const trimmedPrompt = prompt?.trim();
+        const trimmedContext = workspaceContext?.trim() || '';
+
+        if (!trimmedPrompt) {
+            throw new BadRequestException('prompt is required');
+        }
+
+        let completion: any;
+        try {
+            completion = await this.getOpenAiClient().chat.completions.create({
+                model: this.configService.get<string>('GPT_MODEL') ?? 'gpt-4o-mini',
+                messages: [
+                    {
+                        role: 'system',
+                        content: [
+                            'You are a helpful study assistant.',
+                            'Answer clearly using the workspace context when relevant.',
+                            'If context is insufficient, say what is missing instead of hallucinating.',
+                        ].join(' '),
+                    },
+                    {
+                        role: 'user',
+                        content: [
+                            `Workspace title: ${trimmedTitle}`,
+                            trimmedContext ? `Workspace context:\n${trimmedContext}` : 'Workspace context: (none)',
+                            `User prompt: ${trimmedPrompt}`,
+                        ].join('\n\n'),
+                    },
+                ],
+            });
+        } catch (error: any) {
+            const status = Number(error?.status);
+            const code = String(error?.code ?? error?.error?.code ?? '');
+            const message = String(error?.message ?? 'OpenAI request failed');
+
+            if (status === 401 || code === 'invalid_api_key') {
+                throw new UnauthorizedException('Invalid OpenAI API key');
+            }
+
+            if (status === 429 || code === 'insufficient_quota') {
+                throw new HttpException(
+                    'OpenAI quota exceeded. Please check billing and usage.',
+                    HttpStatus.TOO_MANY_REQUESTS,
+                );
+            }
+
+            throw new InternalServerErrorException(message);
+        }
+
+        const assistantMessage = completion.choices[0]?.message?.content?.trim();
+
+        if (!assistantMessage) {
+            throw new InternalServerErrorException("Couldn't generate chat response");
+        }
+
+        return {
+            assistantMessage,
+            followUpQuestion: null,
+            suggestedMode: null,
+        };
+    }
+
     async summarizeStudySpace(studySpaceId: string, userId: string) {
         const studySpace = await this.studySpaceService.getStudySpaceById(studySpaceId);
 

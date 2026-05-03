@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/jwt.guard';
 import { AiService } from './ai.service';
 import { ChatWithStudySpaceDto } from './ai-dto/chat-with-study-space.dto';
 import { WorkspaceSummaryDto } from './ai-dto/workspace-summary.dto';
+import { WorkspaceChatDto } from './ai-dto/workspace-chat.dto';
 
 @Controller('api/ai')
 export class AiController {
@@ -36,6 +37,26 @@ export class AiController {
         return this.aiService.summarizeWorkspaceContent(
             summaryDto.workspaceTitle,
             summaryDto.workspaceContent,
+        );
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('workspace/chat')
+    async chatWithWorkspaceContext(
+        @Body() chatDto: WorkspaceChatDto,
+        @Request() req: any,
+    ) {
+        const user = req.user;
+        const userId = user?.userId;
+
+        if (!userId) {
+            throw new NotFoundException("User not found", "User not found");
+        }
+
+        return this.aiService.chatWithWorkspaceContext(
+            chatDto.workspaceTitle,
+            chatDto.prompt,
+            chatDto.workspaceContext,
         );
     }
 

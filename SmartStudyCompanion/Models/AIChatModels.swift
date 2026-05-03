@@ -50,6 +50,7 @@ struct ChatConversation: Identifiable, Codable, Equatable {
     var title: String
     var createdAt: Date
     var updatedAt: Date
+    var backendChatHistoryId: String?
     var messages: [ChatMessage]
 
     init(
@@ -57,12 +58,14 @@ struct ChatConversation: Identifiable, Codable, Equatable {
         title: String,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
+        backendChatHistoryId: String? = nil,
         messages: [ChatMessage]
     ) {
         self.id = id
         self.title = title
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.backendChatHistoryId = backendChatHistoryId
         self.messages = messages
     }
 }
@@ -121,6 +124,47 @@ struct AIChatRequest: Codable {
 }
 
 struct AIChatResponse: Codable {
+    let assistantMessage: String
+    let followUpQuestion: String?
+    let suggestedMode: ChatMode?
+    let chatHistoryId: String?
+}
+
+struct StudySpaceChatRequest: Codable {
+    let prompt: String
+    let chatHistoryId: String?
+    let title: String?
+}
+
+struct StudySpaceChatSourceDTO: Codable {
+    let chunkId: String?
+    let fileId: String?
+    let fileName: String?
+    let chunkIndex: Int?
+    let score: Double?
+}
+
+struct StudySpaceChatMessageDTO: Codable {
+    let id: String?
+    let chatHistoryId: String?
+    let role: String
+    let content: String
+    let createdAt: String?
+}
+
+struct StudySpaceChatResponse: Codable {
+    let chatHistoryId: String
+    let messages: [StudySpaceChatMessageDTO]
+    let sources: [StudySpaceChatSourceDTO]?
+}
+
+struct WorkspaceContextChatRequest: Codable {
+    let workspaceTitle: String
+    let prompt: String
+    let workspaceContext: String?
+}
+
+struct WorkspaceContextChatResponse: Codable {
     let assistantMessage: String
     let followUpQuestion: String?
     let suggestedMode: ChatMode?

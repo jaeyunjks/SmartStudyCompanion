@@ -94,10 +94,8 @@ struct SummaryDetailView: View {
             }
             .safeAreaInset(edge: .top) {
                 SummaryTopBar(
-                    isBookmarked: viewModel.summary?.isBookmarked ?? false,
                     shareText: viewModel.shareSummaryText(),
                     onBack: { dismiss() },
-                    onToggleBookmark: viewModel.toggleBookmark,
                     onFallbackShare: { showFallbackShareSheet = true }
                 )
             }
@@ -130,6 +128,7 @@ struct SummaryDetailView: View {
         }
         .sheet(isPresented: $showSourcePicker) {
             sourcePickerSheet
+                .presentationDetents([.large])
         }
         .sheet(isPresented: $showVersionsSheet) {
             versionsSheet
@@ -437,17 +436,27 @@ struct SummaryDetailView: View {
                 .padding(.bottom, 14)
                 .background(.ultraThinMaterial)
             }
-            .navigationTitle("Select Sources")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { showSourcePicker = false }
+                    Button {
+                        showSourcePicker = false
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .bold))
+                    }
                 }
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Clear All") { viewModel.clearAllSources() }
+                ToolbarItem(placement: .principal) {
+                    Text("Select Sources")
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Select All") { viewModel.selectAllSources() }
+                    Menu {
+                        Button("Select All") { viewModel.selectAllSources() }
+                        Button("Clear All") { viewModel.clearAllSources() }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
                 }
             }
         }
@@ -457,25 +466,38 @@ struct SummaryDetailView: View {
         NavigationStack {
             List {
                 ForEach(viewModel.versions) { version in
-                    HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(version.name)
-                            Text(version.createdAt.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        if viewModel.selectedVersionID == version.id {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(palette.accent)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    Button {
                         viewModel.selectVersion(version.id)
+                    } label: {
+                        HStack(spacing: 12) {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(palette.accentSoft)
+                                .frame(width: 36, height: 36)
+                                .overlay {
+                                    Image(systemName: "doc.text")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(palette.accent)
+                                }
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(version.name)
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                Text(version.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            if viewModel.selectedVersionID == version.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(palette.accent)
+                            }
+                        }
                     }
+                    .buttonStyle(.plain)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button("Rename") {
                             renameVersionID = version.id
@@ -489,7 +511,8 @@ struct SummaryDetailView: View {
                     }
                 }
             }
-            .navigationTitle("Summary Versions")
+            .navigationTitle("Versions")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { showVersionsSheet = false }

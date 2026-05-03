@@ -109,8 +109,7 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         }
 
         let materialItems: [SummarySourceItem] = materials.map { material in
-            let extracted = storageService.extractSummaryContent(for: material)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let content = extracted
+            let content = (material.previewText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             return SummarySourceItem(
                 id: material.id,
                 name: material.title,
@@ -227,11 +226,6 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         do {
             let material = try storageService.persistDocument(at: sourceURL, workspaceID: workspaceID)
 
-            guard isSupportedType(material.type) else {
-                importErrorMessage = "Unsupported file type. Please import PDF, TXT, DOC, or DOCX."
-                return
-            }
-
             materials.insert(material, at: 0)
             try persistMaterials()
         } catch {
@@ -331,6 +325,10 @@ final class ActiveWorkspaceViewModel: ObservableObject {
             }
     }
 
+    func latestSummaryVersions(limit: Int = 3) -> [SummaryVersion] {
+        Array(summaryVersions.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
+    }
+
     func refreshSummaryHistory() {
         loadSummaryHistory()
     }
@@ -351,15 +349,6 @@ final class ActiveWorkspaceViewModel: ObservableObject {
 
     private func persistMaterials() throws {
         try storageService.saveMaterials(materials, workspaceID: workspaceID)
-    }
-
-    private func isSupportedType(_ type: StudyMaterialType) -> Bool {
-        switch type {
-        case .image, .pdf, .document, .text:
-            return true
-        case .other:
-            return false
-        }
     }
 
     private func bindWorkspaceUpdates() {

@@ -198,10 +198,11 @@ final class SummaryDetailViewModel: ObservableObject {
                 )
 
                 let normalized = normalize(generated)
+                let contextualized = applySourceContext(to: normalized)
 
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.88)) {
-                    summary = normalized
-                    appendVersion(summary: normalized, fallbackName: mode == .regenerate ? "Regenerated" : "Summary")
+                    summary = contextualized
+                    appendVersion(summary: contextualized, fallbackName: mode == .regenerate ? "Regenerated" : "Summary")
                 }
                 onSummarySaved()
             } catch let error as NetworkError {
@@ -241,6 +242,50 @@ final class SummaryDetailViewModel: ObservableObject {
         versions.insert(version, at: 0)
         selectedVersionID = version.id
         persistHistory()
+    }
+
+    private func applySourceContext(to summary: StudySummary) -> StudySummary {
+        let selected = availableSources.filter { selectedSourceIDs.contains($0.id) && $0.isReadable }
+        guard !selected.isEmpty else { return summary }
+
+        let notesCount = selected.filter { $0.kind == .note }.count
+        let filesCount = selected.filter { $0.kind == .file }.count
+        let photosCount = selected.filter { $0.kind == .photo }.count
+
+        let sourceLabel: String
+        if filesCount > 0 && notesCount == 0 && photosCount == 0 {
+            sourceLabel = filesCount == 1 ? "this document" : "these documents"
+        } else if photosCount > 0 && notesCount == 0 && filesCount == 0 {
+            sourceLabel = photosCount == 1 ? "this picture" : "these pictures"
+        } else if notesCount > 0 && filesCount == 0 && photosCount == 0 {
+            sourceLabel = notesCount == 1 ? "this note" : "these notes"
+        } else {
+            sourceLabel = "the combined materials"
+        }
+
+        let names = selected.prefix(3).map(\.name).joined(separator: ", ")
+        let sourceSuffix = selected.count > 3 ? ", and \(selected.count - 3) more" : ""
+
+        let contextualTitle = summary.title.contains(workspaceTitle)
+            ? "\(workspaceTitle) Summary from \(sourceLabel.capitalized)"
+            : "\(summary.title) • \(sourceLabel.capitalized)"
+
+        let contextualOverview = "This summary is generated from \(sourceLabel) (\(names)\(sourceSuffix)).\n\n\(summary.overview)"
+
+        return StudySummary(
+            id: summary.id,
+            category: summary.category,
+            estimatedReadTime: summary.estimatedReadTime,
+            title: contextualTitle,
+            overview: contextualOverview,
+            mainIdeas: summary.mainIdeas,
+            keyConcepts: summary.keyConcepts,
+            importantPoints: summary.importantPoints,
+            examples: summary.examples,
+            quickTakeaways: summary.quickTakeaways,
+            suggestedNextActions: summary.suggestedNextActions,
+            isBookmarked: summary.isBookmarked
+        )
     }
 
     private func buildContentFromSelectedSources() -> String {

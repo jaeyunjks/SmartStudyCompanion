@@ -151,6 +151,11 @@ struct ActiveWorkspaceView: View {
                                 onViewAllNotes: { showAllNotes = true }
                             )
 
+                            WorkspaceAIOutputsSectionView(
+                                versions: viewModel.latestSummaryVersions(limit: 3),
+                                onOpenHistory: { openSummaryFlow() }
+                            )
+
                             WorkspaceSectionLabel(title: "Materials")
                             WorkspaceMaterialsSectionView(
                                 materials: viewModel.materials,
@@ -380,14 +385,7 @@ struct ActiveWorkspaceView: View {
     }
 
     private var supportedDocumentTypes: [UTType] {
-        [
-            .pdf,
-            .plainText,
-            .text,
-            UTType(filenameExtension: "doc"),
-            UTType(filenameExtension: "docx"),
-            .rtf
-        ].compactMap { $0 }
+        [.item]
     }
 
     private var recentActivityItems: [ActivityItem] {
@@ -451,12 +449,7 @@ struct ActiveWorkspaceView: View {
 
     private func handleAction(_ title: String) {
         if title == "Summarise Knowledge" {
-            let sources = viewModel.summarySourceItems()
-            summaryRoute = WorkspaceSummaryRoute(
-                request: viewModel.workspaceSummaryRequest(),
-                workspaceColorHex: viewModel.workspace.workspaceColorHex,
-                sourceItems: sources
-            )
+            openSummaryFlow()
             return
         }
         if title == "Ask AI" {
@@ -475,6 +468,15 @@ struct ActiveWorkspaceView: View {
             showStudyPlan = true
             return
         }
+    }
+
+    private func openSummaryFlow() {
+        let sources = viewModel.summarySourceItems()
+        summaryRoute = WorkspaceSummaryRoute(
+            request: viewModel.workspaceSummaryRequest(),
+            workspaceColorHex: viewModel.workspace.workspaceColorHex,
+            sourceItems: sources
+        )
     }
 }
 

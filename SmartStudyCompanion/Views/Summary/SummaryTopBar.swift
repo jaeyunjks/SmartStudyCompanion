@@ -2,10 +2,8 @@ import SwiftUI
 
 struct SummaryTopBar: View {
     @Environment(\.summaryPalette) private var palette
-    let isBookmarked: Bool
     let shareText: String
     let onBack: () -> Void
-    let onToggleBookmark: () -> Void
     let onFallbackShare: () -> Void
 
     var body: some View {
@@ -20,10 +18,7 @@ struct SummaryTopBar: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
-                topButton(iconName: isBookmarked ? "bookmark.fill" : "bookmark", action: onToggleBookmark)
-                SummaryShareButton(shareText: shareText, onFallbackShare: onFallbackShare)
-            }
+            SummaryShareButton(shareText: shareText, onFallbackShare: onFallbackShare)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
@@ -77,10 +72,8 @@ private struct SummaryShareButton: View {
 
 #Preview {
     SummaryTopBar(
-        isBookmarked: false,
         shareText: "Example summary",
         onBack: {},
-        onToggleBookmark: {},
         onFallbackShare: {}
     )
 }

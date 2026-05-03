@@ -13,7 +13,7 @@ final class AIChatViewModel: ObservableObject {
     @Published var selectedContext: WorkspaceContext
     @Published var selectedMode: ChatMode
     @Published var suggestedPrompts: [SuggestedPrompt]
-    @Published var mentionSuggestions: [ReferencedMaterial] = []
+    @Published var mentionSuggestions: [WorkspaceContextSourceContent] = []
 
     private let service: AIChatServiceProtocol
     private let chatHistoryStorageService: WorkspaceChatHistoryStorageService
@@ -38,7 +38,16 @@ final class AIChatViewModel: ObservableObject {
         self.conversations = [initialConversation]
         self.activeConversationID = initialConversation.id
         self.messages = initialConversation.messages
-        self.mentionSuggestions = selectedContext.referencedMaterials.sorted {
+        let fallbackMaterialSources = selectedContext.referencedMaterials.map {
+            WorkspaceContextSourceContent(
+                id: $0.materialID,
+                title: $0.title,
+                sourceType: $0.type.displayName,
+                content: "",
+                isSelected: $0.isSelected
+            )
+        }
+        self.mentionSuggestions = (selectedContext.sourceContents.isEmpty ? fallbackMaterialSources : selectedContext.sourceContents).sorted {
             $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
         }
         loadPersistedHistory()
@@ -249,8 +258,8 @@ final class AIChatViewModel: ObservableObject {
         persistHistory()
     }
 
-    func insertMention(_ material: ReferencedMaterial) {
-        let token = "@\(material.title.replacingOccurrences(of: " ", with: "_")) "
+    func insertMention(_ source: WorkspaceContextSourceContent) {
+        let token = "@\(source.title.replacingOccurrences(of: " ", with: "_")) "
         if let range = currentMentionRange() {
             inputText.replaceSubrange(range, with: token)
             return
@@ -262,7 +271,7 @@ final class AIChatViewModel: ObservableObject {
         }
     }
 
-    func filteredMentionSuggestions() -> [ReferencedMaterial] {
+    func filteredMentionSuggestions() -> [WorkspaceContextSourceContent] {
         guard let token = currentMentionToken() else { return [] }
         if token.isEmpty { return mentionSuggestions.prefix(6).map { $0 } }
         return mentionSuggestions.filter {
@@ -281,7 +290,13 @@ final class AIChatViewModel: ObservableObject {
         guard let atRange = inputText.range(of: "@", options: .backwards) else { return nil }
         let suffix = inputText[atRange.upperBound...]
         if suffix.contains(" ") { return nil }
-        return atRange.lowerBound..<inputText.endIndex
+        var lowerBound = atRange.lowerBound
+        while lowerBound > inputText.startIndex {
+            let previous = inputText.index(before: lowerBound)
+            guard inputText[previous] == "@" else { break }
+            lowerBound = previous
+        }
+        return lowerBound..<inputText.endIndex
     }
 
     private func loadPersistedHistory() {

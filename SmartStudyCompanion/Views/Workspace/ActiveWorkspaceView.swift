@@ -374,12 +374,13 @@ struct ActiveWorkspaceView: View {
     private var chatContext: WorkspaceContext {
         WorkspaceContext(
             workspaceTitle: viewModel.workspace.title,
-            sourceTitle: "Comparison Table",
-            sourceType: "PDF",
-            description: "Reference extracted from your latest uploaded material.",
-            visualLabel: "Context: \(viewModel.workspace.title) notes and reference table",
+            sourceTitle: viewModel.workspace.title,
+            sourceType: "Workspace",
+            description: "Live workspace context including notes, uploaded files, PDFs, documents, and OCR text extracted from photos.",
+            visualLabel: "Context: \(viewModel.workspace.title) notes, files, and photos",
             previewSystemImage: viewModel.workspace.iconName,
             referencedMaterials: viewModel.referencedMaterials,
+            sourceContents: viewModel.chatSourceContents(),
             aiContextSource: viewModel.aiContextSource
         )
     }

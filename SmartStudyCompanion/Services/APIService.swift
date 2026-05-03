@@ -298,13 +298,15 @@ class APIService {
     func chatWithWorkspaceContext(
         workspaceTitle: String,
         prompt: String,
-        workspaceContext: String?
+        workspaceContext: String?,
+        conversationHistory: [WorkspaceContextChatHistoryMessage] = []
     ) async throws -> WorkspaceContextChatResponse {
         let endpoint = "/ai/workspace/chat"
         let request = WorkspaceContextChatRequest(
             workspaceTitle: workspaceTitle,
             prompt: prompt,
-            workspaceContext: workspaceContext
+            workspaceContext: workspaceContext,
+            conversationHistory: conversationHistory
         )
         let response: WorkspaceContextChatResponse = try await performRequest(
             endpoint: endpoint,

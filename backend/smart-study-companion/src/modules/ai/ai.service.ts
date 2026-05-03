@@ -46,6 +46,11 @@ type RankedChunk = {
     score: number;
 };
 
+type WorkspaceChatHistoryMessage = {
+    role: 'user' | 'assistant';
+    content: string;
+};
+
 @Injectable()
 export class AiService {
     private openai?: OpenAI;
@@ -142,7 +147,12 @@ export class AiService {
         };
     }
 
-    async chatWithWorkspaceContext(workspaceTitle: string, prompt: string, workspaceContext?: string) {
+    async chatWithWorkspaceContext(
+        workspaceTitle: string,
+        prompt: string,
+        workspaceContext?: string,
+        conversationHistory: WorkspaceChatHistoryMessage[] = [],
+    ) {
         const trimmedTitle = workspaceTitle?.trim() || 'Workspace';
         const trimmedPrompt = prompt?.trim();
         const trimmedContext = workspaceContext?.trim() || '';
@@ -150,6 +160,20 @@ export class AiService {
         if (!trimmedPrompt) {
             throw new BadRequestException('prompt is required');
         }
+
+        const safeHistory = Array.isArray(conversationHistory)
+            ? conversationHistory
+                .filter((message) => {
+                    return (message.role === 'user' || message.role === 'assistant') &&
+                        typeof message.content === 'string' &&
+                        message.content.trim().length > 0;
+                })
+                .slice(-8)
+                .map((message) => ({
+                    role: message.role,
+                    content: message.content.trim().slice(0, 1600),
+                }))
+            : [];
 
         let completion: any;
         try {
@@ -160,10 +184,13 @@ export class AiService {
                         role: 'system',
                         content: [
                             'You are a helpful study assistant.',
-                            'Answer clearly using the workspace context when relevant.',
-                            'If context is insufficient, say what is missing instead of hallucinating.',
+                            'The workspace context below is accessible source material from the user app, including notes, uploaded files, PDFs, documents, and OCR text from photos when available.',
+                            'If the user references a source with @, prioritize the matching source content.',
+                            'Use conversation history for continuity, but prefer the newest workspace context when facts conflict.',
+                            'If a specific source has no extracted text, say that text was not extracted for that source and use any other provided context instead of claiming you cannot access the workspace.',
                         ].join(' '),
                     },
+                    ...safeHistory,
                     {
                         role: 'user',
                         content: [

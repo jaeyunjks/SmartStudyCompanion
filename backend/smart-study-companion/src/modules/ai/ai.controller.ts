@@ -57,6 +57,7 @@ export class AiController {
             chatDto.workspaceTitle,
             chatDto.prompt,
             chatDto.workspaceContext,
+            chatDto.conversationHistory,
         );
     }
 

@@ -1,4 +1,13 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsArray, IsIn, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class WorkspaceChatHistoryMessageDto {
+    @IsIn(['user', 'assistant'])
+    role: 'user' | 'assistant';
+
+    @IsString()
+    content: string;
+}
 
 export class WorkspaceChatDto {
     @IsString()
@@ -10,4 +19,10 @@ export class WorkspaceChatDto {
     @IsOptional()
     @IsString()
     workspaceContext?: string;
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => WorkspaceChatHistoryMessageDto)
+    conversationHistory?: WorkspaceChatHistoryMessageDto[];
 }

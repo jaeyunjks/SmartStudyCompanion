@@ -1,8 +1,9 @@
 import Foundation
+import ImageIO
 import PDFKit
 import Vision
 
-final class WorkspaceMaterialStorageService {
+final class WorkspaceMaterialStorageService: @unchecked Sendable {
     static let shared = WorkspaceMaterialStorageService()
 
     private let fileManager = FileManager.default
@@ -15,37 +16,9 @@ final class WorkspaceMaterialStorageService {
 
         let data = try Data(contentsOf: metadataURL)
         let decoded = try JSONDecoder().decode([StudyMaterial].self, from: data)
-        var normalized = try normalizeLoadedMaterials(decoded, workspaceID: workspaceID)
+        let normalized = try normalizeLoadedMaterials(decoded, workspaceID: workspaceID)
 
-        // Backfill preview text for older entries so AI summaries can use real file content.
-        var didBackfill = false
-        normalized = normalized.map { material in
-            guard (material.previewText ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                return material
-            }
-
-            guard let extracted = extractSummaryContent(for: material),
-                  !extracted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                return material
-            }
-
-            didBackfill = true
-            return StudyMaterial(
-                id: material.id,
-                workspaceID: material.workspaceID,
-                title: material.title,
-                type: material.type,
-                storedPath: material.storedPath,
-                createdAt: material.createdAt,
-                previewText: String(extracted.prefix(1200)),
-                thumbnailPath: material.thumbnailPath,
-                isUsableForAIContext: material.isUsableForAIContext,
-                isSelectedForAIContext: material.isSelectedForAIContext,
-                fileSizeInBytes: material.fileSizeInBytes
-            )
-        }
-
-        if normalized != decoded || didBackfill {
+        if normalized != decoded {
             try saveMaterials(normalized, workspaceID: workspaceID)
         }
 
@@ -63,13 +36,15 @@ final class WorkspaceMaterialStorageService {
         let fileName = sanitizedFileName(suggestedFileName ?? "photo_\(Int(Date().timeIntervalSince1970)).jpg")
         let fileURL = directory.appendingPathComponent(fileName)
         try data.write(to: fileURL, options: .atomic)
+        let extractedText = readImageText(at: fileURL)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let previewText = extractedText.flatMap { $0.isEmpty ? nil : String($0.prefix(1200)) }
 
         return StudyMaterial(
             workspaceID: workspaceID,
             title: titleFromFileName(fileName),
             type: .image,
             storedPath: fileURL.path,
-            previewText: nil,
+            previewText: previewText,
             fileSizeInBytes: Int64(data.count)
         )
     }
@@ -170,14 +145,12 @@ final class WorkspaceMaterialStorageService {
         let raw: String?
 
         switch material.type {
-        case .text, .document:
+        case .text, .document, .other:
             raw = try? readTextDocument(at: url)
         case .pdf:
             raw = readPDFText(at: url)
         case .image:
             raw = readImageText(at: url)
-        case .other:
-            raw = nil
         }
 
         guard let raw, !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -185,6 +158,10 @@ final class WorkspaceMaterialStorageService {
         }
 
         let cleaned = sanitizeExtractedText(raw)
+        if material.type == .image {
+            return cleaned.isEmpty ? nil : cleaned
+        }
+
         guard !isLowQualityExtraction(cleaned) else { return nil }
         return cleaned
     }
@@ -323,16 +300,50 @@ final class WorkspaceMaterialStorageService {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
+        request.minimumTextHeight = 0.01
+        request.recognitionLanguages = ["en-US", "en-GB"]
 
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        let handler = VNImageRequestHandler(
+            cgImage: cgImage,
+            orientation: imageOrientation(from: cgImageSource),
+            options: [:]
+        )
         do {
             try handler.perform([request])
             let observations = request.results ?? []
-            let text = observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+            let text = observations
+                .sorted(by: readingOrder)
+                .compactMap { $0.topCandidates(1).first?.string }
+                .joined(separator: "\n")
             return text.trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
             return nil
         }
+    }
+
+    private func readingOrder(_ lhs: VNRecognizedTextObservation, _ rhs: VNRecognizedTextObservation) -> Bool {
+        let verticalDifference = abs(lhs.boundingBox.midY - rhs.boundingBox.midY)
+        if verticalDifference > 0.02 {
+            return lhs.boundingBox.midY > rhs.boundingBox.midY
+        }
+        return lhs.boundingBox.minX < rhs.boundingBox.minX
+    }
+
+    private func imageOrientation(from source: CGImageSource) -> CGImagePropertyOrientation {
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let rawValue = properties[kCGImagePropertyOrientation] else {
+            return .up
+        }
+
+        if let number = rawValue as? NSNumber {
+            return CGImagePropertyOrientation(rawValue: number.uint32Value) ?? .up
+        }
+
+        if let raw = rawValue as? UInt32 {
+            return CGImagePropertyOrientation(rawValue: raw) ?? .up
+        }
+
+        return .up
     }
 
     private func normalizeLoadedMaterials(_ materials: [StudyMaterial], workspaceID: UUID) throws -> [StudyMaterial] {

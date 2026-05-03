@@ -91,6 +91,7 @@ struct WorkspaceContext: Identifiable, Codable, Equatable {
     let visualLabel: String
     let previewSystemImage: String
     let referencedMaterials: [ReferencedMaterial]
+    let sourceContents: [WorkspaceContextSourceContent]
     let aiContextSource: AIContextSource?
 
     init(
@@ -102,6 +103,7 @@ struct WorkspaceContext: Identifiable, Codable, Equatable {
         visualLabel: String,
         previewSystemImage: String,
         referencedMaterials: [ReferencedMaterial] = [],
+        sourceContents: [WorkspaceContextSourceContent] = [],
         aiContextSource: AIContextSource? = nil
     ) {
         self.id = id
@@ -112,7 +114,30 @@ struct WorkspaceContext: Identifiable, Codable, Equatable {
         self.visualLabel = visualLabel
         self.previewSystemImage = previewSystemImage
         self.referencedMaterials = referencedMaterials
+        self.sourceContents = sourceContents
         self.aiContextSource = aiContextSource
+    }
+}
+
+struct WorkspaceContextSourceContent: Identifiable, Codable, Equatable, Hashable {
+    let id: UUID
+    let title: String
+    let sourceType: String
+    let content: String
+    let isSelected: Bool
+
+    init(
+        id: UUID,
+        title: String,
+        sourceType: String,
+        content: String,
+        isSelected: Bool = true
+    ) {
+        self.id = id
+        self.title = title
+        self.sourceType = sourceType
+        self.content = content
+        self.isSelected = isSelected
     }
 }
 
@@ -162,6 +187,12 @@ struct WorkspaceContextChatRequest: Codable {
     let workspaceTitle: String
     let prompt: String
     let workspaceContext: String?
+    let conversationHistory: [WorkspaceContextChatHistoryMessage]
+}
+
+struct WorkspaceContextChatHistoryMessage: Codable {
+    let role: String
+    let content: String
 }
 
 struct WorkspaceContextChatResponse: Codable {

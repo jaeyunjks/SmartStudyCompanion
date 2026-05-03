@@ -26,12 +26,16 @@ final class ActiveWorkspaceViewModel: ObservableObject {
     @Published var selectedMaterialForPreview: StudyMaterial?
     @Published var isWorkspaceDeleted = false
     @Published var notes: [WorkspaceNote] = []
+    @Published private(set) var cachedSummarySourceItems: [SummarySourceItem] = []
+    @Published private(set) var cachedChatSourceContents: [WorkspaceContextSourceContent] = []
 
     private let store: StudySpaceStore
     private let storageService: WorkspaceMaterialStorageService
     private let noteStorageService: WorkspaceNoteStorageService
     private let summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService
     private var summaryVersions: [SummaryVersion] = []
+    private var materialContentCache: [UUID: String] = [:]
+    private var aiReadableContentTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
 
     init(
@@ -50,6 +54,12 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         loadMaterials()
         loadNotes()
         loadSummaryHistory()
+        rebuildAIContentSnapshots()
+        refreshAIReadableContent()
+    }
+
+    deinit {
+        aiReadableContentTask?.cancel()
     }
 
     var workspaceID: UUID {
@@ -97,6 +107,14 @@ final class ActiveWorkspaceViewModel: ObservableObject {
     }
 
     func summarySourceItems() -> [SummarySourceItem] {
+        cachedSummarySourceItems
+    }
+
+    func chatSourceContents() -> [WorkspaceContextSourceContent] {
+        cachedChatSourceContents
+    }
+
+    private func rebuildAIContentSnapshots() {
         let noteItems: [SummarySourceItem] = notes.map { note in
             let content = extractNoteTextForSummary(note).trimmingCharacters(in: .whitespacesAndNewlines)
             return SummarySourceItem(
@@ -109,7 +127,7 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         }
 
         let materialItems: [SummarySourceItem] = materials.map { material in
-            let content = (material.previewText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let content = cachedMaterialContent(for: material)
             return SummarySourceItem(
                 id: material.id,
                 name: material.title,
@@ -119,7 +137,82 @@ final class ActiveWorkspaceViewModel: ObservableObject {
             )
         }
 
-        return (noteItems + materialItems).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        cachedSummarySourceItems = (noteItems + materialItems)
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+        let noteSources = notes.map { note in
+            WorkspaceContextSourceContent(
+                id: note.id,
+                title: note.displayTitle,
+                sourceType: "Note",
+                content: extractNoteTextForSummary(note).trimmingCharacters(in: .whitespacesAndNewlines),
+                isSelected: true
+            )
+        }
+
+        let materialSources = materials.map { material in
+            return WorkspaceContextSourceContent(
+                id: material.id,
+                title: material.title,
+                sourceType: chatSourceType(for: material),
+                content: cachedMaterialContent(for: material),
+                isSelected: material.isSelectedForAIContext
+            )
+        }
+
+        cachedChatSourceContents = (noteSources + materialSources)
+            .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+    }
+
+    private func cachedMaterialContent(for material: StudyMaterial) -> String {
+        (materialContentCache[material.id] ?? material.previewText ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func refreshAIReadableContent() {
+        rebuildAIContentSnapshots()
+        aiReadableContentTask?.cancel()
+
+        let materialsSnapshot = materials
+        guard !materialsSnapshot.isEmpty else {
+            materialContentCache = [:]
+            rebuildAIContentSnapshots()
+            return
+        }
+
+        let storageService = storageService
+        aiReadableContentTask = Task.detached(priority: .utility) {
+            var extractedContent: [UUID: String] = [:]
+
+            for material in materialsSnapshot {
+                guard !Task.isCancelled else { return }
+                let extracted = storageService.extractSummaryContent(for: material)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let fallback = material.previewText?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let content = [extracted, fallback]
+                    .compactMap { $0 }
+                    .first { !$0.isEmpty } ?? ""
+                extractedContent[material.id] = content
+            }
+
+            await MainActor.run {
+                guard !Task.isCancelled else { return }
+                let currentIDs = Set(self.materials.map(\.id))
+                self.materialContentCache = extractedContent.filter { currentIDs.contains($0.key) }
+                self.rebuildAIContentSnapshots()
+            }
+        }
+    }
+
+    private func chatSourceType(for material: StudyMaterial) -> String {
+        switch material.type {
+        case .image: return "Photo/Image OCR"
+        case .pdf: return "PDF"
+        case .document: return "Document"
+        case .text: return "Text file"
+        case .other: return "File"
+        }
     }
 
     func editWorkspace(
@@ -154,9 +247,12 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         do {
             materials = try storageService.loadMaterials(workspaceID: workspaceID)
                 .sorted { $0.createdAt > $1.createdAt }
+            rebuildAIContentSnapshots()
+            refreshAIReadableContent()
         } catch {
             importErrorMessage = "Could not load workspace materials."
             materials = []
+            rebuildAIContentSnapshots()
         }
     }
 
@@ -164,8 +260,10 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         do {
             notes = try noteStorageService.loadNotes(workspaceID: workspaceID)
                 .sorted { $0.updatedAt > $1.updatedAt }
+            rebuildAIContentSnapshots()
         } catch {
             notes = []
+            rebuildAIContentSnapshots()
         }
     }
 
@@ -187,6 +285,7 @@ final class ActiveWorkspaceViewModel: ObservableObject {
 
         do {
             try noteStorageService.saveNotes(notes, workspaceID: workspaceID)
+            rebuildAIContentSnapshots()
         } catch {
             importErrorMessage = "Could not save note. Please try again."
         }
@@ -196,6 +295,7 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         notes.removeAll { $0.id == note.id }
         do {
             try noteStorageService.saveNotes(notes, workspaceID: workspaceID)
+            rebuildAIContentSnapshots()
         } catch {
             importErrorMessage = "Could not delete note. Please try again."
         }
@@ -206,8 +306,14 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         defer { isImporting = false }
 
         do {
-            let material = try storageService.persistPhotoData(data, workspaceID: workspaceID, suggestedFileName: fileName)
+            let storageService = storageService
+            let workspaceID = workspaceID
+            let material = try await Task.detached(priority: .userInitiated) {
+                try storageService.persistPhotoData(data, workspaceID: workspaceID, suggestedFileName: fileName)
+            }.value
             materials.insert(material, at: 0)
+            materialContentCache[material.id] = material.previewText ?? ""
+            rebuildAIContentSnapshots()
             try persistMaterials()
         } catch {
             importErrorMessage = "Photo import failed. Please try again."
@@ -224,10 +330,17 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         }
 
         do {
-            let material = try storageService.persistDocument(at: sourceURL, workspaceID: workspaceID)
+            let storageService = storageService
+            let workspaceID = workspaceID
+            let material = try await Task.detached(priority: .userInitiated) {
+                try storageService.persistDocument(at: sourceURL, workspaceID: workspaceID)
+            }.value
 
             materials.insert(material, at: 0)
+            materialContentCache[material.id] = material.previewText ?? ""
+            rebuildAIContentSnapshots()
             try persistMaterials()
+            refreshAIReadableContent()
         } catch {
             importErrorMessage = "File import failed. Please try a different document."
         }
@@ -238,6 +351,7 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         materials[index].isSelectedForAIContext.toggle()
         do {
             try persistMaterials()
+            rebuildAIContentSnapshots()
         } catch {
             importErrorMessage = "Could not update AI source selection."
         }
@@ -299,6 +413,8 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         materials[index] = updated
         do {
             try persistMaterials()
+            rebuildAIContentSnapshots()
+            refreshAIReadableContent()
         } catch {
             importErrorMessage = "Could not save material rename."
         }
@@ -336,6 +452,8 @@ final class ActiveWorkspaceViewModel: ObservableObject {
     func deleteMaterial(_ material: StudyMaterial) {
         guard let index = materials.firstIndex(where: { $0.id == material.id }) else { return }
         materials.remove(at: index)
+        materialContentCache.removeValue(forKey: material.id)
+        rebuildAIContentSnapshots()
 
         do {
             if FileManager.default.fileExists(atPath: material.storedPath) {

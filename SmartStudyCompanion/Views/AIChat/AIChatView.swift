@@ -162,7 +162,7 @@ struct AIChatView: View {
             if !mentions.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(mentions, id: \.materialID) { material in
+                        ForEach(mentions, id: \.id) { material in
                             Button {
                                 viewModel.insertMention(material)
                             } label: {

@@ -6,6 +6,7 @@ struct WorkspaceNoteEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.workspaceThemePalette) private var palette
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
 
     let note: WorkspaceNote
     let onSave: (WorkspaceNote) -> Void
@@ -29,9 +30,8 @@ struct WorkspaceNoteEditorView: View {
 
     @State private var showFormatSheet = false
     @State private var showDeleteConfirmation = false
-    @State private var showRenameSheet = false
-    @State private var renameDraft = ""
-    @State private var renameSeed = UUID()
+    @State private var autoSaveTask: Task<Void, Never>?
+    @State private var hasLoaded = false
 
     init(
         note: WorkspaceNote,
@@ -55,7 +55,7 @@ struct WorkspaceNoteEditorView: View {
 
     var body: some View {
         ZStack {
-            Color(uiColor: .systemGroupedBackground)
+            Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -64,28 +64,22 @@ struct WorkspaceNoteEditorView: View {
                 ScrollView {
                     mobileCanvas
                 }
+                .scrollDismissesKeyboard(.interactively)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if !isTitleFocused {
+                        focusTrailingTextBlock()
+                    }
+                }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            bottomToolbar
+            contextualToolbar
         }
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showFormatSheet) {
             formatSheet
                 .presentationDetents([.medium])
-        }
-        .sheet(isPresented: $showRenameSheet) {
-            RenameNoteSheetView(
-                initialTitle: renameDraft,
-                onCancel: { showRenameSheet = false },
-                onSave: { newTitle in
-                    title = newTitle
-                    renameDraft = newTitle
-                    showRenameSheet = false
-                }
-            )
-            .id(renameSeed)
-            .presentationDetents([.fraction(0.28)])
         }
         .alert("Delete Note?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
@@ -134,26 +128,55 @@ struct WorkspaceNoteEditorView: View {
             }
             richTextController.currentFontSize = CGFloat(textSize)
             applyAlignmentToController(textAlignment)
+            hasLoaded = true
+        }
+        .onChange(of: title) { _, _ in
+            scheduleAutoSave()
+        }
+        .onChange(of: blocks) { _, _ in
+            scheduleAutoSave()
+        }
+        .onChange(of: textSize) { _, _ in
+            scheduleAutoSave()
+        }
+        .onChange(of: textAlignment) { _, _ in
+            scheduleAutoSave()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase != .active {
+                autoSaveTask?.cancel()
+                saveNoteSilently()
+            }
+        }
+        .onDisappear {
+            autoSaveTask?.cancel()
+            saveNoteSilently()
         }
     }
 
     private var topBar: some View {
         HStack(spacing: 10) {
             Button {
+                saveNoteSilently()
                 dismiss()
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.primary)
-                    .frame(width: 34, height: 34)
-                    .background(WorkspaceTheme.secondaryBackground)
+                    .frame(width: 36, height: 36)
+                    .background(Color(uiColor: .secondarySystemBackground))
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
 
-            TextField("Untitled Note", text: $title)
-                .font(.headline.weight(.semibold))
-                .multilineTextAlignment(.center)
+            TextField("Untitled Note", text: $title, axis: .vertical)
+                .font(.system(.headline, design: .rounded).weight(.semibold))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+                .lineLimit(1...2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
                 .focused($isTitleFocused)
                 .onChange(of: isTitleFocused) { _, focused in
                     if focused {
@@ -164,10 +187,7 @@ struct WorkspaceNoteEditorView: View {
 
             Menu {
                 Button {
-                    renameDraft = title
-                    renameSeed = UUID()
-                    isTitleFocused = false
-                    showRenameSheet = true
+                    focusTitleForRename()
                 } label: {
                     Label("Rename Note", systemImage: "pencil")
                 }
@@ -179,23 +199,33 @@ struct WorkspaceNoteEditorView: View {
                         Label("Delete Note", systemImage: "trash")
                     }
                 }
+
+                Button {
+                    insertChecklistBlock()
+                } label: {
+                    Label("Insert Checklist", systemImage: "checklist")
+                }
+
+                Button {
+                    showFormatSheet = true
+                } label: {
+                    Label("Format", systemImage: "textformat")
+                }
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(WorkspaceTheme.mutedText)
-                    .frame(width: 30, height: 30)
+                    .frame(width: 36, height: 36)
             }
-
-            Button("Save") {
-                saveAndDismiss()
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.primary)
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(.ultraThinMaterial)
+        .background(Color(uiColor: .systemBackground).opacity(0.94))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.primary.opacity(colorScheme == .dark ? 0.10 : 0.06))
+                .frame(height: 0.5)
+        }
     }
 
     private var mobileCanvas: some View {
@@ -211,9 +241,10 @@ struct WorkspaceNoteEditorView: View {
                     focusTrailingTextBlock()
                 }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 26)
     }
 
     @ViewBuilder
@@ -237,8 +268,8 @@ struct WorkspaceNoteEditorView: View {
                 set: { block.wrappedValue.textDataBase64 = $0 }
             ),
             measuredHeight: Binding(
-                get: { textBlockHeights[block.wrappedValue.id] ?? 44 },
-                set: { textBlockHeights[block.wrappedValue.id] = $0 }
+                get: { heightForTextBlock(block.wrappedValue.id) },
+                set: { setHeight($0, forTextBlock: block.wrappedValue.id) }
             ),
             focusedBlockID: $focusedTextBlockID,
             blockID: block.wrappedValue.id,
@@ -248,13 +279,22 @@ struct WorkspaceNoteEditorView: View {
             controller: richTextController,
             onTextChange: {
                 activeBlockID = block.wrappedValue.id
+                if block.wrappedValue.kind == .text {
+                    var normalized = block.wrappedValue
+                    let text = normalized.attributedText().string
+                    if !text.isEmpty {
+                        normalized.storeAttributedText(normalized.attributedText())
+                        block.wrappedValue = normalized
+                    }
+                }
             },
             onFocus: {
                 activeBlockID = block.wrappedValue.id
                 isTitleFocused = false
             }
         )
-        .frame(height: max(44, textBlockHeights[block.wrappedValue.id] ?? 44))
+        .frame(height: heightForTextBlock(block.wrappedValue.id))
+        .frame(maxWidth: .infinity, alignment: .leading)
         .onTapGesture {
             activeBlockID = block.wrappedValue.id
             focusedTextBlockID = block.wrappedValue.id
@@ -388,24 +428,27 @@ struct WorkspaceNoteEditorView: View {
         .padding(.vertical, 1)
     }
 
-    private var bottomToolbar: some View {
-        HStack(spacing: 18) {
-            toolbarIcon("checklist") { insertChecklistBlock() }
-            toolbarIcon("textformat") {
-                if !isTitleFocused { showFormatSheet = true }
+    private var contextualToolbar: some View {
+        Group {
+            if richTextController.selectedRange.length > 0, richTextController.isEditing, !isTitleFocused {
+                HStack(spacing: 10) {
+                    toolbarIcon("bold", isActive: richTextController.isBold) { richTextController.toggleBold() }
+                    toolbarIcon("italic", isActive: richTextController.isItalic) { richTextController.toggleItalic() }
+                    toolbarIcon("underline", isActive: richTextController.isUnderline) { richTextController.toggleUnderline() }
+                    toolbarIcon("list.bullet", isActive: false) { richTextController.applyListStyle(.bullet) }
+                    toolbarIcon("list.number", isActive: false) { richTextController.applyListStyle(.numbered) }
+                    toolbarIcon("checklist", isActive: false) { insertChecklistBlock() }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            } else {
+                Color.clear.frame(height: 0)
             }
-
-            Spacer()
-
-            Text(note.createdDisplayText)
-                .font(.caption)
-                .foregroundStyle(WorkspaceTheme.mutedText)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .top) {
-            Divider().opacity(0.3)
         }
     }
 
@@ -472,12 +515,14 @@ struct WorkspaceNoteEditorView: View {
         }
     }
 
-    private func toolbarIcon(_ icon: String, action: @escaping () -> Void) -> some View {
+    private func toolbarIcon(_ icon: String, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.primary)
-                .frame(width: 30, height: 30)
+                .foregroundStyle(isActive ? .white : .primary)
+                .frame(width: 32, height: 32)
+                .background(isActive ? palette.primary : Color.clear)
+                .clipShape(Circle())
         }
         .buttonStyle(.plain)
     }
@@ -646,6 +691,27 @@ struct WorkspaceNoteEditorView: View {
         selectedTableBlockID = nil
     }
 
+    private func focusTitleForRename() {
+        activeBlockID = nil
+        focusedTextBlockID = nil
+        richTextController.textView?.resignFirstResponder()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            isTitleFocused = true
+        }
+    }
+
+    private func heightForTextBlock(_ id: UUID) -> CGFloat {
+        textBlockHeights[id] ?? 56
+    }
+
+    private func setHeight(_ height: CGFloat, forTextBlock id: UUID) {
+        let normalized = max(56, height)
+        guard textBlockHeights[id] != normalized else { return }
+        var next = textBlockHeights
+        next[id] = normalized
+        textBlockHeights = next
+    }
+
     private func normalizedTable(_ table: WorkspaceTableBlock?) -> WorkspaceTableBlock? {
         guard var table else { return nil }
         let expectedRows = max(1, table.rows)
@@ -695,7 +761,7 @@ struct WorkspaceNoteEditorView: View {
         return (start, end)
     }
 
-    private func saveAndDismiss() {
+    private func buildUpdatedNote() -> WorkspaceNote {
         let plain = blocks.map { $0.plainTextSummary }
             .joined(separator: "\n\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -708,9 +774,21 @@ struct WorkspaceNoteEditorView: View {
         updated.textAlignment = textAlignment
         updated.isBoldEnabled = richTextController.isBold
         updated.updatedAt = Date()
+        return updated
+    }
 
-        onSave(updated)
-        dismiss()
+    private func scheduleAutoSave() {
+        guard hasLoaded else { return }
+        autoSaveTask?.cancel()
+        autoSaveTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            guard !Task.isCancelled else { return }
+            saveNoteSilently()
+        }
+    }
+
+    private func saveNoteSilently() {
+        onSave(buildUpdatedNote())
     }
 
 }
@@ -744,50 +822,6 @@ private struct WorkspaceNoteImageView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .task(id: path) {
             image = await WorkspaceNoteImageCache.shared.image(for: path, maxPixelSize: 1600)
-        }
-    }
-}
-
-private struct RenameNoteSheetView: View {
-    let initialTitle: String
-    let onCancel: () -> Void
-    let onSave: (String) -> Void
-
-    @State private var draft: String
-    @FocusState private var isFocused: Bool
-
-    init(initialTitle: String, onCancel: @escaping () -> Void, onSave: @escaping (String) -> Void) {
-        self.initialTitle = initialTitle
-        self.onCancel = onCancel
-        self.onSave = onSave
-        _draft = State(initialValue: initialTitle)
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                TextField("Note title", text: $draft)
-                    .textInputAutocapitalization(.sentences)
-                    .disableAutocorrection(false)
-                    .focused($isFocused)
-            }
-            .navigationTitle("Rename Note")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel", action: onCancel)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
-                        onSave(draft)
-                    }
-                }
-            }
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    isFocused = true
-                }
-            }
         }
     }
 }

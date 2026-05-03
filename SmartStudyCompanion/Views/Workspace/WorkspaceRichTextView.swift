@@ -17,6 +17,8 @@ final class WorkspaceRichTextController: NSObject, ObservableObject {
     @Published var currentFontSize: CGFloat = 18
     @Published var currentAlignment: NSTextAlignment = .left
     @Published var selectedRange: NSRange = NSRange(location: 0, length: 0)
+    @Published var isEditing = false
+    var onAttributedTextMutated: ((NSAttributedString) -> Void)?
 
     func refreshSelectionState() {
         guard let textView else { return }
@@ -75,12 +77,14 @@ final class WorkspaceRichTextController: NSObject, ObservableObject {
             textView.typingAttributes = attrs
         }
         currentFontSize = size
+        notifyMutation()
     }
 
     func setAlignment(_ alignment: NSTextAlignment) {
         guard let textView else { return }
         textView.textAlignment = alignment
         currentAlignment = alignment
+        notifyMutation()
     }
 
     func applyListStyle(_ style: ListStyle) {
@@ -120,6 +124,7 @@ final class WorkspaceRichTextController: NSObject, ObservableObject {
         mutable.replaceCharacters(in: paragraphRange, with: output)
         textView.text = String(mutable)
         textView.selectedRange = NSRange(location: paragraphRange.location, length: output.count)
+        notifyMutation()
     }
 
     private func toggleIntegerAttribute(_ key: NSAttributedString.Key, enabled: Bool) {
@@ -138,6 +143,7 @@ final class WorkspaceRichTextController: NSObject, ObservableObject {
         }
 
         refreshSelectionState()
+        notifyMutation()
     }
 
     private func toggleSymbolicTrait(_ trait: UIFontDescriptor.SymbolicTraits) {
@@ -174,6 +180,12 @@ final class WorkspaceRichTextController: NSObject, ObservableObject {
         }
 
         refreshSelectionState()
+        notifyMutation()
+    }
+
+    private func notifyMutation() {
+        guard let textView else { return }
+        onAttributedTextMutated?(textView.attributedText ?? NSAttributedString(string: textView.text ?? ""))
     }
 }
 
@@ -194,21 +206,39 @@ struct WorkspaceRichTextView: UIViewRepresentable {
         textView.delegate = context.coordinator
         textView.backgroundColor = .clear
         textView.isScrollEnabled = false
-        textView.font = UIFont.systemFont(ofSize: textSize)
-        textView.textContainerInset = UIEdgeInsets(top: 8, left: 4, bottom: 8, right: 4)
+        textView.font = UIFont.systemFont(ofSize: textSize, weight: .regular)
+        textView.textContainerInset = UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
+        textView.textContainer.lineFragmentPadding = 0
+        textView.textContainer.widthTracksTextView = true
+        textView.textContainer.lineBreakMode = .byCharWrapping
+        textView.textContainer.maximumNumberOfLines = 0
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        textView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        textView.alwaysBounceHorizontal = false
+        textView.showsHorizontalScrollIndicator = false
         textView.keyboardDismissMode = .interactive
+        textView.smartDashesType = .yes
+        textView.smartQuotesType = .yes
+        textView.smartInsertDeleteType = .yes
+        textView.autocorrectionType = .yes
+        textView.autocapitalizationType = .sentences
+        textView.typingAttributes = defaultTypingAttributes(fontSize: textSize)
 
         let alignmentValue = nsAlignment(alignment)
         textView.textAlignment = alignmentValue
 
         if let attributed = decodeAttributedText(from: textDataBase64) {
-            textView.attributedText = attributed
+            textView.attributedText = normalizedAttributedTextForDisplay(attributed, fontSize: textSize)
         } else {
-            textView.attributedText = NSAttributedString(string: "")
+            textView.attributedText = NSAttributedString(string: "", attributes: defaultTypingAttributes(fontSize: textSize))
         }
 
         if isActive {
             controller.textView = textView
+            controller.onAttributedTextMutated = { attributed in
+                self.textDataBase64 = self.encodeAttributedText(attributed)
+                self.onTextChange()
+            }
             controller.refreshSelectionState()
         }
         context.coordinator.updateHeight(for: textView)
@@ -221,16 +251,29 @@ struct WorkspaceRichTextView: UIViewRepresentable {
         if uiView.textAlignment != alignmentValue {
             uiView.textAlignment = alignmentValue
         }
+        uiView.textContainer.size = CGSize(
+            width: max(1, uiView.bounds.width),
+            height: .greatestFiniteMagnitude
+        )
 
         if let incoming = decodeAttributedText(from: textDataBase64),
            uiView.attributedText != incoming {
             let selected = uiView.selectedRange
-            uiView.attributedText = incoming
+            uiView.attributedText = normalizedAttributedTextForDisplay(incoming, fontSize: textSize)
             uiView.selectedRange = selected
+        }
+
+        let currentFontSize = ((uiView.typingAttributes[.font] as? UIFont)?.pointSize) ?? 0
+        if abs(currentFontSize - textSize) > 0.1 {
+            uiView.typingAttributes = defaultTypingAttributes(fontSize: textSize)
         }
 
         if isActive, controller.textView !== uiView {
             controller.textView = uiView
+            controller.onAttributedTextMutated = { attributed in
+                self.textDataBase64 = self.encodeAttributedText(attributed)
+                self.onTextChange()
+            }
             controller.refreshSelectionState()
         }
 
@@ -274,17 +317,78 @@ struct WorkspaceRichTextView: UIViewRepresentable {
         func textViewDidBeginEditing(_ textView: UITextView) {
             parent.onFocus()
             parent.controller.textView = textView
+            parent.controller.isEditing = true
             parent.controller.refreshSelectionState()
             if parent.focusedBlockID != parent.blockID {
                 parent.focusedBlockID = parent.blockID
             }
         }
 
+        func textViewDidEndEditing(_ textView: UITextView) {
+            parent.controller.isEditing = false
+        }
+
+        func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+            // Smart continuation for bullets and numbered lists.
+            guard text == "\n",
+                  let currentText = textView.text,
+                  !currentText.isEmpty
+            else { return true }
+
+            let current = currentText as NSString
+            let paragraphRange = current.paragraphRange(for: range)
+            let line = current.substring(with: paragraphRange)
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if trimmed.hasPrefix("• ") {
+                if trimmed == "•" || trimmed == "• " {
+                    replaceText(in: textView, range: paragraphRange, with: "\n")
+                    textView.selectedRange = NSRange(location: paragraphRange.location + 1, length: 0)
+                    textViewDidChange(textView)
+                    return false
+                }
+
+                let insertion = "\n• "
+                replaceText(in: textView, range: range, with: insertion)
+                textView.selectedRange = NSRange(location: range.location + insertion.count, length: 0)
+                textViewDidChange(textView)
+                return false
+            }
+
+            let pattern = #"^(\d+)\.\s"#
+            if let match = trimmed.range(of: pattern, options: .regularExpression) {
+                let numberString = String(trimmed[match]).replacingOccurrences(of: ".", with: "").trimmingCharacters(in: .whitespaces)
+                if trimmed == "\(numberString)." || trimmed == "\(numberString). " {
+                    replaceText(in: textView, range: paragraphRange, with: "\n")
+                    textView.selectedRange = NSRange(location: paragraphRange.location + 1, length: 0)
+                    textViewDidChange(textView)
+                    return false
+                }
+
+                let nextNumber = (Int(numberString) ?? 0) + 1
+                let insertion = "\n\(nextNumber). "
+                replaceText(in: textView, range: range, with: insertion)
+                textView.selectedRange = NSRange(location: range.location + insertion.count, length: 0)
+                textViewDidChange(textView)
+                return false
+            }
+
+            return true
+        }
+
+        private func replaceText(in textView: UITextView, range: NSRange, with replacement: String) {
+            let current = textView.attributedText ?? NSAttributedString(string: "")
+            let mutable = NSMutableAttributedString(attributedString: current)
+            let attrs = textView.typingAttributes
+            mutable.replaceCharacters(in: range, with: NSAttributedString(string: replacement, attributes: attrs))
+            textView.attributedText = mutable
+        }
+
         func updateHeight(for textView: UITextView) {
             let fallbackWidth = (textView.window?.windowScene?.screen.bounds.width ?? 390) - 40
             let fittingSize = CGSize(width: textView.bounds.width > 0 ? textView.bounds.width : fallbackWidth, height: .greatestFiniteMagnitude)
             let size = textView.sizeThatFits(fittingSize)
-            let height = max(44, ceil(size.height))
+            let height = max(56, ceil(size.height))
             if parent.measuredHeight != height {
                 DispatchQueue.main.async {
                     self.parent.measuredHeight = height
@@ -309,5 +413,30 @@ struct WorkspaceRichTextView: UIViewRepresentable {
         case .center: return .center
         case .right: return .right
         }
+    }
+
+    private func defaultTypingAttributes(fontSize: CGFloat) -> [NSAttributedString.Key: Any] {
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = 5
+        style.paragraphSpacing = 10
+        return [
+            .font: UIFont.systemFont(ofSize: fontSize, weight: .regular),
+            .foregroundColor: UIColor.label,
+            .paragraphStyle: style
+        ]
+    }
+
+    private func normalizedAttributedTextForDisplay(_ text: NSAttributedString, fontSize: CGFloat) -> NSAttributedString {
+        let mutable = NSMutableAttributedString(attributedString: text)
+        let fullRange = NSRange(location: 0, length: mutable.length)
+        mutable.enumerateAttributes(in: fullRange) { attrs, range, _ in
+            let oldFont = (attrs[.font] as? UIFont) ?? UIFont.systemFont(ofSize: fontSize)
+            if attrs[.font] == nil {
+                mutable.addAttribute(.font, value: oldFont, range: range)
+            }
+            mutable.removeAttribute(.foregroundColor, range: range)
+            mutable.addAttribute(.foregroundColor, value: UIColor.label, range: range)
+        }
+        return mutable
     }
 }

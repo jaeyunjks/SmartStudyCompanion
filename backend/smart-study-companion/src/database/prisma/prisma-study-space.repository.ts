@@ -31,18 +31,6 @@ export class PrismaStudySpaceRepository implements StudySpaceRepository {
         });
     }
 
-    async updateSummaryById(id: string, userId: string, summary: any): Promise<any> {
-        return this.prisma.studySpace.update({
-            where: {
-                id,
-                userId,
-            },
-            data: {
-                summary,
-            },
-        });
-    }
-
     async delete(id: string, userId: string): Promise<any> {
         return this.prisma.studySpace.delete({
             where: {
@@ -57,6 +45,20 @@ export class PrismaStudySpaceRepository implements StudySpaceRepository {
             where: {
                 id,
             },
+            include: {
+                summaries: {
+                    include: {
+                        files: {
+                            include: {
+                                file: true,
+                            },
+                        },
+                    },
+                    orderBy: {
+                        createdAt: 'desc',
+                    },
+                },
+            },
         });
     }
 
@@ -64,6 +66,25 @@ export class PrismaStudySpaceRepository implements StudySpaceRepository {
         return this.prisma.studySpace.findMany({
             where: {
                 userId,
+            },
+            include: {
+                summaries: {
+                    select: {
+                        id: true,
+                        title: true,
+                        content: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        files: {
+                            include: {
+                                file: true,
+                            },
+                        },
+                    },
+                    orderBy: {
+                        createdAt: 'desc',
+                    },
+                },
             },
         });
     }

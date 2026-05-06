@@ -41,12 +41,30 @@ Dates are returned as ISO date strings. IDs are UUID strings. JWT access tokens 
     "userId": "string",
     "color": "#3B82F6",
     "tag": "biology",
-    "summary": {
+    "summaries": ["StudySpaceSummary"],
+    "createdAt": "2026-05-02T00:00:00.000Z"
+  },
+  "StudySpaceSummary": {
+    "id": "string",
+    "studySpaceId": "string",
+    "userId": "string",
+    "title": "Lecture set summary",
+    "content": {
       "overview": "string",
       "keyConcepts": ["string"],
       "importantDetails": ["string"]
     },
-    "createdAt": "2026-05-02T00:00:00.000Z"
+    "files": [
+      {
+        "id": "string",
+        "summaryId": "string",
+        "fileId": "string",
+        "createdAt": "2026-05-02T00:00:00.000Z",
+        "file": "File"
+      }
+    ],
+    "createdAt": "2026-05-02T00:00:00.000Z",
+    "updatedAt": "2026-05-02T00:00:00.000Z"
   },
   "File": {
     "id": "string",
@@ -298,7 +316,7 @@ Response:
     "userId": "string",
     "color": "#22C55E",
     "tag": "science",
-    "summary": null,
+    "summaries": [],
     "createdAt": "2026-05-02T00:00:00.000Z"
   }
 }
@@ -322,7 +340,7 @@ Response:
       "userId": "string",
       "color": "#22C55E",
       "tag": "science",
-      "summary": null,
+      "summaries": [],
       "createdAt": "2026-05-02T00:00:00.000Z"
     }
   ]
@@ -354,7 +372,6 @@ Response:
   "userId": "string",
   "color": "#22C55E",
   "tag": "science",
-  "summary": null,
   "createdAt": "2026-05-02T00:00:00.000Z"
 }
 ```
@@ -385,7 +402,6 @@ Response:
   "userId": "string",
   "color": "#16A34A",
   "tag": "exam",
-  "summary": null,
   "createdAt": "2026-05-02T00:00:00.000Z"
 }
 ```
@@ -413,7 +429,6 @@ Response:
   "userId": "string",
   "color": "#16A34A",
   "tag": "exam",
-  "summary": null,
   "createdAt": "2026-05-02T00:00:00.000Z"
 }
 ```
@@ -1000,34 +1015,144 @@ Response:
 
 ### `POST /api/ai/study-space/:id/summary`
 
-Summarize all files and images in a study space and save the result to `study_space.summary`.
+Create a new summary for selected files in a study space. Each call creates a separate `StudySpaceSummary`, so one study space can have multiple summaries.
 
 Auth: required
 
-Request body: none
+Request:
+
+```json
+{
+  "fileIds": ["file_id_1", "file_id_2"],
+  "title": "Optional summary title"
+}
+```
+
+Notes:
+
+- `fileIds` is required and must contain at least one file ID.
+- Every selected file must belong to the study space in the URL.
+- The summary uses selected files only. Images are not included by this endpoint.
+- If `title` is omitted, the backend creates one from the selected file names.
 
 Response:
 
 ```json
 {
   "summary": {
-    "overview": "One paragraph overview.",
-    "keyConcepts": ["concept 1", "concept 2"],
-    "importantDetails": ["detail 1", "detail 2"]
-  },
-  "studySpace": {
     "id": "string",
-    "title": "Biology",
+    "studySpaceId": "string",
     "userId": "string",
-    "color": "#22C55E",
-    "tag": "science",
-    "summary": {
+    "title": "Optional summary title",
+    "content": {
       "overview": "One paragraph overview.",
       "keyConcepts": ["concept 1", "concept 2"],
       "importantDetails": ["detail 1", "detail 2"]
     },
-    "createdAt": "2026-05-02T00:00:00.000Z"
+    "createdAt": "2026-05-02T00:00:00.000Z",
+    "updatedAt": "2026-05-02T00:00:00.000Z",
+    "files": [
+      {
+        "id": "string",
+        "summaryId": "string",
+        "fileId": "file_id_1",
+        "createdAt": "2026-05-02T00:00:00.000Z",
+        "file": {
+          "id": "file_id_1",
+          "name": "lecture.pdf",
+          "mimeType": "application/pdf",
+          "size": 12345,
+          "userId": "string",
+          "spaceId": "string",
+          "createdAt": "2026-05-02T00:00:00.000Z"
+        }
+      }
+    ]
   }
+}
+```
+
+### `GET /api/ai/study-space/:id/summaries`
+
+List all summaries for a study space, newest first.
+
+Auth: required
+
+Response:
+
+```json
+[
+  {
+    "id": "string",
+    "studySpaceId": "string",
+    "userId": "string",
+    "title": "Lecture set summary",
+    "content": {
+      "overview": "One paragraph overview.",
+      "keyConcepts": ["concept 1", "concept 2"],
+      "importantDetails": ["detail 1", "detail 2"]
+    },
+    "createdAt": "2026-05-02T00:00:00.000Z",
+    "updatedAt": "2026-05-02T00:00:00.000Z",
+    "files": [
+      {
+        "id": "string",
+        "summaryId": "string",
+        "fileId": "file_id_1",
+        "createdAt": "2026-05-02T00:00:00.000Z",
+        "file": {
+          "id": "file_id_1",
+          "name": "lecture.pdf",
+          "mimeType": "application/pdf",
+          "size": 12345,
+          "userId": "string",
+          "spaceId": "string",
+          "createdAt": "2026-05-02T00:00:00.000Z"
+        }
+      }
+    ]
+  }
+]
+```
+
+### `GET /api/ai/summary/:id`
+
+Get one saved study-space summary by summary ID.
+
+Auth: required
+
+Response:
+
+```json
+{
+  "id": "string",
+  "studySpaceId": "string",
+  "userId": "string",
+  "title": "Lecture set summary",
+  "content": {
+    "overview": "One paragraph overview.",
+    "keyConcepts": ["concept 1", "concept 2"],
+    "importantDetails": ["detail 1", "detail 2"]
+  },
+  "createdAt": "2026-05-02T00:00:00.000Z",
+  "updatedAt": "2026-05-02T00:00:00.000Z",
+  "files": [
+    {
+      "id": "string",
+      "summaryId": "string",
+      "fileId": "file_id_1",
+      "createdAt": "2026-05-02T00:00:00.000Z",
+      "file": {
+        "id": "file_id_1",
+        "name": "lecture.pdf",
+        "mimeType": "application/pdf",
+        "size": 12345,
+        "userId": "string",
+        "spaceId": "string",
+        "createdAt": "2026-05-02T00:00:00.000Z"
+      }
+    }
+  ]
 }
 ```
 

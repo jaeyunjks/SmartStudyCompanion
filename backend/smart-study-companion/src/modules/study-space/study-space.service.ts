@@ -28,16 +28,6 @@ export class StudySpaceService {
         return studySpace;
     }
 
-    async updateStudySpaceSummaryById (id: string, userId: string, summary: any) {
-        const studySpace = await this.studySpaceRepo.updateSummaryById(id, userId, summary);
-
-        if (!studySpace) {
-            throw new InternalServerErrorException("Couldn't update this study space summary", "Couldn't update this study space summary");
-        }
-
-        return studySpace;
-    }
-
     async deleteStudySpaceById (id: string, userId: string) {
         const studySpace = await this.studySpaceRepo.delete(id, userId);
 

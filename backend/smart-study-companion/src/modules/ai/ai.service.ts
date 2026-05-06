@@ -1,13 +1,10 @@
 import {
     BadRequestException,
     ForbiddenException,
-    HttpException,
-    HttpStatus,
     Inject,
     Injectable,
     InternalServerErrorException,
     NotFoundException,
-    UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
@@ -21,13 +18,6 @@ type StudySpaceSummary = {
     overview: string;
     keyConcepts: string[];
     importantDetails: string[];
-};
-
-type WorkspaceSummary = {
-    overview: string;
-    keyConcepts: string[];
-    importantDetails: string[];
-    reviewNext: string[];
 };
 
 type StudySpaceAsset = {
@@ -44,11 +34,6 @@ type RankedChunk = {
     chunkIndex: number;
     content: string;
     score: number;
-};
-
-type WorkspaceChatHistoryMessage = {
-    role: 'user' | 'assistant';
-    content: string;
 };
 
 @Injectable()
@@ -79,158 +64,6 @@ export class AiService {
         this.openai ??= new OpenAI({ apiKey });
 
         return this.openai;
-    }
-
-    async summarizeWorkspaceContent(workspaceTitle: string, workspaceContent: string) {
-        const trimmedTitle = workspaceTitle?.trim() || 'Workspace';
-        const trimmedContent = workspaceContent?.trim();
-
-        if (!trimmedContent) {
-            throw new BadRequestException('workspaceContent is required');
-        }
-
-        let completion: any;
-        try {
-            completion = await this.getOpenAiClient().chat.completions.create({
-                model: this.configService.get<string>('GPT_MODEL') ?? 'gpt-4o-mini',
-                response_format: {
-                    type: 'json_object',
-                },
-                messages: [
-                    {
-                        role: 'system',
-                        content: [
-                            'You are an expert study assistant.',
-                            'Summarize the provided workspace notes accurately.',
-                            'Return valid JSON with exactly these keys: overview, keyConcepts, importantDetails, reviewNext.',
-                            'keyConcepts, importantDetails, and reviewNext must be arrays of concise strings.',
-                        ].join(' '),
-                    },
-                    {
-                        role: 'user',
-                        content: [
-                            `Workspace title: ${trimmedTitle}`,
-                            '',
-                            'Workspace content:',
-                            trimmedContent,
-                        ].join('\n'),
-                    },
-                ],
-            });
-        } catch (error: any) {
-            const status = Number(error?.status);
-            const code = String(error?.code ?? error?.error?.code ?? '');
-            const message = String(error?.message ?? 'OpenAI request failed');
-
-            if (status === 401 || code === 'invalid_api_key') {
-                throw new UnauthorizedException('Invalid OpenAI API key');
-            }
-
-            if (status === 429 || code === 'insufficient_quota') {
-                throw new HttpException(
-                    'OpenAI quota exceeded. Please check billing and usage.',
-                    HttpStatus.TOO_MANY_REQUESTS,
-                );
-            }
-
-            throw new InternalServerErrorException(message);
-        }
-
-        const rawSummary = completion.choices[0]?.message?.content;
-
-        if (!rawSummary) {
-            throw new InternalServerErrorException("Couldn't generate workspace summary");
-        }
-
-        return {
-            summary: this.parseWorkspaceSummary(rawSummary),
-        };
-    }
-
-    async chatWithWorkspaceContext(
-        workspaceTitle: string,
-        prompt: string,
-        workspaceContext?: string,
-        conversationHistory: WorkspaceChatHistoryMessage[] = [],
-    ) {
-        const trimmedTitle = workspaceTitle?.trim() || 'Workspace';
-        const trimmedPrompt = prompt?.trim();
-        const trimmedContext = workspaceContext?.trim() || '';
-
-        if (!trimmedPrompt) {
-            throw new BadRequestException('prompt is required');
-        }
-
-        const safeHistory = Array.isArray(conversationHistory)
-            ? conversationHistory
-                .filter((message) => {
-                    return (message.role === 'user' || message.role === 'assistant') &&
-                        typeof message.content === 'string' &&
-                        message.content.trim().length > 0;
-                })
-                .slice(-8)
-                .map((message) => ({
-                    role: message.role,
-                    content: message.content.trim().slice(0, 1600),
-                }))
-            : [];
-
-        let completion: any;
-        try {
-            completion = await this.getOpenAiClient().chat.completions.create({
-                model: this.configService.get<string>('GPT_MODEL') ?? 'gpt-4o-mini',
-                messages: [
-                    {
-                        role: 'system',
-                        content: [
-                            'You are a helpful study assistant.',
-                            'The workspace context below is accessible source material from the user app, including notes, uploaded files, PDFs, documents, and OCR text from photos when available.',
-                            'If the user references a source with @, prioritize the matching source content.',
-                            'Use conversation history for continuity, but prefer the newest workspace context when facts conflict.',
-                            'If a specific source has no extracted text, say that text was not extracted for that source and use any other provided context instead of claiming you cannot access the workspace.',
-                        ].join(' '),
-                    },
-                    ...safeHistory,
-                    {
-                        role: 'user',
-                        content: [
-                            `Workspace title: ${trimmedTitle}`,
-                            trimmedContext ? `Workspace context:\n${trimmedContext}` : 'Workspace context: (none)',
-                            `User prompt: ${trimmedPrompt}`,
-                        ].join('\n\n'),
-                    },
-                ],
-            });
-        } catch (error: any) {
-            const status = Number(error?.status);
-            const code = String(error?.code ?? error?.error?.code ?? '');
-            const message = String(error?.message ?? 'OpenAI request failed');
-
-            if (status === 401 || code === 'invalid_api_key') {
-                throw new UnauthorizedException('Invalid OpenAI API key');
-            }
-
-            if (status === 429 || code === 'insufficient_quota') {
-                throw new HttpException(
-                    'OpenAI quota exceeded. Please check billing and usage.',
-                    HttpStatus.TOO_MANY_REQUESTS,
-                );
-            }
-
-            throw new InternalServerErrorException(message);
-        }
-
-        const assistantMessage = completion.choices[0]?.message?.content?.trim();
-
-        if (!assistantMessage) {
-            throw new InternalServerErrorException("Couldn't generate chat response");
-        }
-
-        return {
-            assistantMessage,
-            followUpQuestion: null,
-            suggestedMode: null,
-        };
     }
 
     async summarizeStudySpace(studySpaceId: string, userId: string) {
@@ -648,27 +481,6 @@ export class AiService {
             };
         } catch {
             throw new InternalServerErrorException("Couldn't parse study space summary");
-        }
-    }
-
-    private parseWorkspaceSummary(rawSummary: string): WorkspaceSummary {
-        try {
-            const parsed = JSON.parse(rawSummary);
-
-            return {
-                overview: String(parsed.overview ?? ''),
-                keyConcepts: Array.isArray(parsed.keyConcepts)
-                    ? parsed.keyConcepts.map(String)
-                    : [],
-                importantDetails: Array.isArray(parsed.importantDetails)
-                    ? parsed.importantDetails.map(String)
-                    : [],
-                reviewNext: Array.isArray(parsed.reviewNext)
-                    ? parsed.reviewNext.map(String)
-                    : [],
-            };
-        } catch {
-            throw new InternalServerErrorException("Couldn't parse workspace summary");
         }
     }
 

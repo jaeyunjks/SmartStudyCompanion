@@ -25,7 +25,7 @@ export class UserController {
         }
 
         return {
-            profile: this.serializeProfile(profile),
+            profile,
             viewerId: viewer?.userId,
             profileId: profile.id,
         };
@@ -57,20 +57,8 @@ export class UserController {
             username,
             updateUserDto.fullname,
             updateUserDto.username,
-            updateUserDto.profileImage,
         );
 
-        return this.serializeProfile(updatedProfile);
-    }
-
-    private serializeProfile(user: any) {
-        return {
-            id: user.id,
-            email: user.email,
-            fullname: user.fullname,
-            username: user.username,
-            profileImage: user.profileImage,
-            createdAt: user.createdAt,
-        };
+        return updatedProfile;
     }
 }

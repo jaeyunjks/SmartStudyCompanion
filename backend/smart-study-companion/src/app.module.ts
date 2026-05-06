@@ -6,7 +6,6 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PasswordResetTokenModule } from './modules/password-reset-token/password-reset-token.module';
-import { WorkspaceModule } from './modules/workspace/workspace.module';
 import { StudySpaceModule } from './modules/study-space/study-space.module';
 import { NoteModule } from './modules/note/note.module';
 import { ImageModule } from './modules/image/image.module';
@@ -36,7 +35,6 @@ import { StorageModule } from './modules/file-storage/file-storage.module';
         UserModule,
         AuthModule,
         PasswordResetTokenModule,
-        WorkspaceModule,
         StorageModule,
         StudySpaceModule,
         NoteModule,
@@ -44,7 +42,11 @@ import { StorageModule } from './modules/file-storage/file-storage.module';
         FileModule,
         AiModule,
     ],
-    controllers: [AppController],
-    providers: [AppService],
+    controllers: [
+        AppController
+    ],
+    providers: [
+        AppService
+    ],
 })
 export class AppModule {}

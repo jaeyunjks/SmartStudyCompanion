@@ -47,12 +47,39 @@ struct FlashcardGenerationRequest: Codable {
     let pdfFileId: String
     let count: Int // Number of flashcards to generate
     let difficulty: Flashcard.Difficulty
+    let workspaceTitle: String?
+    let sourceDocumentIDs: [String]
+    let preferredTopics: [String]
+
+    init(
+        pdfFileId: String,
+        count: Int,
+        difficulty: Flashcard.Difficulty,
+        workspaceTitle: String? = nil,
+        sourceDocumentIDs: [String] = [],
+        preferredTopics: [String] = []
+    ) {
+        self.pdfFileId = pdfFileId
+        self.count = count
+        self.difficulty = difficulty
+        self.workspaceTitle = workspaceTitle
+        self.sourceDocumentIDs = sourceDocumentIDs
+        self.preferredTopics = preferredTopics
+    }
     
     enum CodingKeys: String, CodingKey {
         case pdfFileId = "pdf_file_id"
         case count
         case difficulty
+        case workspaceTitle = "workspace_title"
+        case sourceDocumentIDs = "source_document_ids"
+        case preferredTopics = "preferred_topics"
     }
+}
+
+struct FlashcardGenerationResponse: Codable {
+    let flashcards: [FlashcardItem]
+    let generatedAt: Date
 }
 
 /// Flashcard set for organizing flashcards

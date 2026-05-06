@@ -1,0 +1,53 @@
+import SwiftUI
+
+struct ChatInputBar: View {
+    @Binding var text: String
+    let isLoading: Bool
+    let onMentionTap: () -> Void
+    let onSend: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Button(action: onMentionTap) {
+                Text("@")
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 42, height: 42)
+            }
+            .buttonStyle(.plain)
+
+            TextField("Chat with LumoraAI", text: $text, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(.body)
+                .lineLimit(1...4)
+                .disabled(isLoading)
+
+            Button(action: onSend) {
+                Image(systemName: "paperplane.fill")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(AIChatTheme.accent)
+                    .clipShape(Circle())
+                    .shadow(color: AIChatTheme.accent.opacity(0.24), radius: 8, x: 0, y: 4)
+            }
+            .buttonStyle(.plain)
+            .disabled(isLoading || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .opacity((isLoading || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.45 : 1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(AIChatTheme.surface)
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+        .shadow(color: AIChatTheme.shadow.opacity(0.38), radius: 10, x: 0, y: 5)
+    }
+}
+
+#Preview {
+    ChatInputBar(text: .constant(""), isLoading: false, onMentionTap: {}, onSend: {})
+        .padding()
+}

@@ -1,0 +1,88 @@
+import SwiftUI
+
+struct WorkspaceNotesSectionView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    let notes: [WorkspaceNote]
+    let onCreateNote: () -> Void
+    let onSelectNote: (WorkspaceNote) -> Void
+    let onViewAllNotes: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Notes")
+                    .font(.title3.weight(.bold))
+                Spacer()
+                Text("\(notes.count)")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color(uiColor: .secondarySystemBackground))
+                    .clipShape(Capsule())
+            }
+
+            if notes.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("No notes yet")
+                        .font(.headline.weight(.semibold))
+                    Text("Capture your first idea, summary, or quick study insight.")
+                        .font(.subheadline)
+                        .foregroundStyle(WorkspaceTheme.mutedText)
+
+                    Button("Create your first note") {
+                        onCreateNote()
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .buttonStyle(.plain)
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(WorkspaceTheme.surfaceSecondary(for: colorScheme).opacity(0.86))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(notes.prefix(3)) { note in
+                        Button {
+                            onSelectNote(note)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(note.displayTitle)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                Text(note.createdDisplayText)
+                                    .font(.caption)
+                                    .foregroundStyle(WorkspaceTheme.mutedText)
+                            }
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(WorkspaceTheme.surfaceTertiary(for: colorScheme).opacity(0.84))
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        .buttonStyle(WorkspacePressableButtonStyle())
+                    }
+
+                    if notes.count > 3 {
+                        Button("View all notes") {
+                            onViewAllNotes()
+                        }
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 2)
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .workspaceSurface(prominence: .secondary)
+    }
+}
+
+#Preview {
+    WorkspaceNotesSectionView(notes: [], onCreateNote: {}, onSelectNote: { _ in }, onViewAllNotes: {})
+        .padding()
+}

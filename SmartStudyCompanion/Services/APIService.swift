@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// Main API service for communicating with the FastAPI backend
+/// Main API service for communicating with the backend
 class APIService {
     // MARK: - Singleton
     static let shared = APIService()
@@ -21,6 +21,19 @@ class APIService {
     // MARK: - Configuration
     private let timeoutInterval: TimeInterval = 30.0
     private let lock = NSLock()
+    private let accessTokenDefaultsKey = "auth.token.access"
+    private let refreshTokenDefaultsKey = "auth.token.refresh"
+    private let defaultUploadWorkspaceTitle = "General Uploads"
+    private static let iso8601FormatterWithFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    private static let iso8601Formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
     
     init(
         baseURL: URL = URL(string: "http://localhost:8000/api")!,
@@ -37,8 +50,8 @@ class APIService {
     
     /// Sign up a new user
     /// - Parameters:
-    ///   - signUpRequest: The sign-up request containing email, password, username, and full name
-    /// - Returns: AuthResponse containing user info and authentication tokens
+    ///   - signUpRequest: The sign-up request payload
+    /// - Returns: AuthResponse containing backend auth token
     func signUp(signUpRequest: SignUpRequest) async throws -> AuthResponse {
         let endpoint = "/auth/signup"
         let response: AuthResponse = try await performRequest(
@@ -47,8 +60,8 @@ class APIService {
             body: signUpRequest
         )
         
-        // Store tokens after successful signup
-        setTokens(accessToken: response.token, refreshToken: response.refreshToken)
+        // Store token after successful signup
+        setTokens(accessToken: response.accessToken)
         
         return response
     }
@@ -57,7 +70,7 @@ class APIService {
     /// - Parameters:
     ///   - email: User's email
     ///   - password: User's password
-    /// - Returns: AuthResponse containing user info and authentication tokens
+    /// - Returns: AuthResponse containing backend auth token
     func login(email: String, password: String) async throws -> AuthResponse {
         let endpoint = "/auth/login"
         let authRequest = AuthRequest(email: email, password: password)
@@ -67,8 +80,8 @@ class APIService {
             body: authRequest
         )
         
-        // Store tokens after successful login
-        setTokens(accessToken: response.token, refreshToken: response.refreshToken)
+        // Store token after successful login
+        setTokens(accessToken: response.accessToken)
         
         return response
     }
@@ -88,7 +101,7 @@ class APIService {
             body: tokenRequest
         )
         
-        setTokens(accessToken: response.token, refreshToken: response.refreshToken)
+        setTokens(accessToken: response.accessToken)
         return response
     }
     
@@ -97,6 +110,90 @@ class APIService {
         authToken = nil
         refreshToken = nil
         clearStoredTokens()
+    }
+
+    // MARK: - User Profile Methods
+
+    /// Update the current user's profile details
+    /// - Parameters:
+    ///   - currentUsername: Existing username used by backend route
+    ///   - fullname: Optional new full name
+    ///   - username: Optional new username
+    ///   - profileImage: Optional Base64-encoded profile image
+    /// - Returns: Updated user profile
+    func updateUserProfile(
+        currentUsername: String,
+        fullname: String?,
+        username: String?,
+        profileImage: String?
+    ) async throws -> UserProfileResponse {
+        let endpoint = "/user/\(currentUsername)"
+        let payload = UpdateProfileRequest(
+            fullname: fullname,
+            username: username,
+            profileImage: profileImage
+        )
+        let response: UserProfileResponse = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: payload
+        )
+        return response
+    }
+
+    // MARK: - Workspace Methods
+
+    func fetchWorkspaces() async throws -> [RemoteStudySpace] {
+        guard let userId = currentUserIDFromAccessToken() else {
+            throw NetworkError.unauthorized
+        }
+        let endpoint = "/study-space/user/\(userId)"
+        let response: LegacyStudySpaceListResponse = try await performRequest(endpoint: endpoint, method: .get)
+        return response.studySpaces
+    }
+
+    func createWorkspace(request: CreateWorkspaceRequest) async throws -> RemoteStudySpace {
+        let endpoint = "/study-space/add"
+        let payload = LegacyCreateStudySpaceRequest(
+            title: request.title,
+            color: request.workspaceColorHex,
+            tag: request.category
+        )
+        let response: RemoteStudySpace = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: payload
+        )
+        return response
+    }
+
+    func updateWorkspace(id: UUID, request: UpdateWorkspaceRequest) async throws -> RemoteStudySpace {
+        let endpoint = "/study-space/update"
+        let payload = LegacyUpdateStudySpaceRequest(
+            id: id.uuidString.lowercased(),
+            title: request.title,
+            color: request.workspaceColorHex,
+            tag: request.category
+        )
+        let response: RemoteStudySpace = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: payload
+        )
+        return response
+    }
+
+    func deleteWorkspace(id: UUID) async throws {
+        let endpoint = "/study-space/delete"
+        struct DeleteStudySpaceRequest: Encodable {
+            let id: String
+        }
+        struct EmptyResponse: Decodable {}
+        _ = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: DeleteStudySpaceRequest(id: id.uuidString.lowercased())
+        ) as EmptyResponse
     }
     
     // MARK: - PDF Upload Methods
@@ -108,27 +205,66 @@ class APIService {
     ///   - fileType: Type of file ("pdf" or "image")
     /// - Returns: PDFFile object with upload details
     func uploadPDF(fileData: Data, fileName: String, fileType: String) async throws -> PDFFile {
-        let endpoint = "/files/upload"
-        
-        // Create multipart form data request
+        _ = fileType
+        let studySpaceId = try await ensureDefaultUploadWorkspaceID()
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension((fileName as NSString).pathExtension.isEmpty ? "bin" : (fileName as NSString).pathExtension)
+
+        try fileData.write(to: tempURL, options: .atomic)
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        let uploaded = try await uploadStudySpaceFile(
+            fileURL: tempURL,
+            studySpaceId: studySpaceId,
+            fallbackWorkspaceTitle: defaultUploadWorkspaceTitle
+        )
+        return Self.mapLegacyUploadToPDFFile(uploaded)
+    }
+    
+    /// Fetch list of user's uploaded PDFs
+    /// - Returns: Array of PDFFile objects
+    func fetchUserPDFs() async throws -> [PDFFile] {
+        guard let workspaceId = try await resolveStudySpaceIdByTitle(defaultUploadWorkspaceTitle) else {
+            return []
+        }
+        let files = try await fetchStudySpaceFiles(
+            studySpaceId: workspaceId,
+            fallbackWorkspaceTitle: defaultUploadWorkspaceTitle
+        )
+        return files.map(Self.mapLegacyFileItemToPDFFile(_:))
+    }
+
+    /// Upload one study-space file to legacy backend endpoint.
+    func uploadStudySpaceFile(
+        fileURL: URL,
+        studySpaceId: String,
+        fallbackWorkspaceTitle: String? = nil
+    ) async throws -> LegacyUploadedStudySpaceFileResponse {
+        let resolvedStudySpaceId = try await resolveStudySpaceIDIfNeeded(
+            preferredId: studySpaceId,
+            fallbackWorkspaceTitle: fallbackWorkspaceTitle
+        )
+        let endpoint = "/file/add-one"
         let boundary = UUID().uuidString
         var body = Data()
-        
-        // Add file data
+
+        let fileData = try Data(contentsOf: fileURL)
+        let fileName = fileURL.lastPathComponent
+        let mimeType = guessedMimeType(for: fileURL.pathExtension)
+
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: application/octet-stream\r\n\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
         body.append(fileData)
         body.append("\r\n".data(using: .utf8)!)
-        
-        // Add file type
+
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file_type\"\r\n\r\n".data(using: .utf8)!)
-        body.append(fileType.data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"studySpaceId\"\r\n\r\n".data(using: .utf8)!)
+        body.append(resolvedStudySpaceId.data(using: .utf8)!)
         body.append("\r\n".data(using: .utf8)!)
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-        
-        // Create request
+
         let url = baseURL.appendingPathComponent(endpoint)
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -136,21 +272,22 @@ class APIService {
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         addAuthHeaders(to: &request)
         request.timeoutInterval = timeoutInterval
-        
+
         let (data, response) = try await session.data(for: request)
-        try validateResponse(response)
-        
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(PDFFile.self, from: data)
+        try validateResponse(response, data: data)
+
+        return try decodeResponse(LegacyUploadedStudySpaceFileResponse.self, from: data)
     }
-    
-    /// Fetch list of user's uploaded PDFs
-    /// - Returns: Array of PDFFile objects
-    func fetchUserPDFs() async throws -> [PDFFile] {
-        let endpoint = "/files/list"
-        let files: [PDFFile] = try await performRequest(endpoint: endpoint, method: .get)
-        return files
+
+    /// Fetch backend files for a study space.
+    func fetchStudySpaceFiles(studySpaceId: String, fallbackWorkspaceTitle: String? = nil) async throws -> [LegacyStudySpaceFileItem] {
+        let resolvedStudySpaceId = try await resolveStudySpaceIDIfNeeded(
+            preferredId: studySpaceId,
+            fallbackWorkspaceTitle: fallbackWorkspaceTitle
+        )
+        let endpoint = "/file/study-space/\(resolvedStudySpaceId)"
+        let response: LegacyStudySpaceFilesResponse = try await performRequest(endpoint: endpoint, method: .get)
+        return response.files
     }
     
     // MARK: - Summary Methods
@@ -184,7 +321,116 @@ class APIService {
             return nil
         }
     }
-    
+
+    /// Generate AI summary for a workspace from aggregated note text
+    func generateWorkspaceSummary(
+        workspaceId: String,
+        workspaceTitle: String,
+        workspaceContent: String,
+        preferredFileNames: [String] = []
+    ) async throws -> StudySummary {
+        _ = workspaceContent
+        let resolvedWorkspaceId = try await resolveStudySpaceIDIfNeeded(
+            preferredId: workspaceId,
+            fallbackWorkspaceTitle: workspaceTitle
+        )
+        let backendFiles: [LegacyStudySpaceFileItem]
+        do {
+            backendFiles = try await fetchStudySpaceFiles(
+                studySpaceId: resolvedWorkspaceId,
+                fallbackWorkspaceTitle: workspaceTitle
+            )
+        } catch let error as NetworkError {
+            switch error {
+            case .notFound:
+                backendFiles = []
+            case .serverError(let statusCode, _ ) where statusCode >= 500:
+                backendFiles = []
+            default:
+                throw error
+            }
+        }
+        let selectedFiles = selectedBackendFiles(
+            from: backendFiles,
+            preferredFileNames: preferredFileNames
+        )
+        let fileIds = selectedFiles.map { $0.file.id }
+
+        guard !fileIds.isEmpty else {
+            throw NetworkError.serverError(
+                statusCode: 400,
+                message: "No backend files found for this workspace. Please upload at least one document first."
+            )
+        }
+
+        let endpoint = "/ai/study-space/\(resolvedWorkspaceId)/summary"
+        let request = SummarizeStudySpaceRequest(
+            fileIds: fileIds,
+            title: workspaceTitle
+        )
+        let response: LegacyStudySpaceSummaryEnvelope = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: request
+        )
+
+        let dto = WorkspaceAISummaryDTO(
+            overview: response.summary.overview,
+            keyConcepts: response.summary.keyConcepts,
+            importantDetails: response.summary.importantDetails,
+            reviewNext: Array(response.summary.importantDetails.prefix(5))
+        )
+        return dto.toStudySummary(workspaceTitle: workspaceTitle)
+    }
+
+    /// Chat with AI using a workspace-backed context on the backend.
+    func chatWithStudySpace(
+        workspaceId: String,
+        workspaceTitle: String?,
+        prompt: String,
+        chatHistoryId: String?,
+        title: String?
+    ) async throws -> StudySpaceChatResponse {
+        let resolvedWorkspaceId = try await resolveStudySpaceIDIfNeeded(
+            preferredId: workspaceId,
+            fallbackWorkspaceTitle: workspaceTitle
+        )
+        let endpoint = "/ai/study-space/\(resolvedWorkspaceId)/chat"
+        let request = StudySpaceChatRequest(
+            prompt: prompt,
+            chatHistoryId: chatHistoryId,
+            title: title
+        )
+        let response: StudySpaceChatResponse = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: request
+        )
+        return response
+    }
+
+    /// Chat with AI using workspace title + context payload (does not require study-space id).
+    func chatWithWorkspaceContext(
+        workspaceTitle: String,
+        prompt: String,
+        workspaceContext: String?,
+        conversationHistory: [WorkspaceContextChatHistoryMessage] = []
+    ) async throws -> WorkspaceContextChatResponse {
+        let endpoint = "/ai/workspace/chat"
+        let request = WorkspaceContextChatRequest(
+            workspaceTitle: workspaceTitle,
+            prompt: prompt,
+            workspaceContext: workspaceContext,
+            conversationHistory: conversationHistory
+        )
+        let response: WorkspaceContextChatResponse = try await performRequest(
+            endpoint: endpoint,
+            method: .post,
+            body: request
+        )
+        return response
+    }
+
     // MARK: - Flashcard Methods
     
     /// Generate flashcards from a PDF
@@ -339,17 +585,29 @@ class APIService {
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
         
-        let (data, response) = try await session.data(for: urlRequest)
-        try validateResponse(response)
-        
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        
+        let (data, response): (Data, URLResponse)
         do {
-            return try decoder.decode(T.self, from: data)
+            (data, response) = try await session.data(for: urlRequest)
+        } catch let urlError as URLError {
+            switch urlError.code {
+            case .timedOut:
+                throw NetworkError.timeout
+            case .notConnectedToInternet, .networkConnectionLost:
+                throw NetworkError.offline
+            case .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed:
+                throw NetworkError.serverError(
+                    statusCode: 0,
+                    message: "Cannot connect to backend at \(baseURL.absoluteString)"
+                )
+            default:
+                throw NetworkError.unknown(urlError)
+            }
         } catch {
-            throw NetworkError.decodingError(error)
+            throw NetworkError.unknown(error)
         }
+        try validateResponse(response, data: data)
+        
+        return try decodeResponse(T.self, from: data)
     }
     
     /// Add authorization headers to request
@@ -364,10 +622,12 @@ class APIService {
     }
     
     /// Validate HTTP response
-    private func validateResponse(_ response: URLResponse) throws {
+    private func validateResponse(_ response: URLResponse, data: Data?) throws {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
+
+        let serverMessage = parseServerMessage(from: data)
         
         switch httpResponse.statusCode {
         case 200...299:
@@ -378,14 +638,250 @@ class APIService {
         case 404:
             throw NetworkError.notFound
         case 500...599:
-            throw NetworkError.serverError(statusCode: httpResponse.statusCode, message: "Server error")
+            throw NetworkError.serverError(
+                statusCode: httpResponse.statusCode,
+                message: serverMessage ?? "Server error"
+            )
         default:
-            throw NetworkError.serverError(statusCode: httpResponse.statusCode, message: "HTTP \(httpResponse.statusCode)")
+            throw NetworkError.serverError(
+                statusCode: httpResponse.statusCode,
+                message: serverMessage ?? "HTTP \(httpResponse.statusCode)"
+            )
         }
+    }
+
+    private func parseServerMessage(from data: Data?) -> String? {
+        guard let data, !data.isEmpty else { return nil }
+
+        if let messageObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let message = messageObject["message"] as? String {
+                return message
+            }
+            if let messages = messageObject["message"] as? [String], !messages.isEmpty {
+                return messages.joined(separator: ", ")
+            }
+            if let error = messageObject["error"] as? String {
+                return error
+            }
+        }
+
+        return nil
+    }
+
+    private func resolveStudySpaceIDIfNeeded(
+        preferredId: String,
+        fallbackWorkspaceTitle: String?,
+        allowCreateIfMissingTitle: Bool = false
+    ) async throws -> String {
+        let trimmedPreferredId = preferredId.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedPreferredId.isEmpty {
+            if let fallbackWorkspaceTitle {
+                if let resolved = try await resolveStudySpaceIdByTitle(fallbackWorkspaceTitle) {
+                    return resolved
+                }
+                if allowCreateIfMissingTitle,
+                   let created = try await createWorkspaceFallbackIfMissing(title: fallbackWorkspaceTitle) {
+                    return created
+                }
+            }
+            throw NetworkError.notFound
+        }
+
+        do {
+            let endpoint = "/study-space/\(trimmedPreferredId)"
+            let _: LegacyStudySpaceDetailResponse = try await performRequest(endpoint: endpoint, method: .get)
+            return trimmedPreferredId
+        } catch let error as NetworkError {
+            switch error {
+            case .notFound:
+                if let fallbackWorkspaceTitle,
+                   let resolved = try await resolveStudySpaceIdByTitle(fallbackWorkspaceTitle) {
+                    return resolved
+                }
+                if allowCreateIfMissingTitle,
+                   let fallbackWorkspaceTitle,
+                   let created = try await createWorkspaceFallbackIfMissing(title: fallbackWorkspaceTitle) {
+                    return created
+                }
+                throw error
+            case .unauthorized, .offline, .timeout:
+                throw error
+            default:
+                return trimmedPreferredId
+            }
+        } catch {
+            return trimmedPreferredId
+        }
+    }
+
+    private func resolveStudySpaceIdByTitle(_ workspaceTitle: String) async throws -> String? {
+        let normalizedTitle = normalizeWorkspaceTitle(workspaceTitle)
+        guard !normalizedTitle.isEmpty else { return nil }
+
+        let workspaces = try await fetchWorkspaces()
+        return workspaces.first(where: {
+            normalizeWorkspaceTitle($0.title) == normalizedTitle
+        })?.id
+    }
+
+    private func ensureDefaultUploadWorkspaceID() async throws -> String {
+        if let existingId = try await resolveStudySpaceIdByTitle(defaultUploadWorkspaceTitle) {
+            return existingId
+        }
+
+        let created = try await createWorkspace(
+            request: CreateWorkspaceRequest(
+                title: defaultUploadWorkspaceTitle,
+                description: "Auto-created workspace for generic uploads.",
+                iconName: "doc",
+                category: "General",
+                status: "Active",
+                workspaceColorHex: "#388767",
+                documentCount: 0,
+                noteCount: 0,
+                aiOutputCount: 0,
+                progress: 0
+            )
+        )
+        return created.id
+    }
+
+    private func createWorkspaceFallbackIfMissing(title: String) async throws -> String? {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let created = try await createWorkspace(
+            request: CreateWorkspaceRequest(
+                title: trimmed,
+                description: "Auto-created to complete backend sync.",
+                iconName: "book.closed",
+                category: "General",
+                status: "Active",
+                workspaceColorHex: "#388767",
+                documentCount: 0,
+                noteCount: 0,
+                aiOutputCount: 0,
+                progress: 0
+            )
+        )
+        return created.id
+    }
+
+    private func normalizeWorkspaceTitle(_ value: String) -> String {
+        value
+            .lowercased()
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func currentUserIDFromAccessToken() -> String? {
+        lock.lock()
+        let token = authToken
+        lock.unlock()
+
+        guard let token else { return nil }
+        let segments = token.split(separator: ".")
+        guard segments.count == 3 else { return nil }
+
+        var payload = String(segments[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        while payload.count % 4 != 0 {
+            payload.append("=")
+        }
+
+        guard
+            let data = Data(base64Encoded: payload),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return nil
+        }
+
+        if let sub = object["sub"] as? String, !sub.isEmpty {
+            return sub
+        }
+        if let userId = object["userId"] as? String, !userId.isEmpty {
+            return userId
+        }
+        return nil
+    }
+
+    private func guessedMimeType(for fileExtension: String) -> String {
+        switch fileExtension.lowercased() {
+        case "pdf":
+            return "application/pdf"
+        case "txt":
+            return "text/plain"
+        case "md":
+            return "text/markdown"
+        case "csv":
+            return "text/csv"
+        case "json":
+            return "application/json"
+        case "xml":
+            return "application/xml"
+        case "png":
+            return "image/png"
+        case "jpg", "jpeg":
+            return "image/jpeg"
+        case "heic":
+            return "image/heic"
+        default:
+            return "application/octet-stream"
+        }
+    }
+
+    private func selectedBackendFiles(
+        from files: [LegacyStudySpaceFileItem],
+        preferredFileNames: [String]
+    ) -> [LegacyStudySpaceFileItem] {
+        let trimmedPreferred = preferredFileNames
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        guard !trimmedPreferred.isEmpty else { return files }
+
+        let preferredKeys = Set(trimmedPreferred.map(normalizedFileKey(_:)))
+        let matched = files.filter { file in
+            preferredKeys.contains(normalizedFileKey(file.file.name))
+        }
+
+        return matched.isEmpty ? files : matched
+    }
+
+    private func normalizedFileKey(_ value: String) -> String {
+        let lastPath = URL(fileURLWithPath: value).lastPathComponent
+        let withoutExtension = URL(fileURLWithPath: lastPath).deletingPathExtension().lastPathComponent
+        return withoutExtension
+            .lowercased()
+            .replacingOccurrences(of: "_", with: " ")
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func mapLegacyFileRecordToPDFFile(_ file: LegacyFileRecord, url: String) -> PDFFile {
+        PDFFile(
+            id: file.id,
+            userId: file.userId,
+            fileName: file.name,
+            fileSize: file.size,
+            fileURL: url,
+            uploadedAt: file.createdAt ?? Date(),
+            processedAt: nil,
+            status: .completed
+        )
+    }
+
+    private static func mapLegacyUploadToPDFFile(_ upload: LegacyUploadedStudySpaceFileResponse) -> PDFFile {
+        mapLegacyFileRecordToPDFFile(upload.file, url: upload.url)
+    }
+
+    private static func mapLegacyFileItemToPDFFile(_ item: LegacyStudySpaceFileItem) -> PDFFile {
+        mapLegacyFileRecordToPDFFile(item.file, url: item.url)
     }
     
     /// Store authentication tokens
-    private func setTokens(accessToken: String, refreshToken: String) {
+    private func setTokens(accessToken: String, refreshToken: String? = nil) {
         lock.lock()
         defer { lock.unlock() }
         self.authToken = accessToken
@@ -395,19 +891,136 @@ class APIService {
     
     /// Load stored tokens from secure storage
     private func loadStoredTokens() {
-        // TODO: Implement Keychain access for secure token storage
-        // For now, tokens are stored in memory only
+        lock.lock()
+        defer { lock.unlock() }
+        authToken = UserDefaults.standard.string(forKey: accessTokenDefaultsKey)
+        refreshToken = UserDefaults.standard.string(forKey: refreshTokenDefaultsKey)
     }
     
     /// Save tokens to Keychain
-    private func saveTokensToKeychain(accessToken: String, refreshToken: String) {
-        // TODO: Implement Keychain save for secure token storage
+    private func saveTokensToKeychain(accessToken: String, refreshToken: String?) {
+        UserDefaults.standard.set(accessToken, forKey: accessTokenDefaultsKey)
+        if let refreshToken {
+            UserDefaults.standard.set(refreshToken, forKey: refreshTokenDefaultsKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: refreshTokenDefaultsKey)
+        }
     }
     
     /// Clear stored tokens
     private func clearStoredTokens() {
-        // TODO: Implement Keychain delete for secure token removal
+        UserDefaults.standard.removeObject(forKey: accessTokenDefaultsKey)
+        UserDefaults.standard.removeObject(forKey: refreshTokenDefaultsKey)
     }
+
+    private func decodeResponse<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(String.self)
+
+            if let date = APIService.iso8601FormatterWithFractionalSeconds.date(from: rawValue) {
+                return date
+            }
+            if let date = APIService.iso8601Formatter.date(from: rawValue) {
+                return date
+            }
+
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Invalid ISO-8601 date: \(rawValue)"
+            )
+        }
+
+        do {
+            return try decoder.decode(type, from: data)
+        } catch {
+            throw NetworkError.decodingError(error)
+        }
+    }
+}
+
+private struct LegacyStudySpaceListResponse: Decodable {
+    let isOwner: Bool?
+    let studySpaces: [RemoteStudySpace]
+}
+
+private struct LegacyCreateStudySpaceRequest: Encodable {
+    let title: String
+    let color: String?
+    let tag: String?
+}
+
+private struct LegacyUpdateStudySpaceRequest: Encodable {
+    let id: String
+    let title: String?
+    let color: String?
+    let tag: String?
+}
+
+struct LegacyUploadedStudySpaceFileResponse: Decodable {
+    let file: LegacyFileRecord
+    let url: String
+}
+
+struct LegacyStudySpaceFilesResponse: Decodable {
+    let isOwner: Bool?
+    let files: [LegacyStudySpaceFileItem]
+}
+
+private struct LegacyStudySpaceDetailResponse: Decodable {
+    let isOwner: Bool?
+    let studySpace: RemoteStudySpace
+}
+
+struct LegacyStudySpaceFileItem: Decodable {
+    let file: LegacyFileRecord
+    let url: String
+}
+
+struct LegacyFileRecord: Decodable {
+    let id: String
+    let name: String
+    let mimeType: String
+    let size: Int
+    let userId: String
+    let spaceId: String
+    let createdAt: Date?
+}
+
+private struct SummarizeStudySpaceRequest: Encodable {
+    let fileIds: [String]
+    let title: String?
+}
+
+private struct LegacyStudySpaceSummaryEnvelope: Decodable {
+    let summary: LegacyStudySpaceSummaryContent
+
+    private enum CodingKeys: String, CodingKey {
+        case summary
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        if let directSummary = try? container.decode(LegacyStudySpaceSummaryContent.self, forKey: .summary) {
+            summary = directSummary
+            return
+        }
+
+        let wrappedSummary = try container.decode(LegacyStudySpaceSummaryRecord.self, forKey: .summary)
+        summary = wrappedSummary.content
+    }
+}
+
+private struct LegacyStudySpaceSummaryRecord: Decodable {
+    let content: LegacyStudySpaceSummaryContent
+}
+
+private struct LegacyStudySpaceSummaryContent: Decodable {
+    let overview: String
+    let keyConcepts: [String]
+    let importantDetails: [String]
 }
 
 // MARK: - HTTP Method Enum

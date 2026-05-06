@@ -8,6 +8,8 @@ build/
 xcuserdata/
 *.xcworkspace/xcuserdata/
 DerivedData/
+.derivedData/
+.derivedData*/
 
 # Swift Package Manager
 .swiftpm/

@@ -34,28 +34,44 @@ struct AuthRequest: Codable {
 
 /// Response model for authentication
 struct AuthResponse: Codable {
-    let user: User
-    let token: String
-    let refreshToken: String
-    
+    let accessToken: String
+    let user: AuthUserProfile?
+
     enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
         case user
-        case token
-        case refreshToken = "refresh_token"
     }
+}
+
+struct AuthUserProfile: Codable {
+    let id: String?
+    let email: String
+    let fullname: String
+    let username: String
+    let profileImage: String?
+    let createdAt: Date?
 }
 
 /// User registration request
 struct SignUpRequest: Codable {
     let email: String
     let password: String
+    let confirmPassword: String
     let username: String
-    let fullName: String
-    
-    enum CodingKeys: String, CodingKey {
-        case email
-        case password
-        case username
-        case fullName = "full_name"
-    }
+    let fullname: String
+}
+
+struct UpdateProfileRequest: Codable {
+    let fullname: String?
+    let username: String?
+    let profileImage: String?
+}
+
+struct UserProfileResponse: Codable {
+    let id: String
+    let email: String
+    let fullname: String
+    let username: String
+    let profileImage: String?
+    let createdAt: Date?
 }

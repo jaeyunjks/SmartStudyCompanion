@@ -157,41 +157,56 @@ SmartStudyCompanion/
 
 ## API Integration 🔌
 
-The app is ready to connect to a FastAPI backend. Currently, the API base URL is:
+The app currently targets the Nest backend contract under:
 
 ```swift
 baseURL: URL(string: "http://localhost:8000/api")!
 ```
 
-### Configured Endpoints
+Note: the backend contract file may show `1234` as a default port. Use whichever port your backend is running on and keep frontend/backend aligned.
+
+### Active Endpoints Used by Current App Flows
 
 **Authentication**
-- `POST /auth/signup` - User registration
-- `POST /auth/login` - User login
-- `POST /auth/refresh` - Refresh tokens
+- `POST /auth/signup`
+- `POST /auth/login`
 
-**Documents**
-- `POST /files/upload` - Upload PDF/image
-- `GET /files/list` - List user documents
+**Study Spaces**
+- `GET /study-space/user/:id`
+- `POST /study-space/add`
+- `POST /study-space/update`
+- `POST /study-space/delete`
 
-**Summaries**
-- `POST /summaries/generate` - Generate AI summary
-- `GET /summaries/{pdf_id}` - Fetch existing summary
+**Files**
+- `POST /file/add-one`
+- `GET /file/study-space/:id`
 
-**Flashcards**
-- `POST /flashcards/generate` - Generate flashcards
-- `GET /flashcards/{pdf_id}` - Fetch flashcards
-- `PUT /flashcards/{id}` - Update flashcard
+**AI**
+- `POST /ai/study-space/:id/summary`
+- `POST /ai/study-space/:id/chat`
 
-**Quizzes**
-- `POST /quizzes/generate` - Generate quiz
-- `GET /quizzes/{id}` - Fetch quiz
-- `POST /quizzes/{id}/submit` - Submit answers
+Other legacy routes for flashcards/quizzes/progress remain in the codebase but are outside the current AI-summary/chat stabilization scope.
 
-**Progress**
-- `POST /progress/update` - Update progress
-- `GET /progress/{pdf_id}` - Fetch progress
-- `GET /progress/statistics` - Daily statistics
+## Tester Quickstart ✅
+
+Use this smoke flow before merging to `main`:
+
+1. Start backend and confirm it is reachable at the configured base URL.
+2. Sign up or log in from the app.
+3. Create or open one workspace.
+4. Upload a document in that workspace.
+5. Generate AI summary.
+6. Ask AI chat a question referencing that uploaded content.
+
+Expected results:
+- Upload succeeds and file appears in workspace materials.
+- Summary returns content (overview + key concepts + important details).
+- Chat returns an assistant response with persisted history.
+
+Known failure messages and meaning:
+- `No backend files found for this workspace...`: workspace/file sync mismatch or no backend file row yet.
+- `Unauthorized`: token/session expired, log in again.
+- `Cannot connect to backend`: backend URL/port mismatch or backend not running.
 
 ## Code Quality 🎯
 

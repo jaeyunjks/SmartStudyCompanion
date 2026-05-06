@@ -28,6 +28,7 @@ model User {
     images                  Image[]
     notes                   Note[]
     chatHistories           ChatHistory[]
+    studySpaceSummaries     StudySpaceSummary[]
     
     @@map("user")
 }
@@ -52,7 +53,6 @@ model StudySpace {
     userId                  String
     color                   String?
     tag                     String?
-    summary                 Json?
     createdAt               DateTime                @default(now())
 
     user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)    
@@ -62,6 +62,7 @@ model StudySpace {
     images                  Image[]
     chunks                  Chunk[]
     chatHistories           ChatHistory[]
+    summaries               StudySpaceSummary[]
 
     @@index([userId])
     @@unique([title, userId])
@@ -98,11 +99,45 @@ model File {
     user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
     studySpace              StudySpace              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
     chunks                  Chunk[]
+    summaryLinks            StudySpaceSummaryFile[]
 
     @@index([spaceId])
     @@unique([name, spaceId])
 
     @@map("file")
+}
+
+model StudySpaceSummary {
+    id                      String                  @id @default(uuid())
+    studySpaceId            String
+    userId                  String
+    title                   String?
+    content                 Json
+    createdAt               DateTime                @default(now())
+    updatedAt               DateTime                @updatedAt
+
+    studySpace              StudySpace              @relation(fields: [studySpaceId], references: [id], onDelete: Cascade)
+    user                    User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    files                   StudySpaceSummaryFile[]
+
+    @@index([studySpaceId])
+    @@index([userId])
+    @@map("study_space_summary")
+}
+
+model StudySpaceSummaryFile {
+    id                      String                  @id @default(uuid())
+    summaryId               String
+    fileId                  String
+    createdAt               DateTime                @default(now())
+
+    summary                 StudySpaceSummary       @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+    file                    File                    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+    @@index([summaryId])
+    @@index([fileId])
+    @@unique([summaryId, fileId])
+    @@map("study_space_summary_file")
 }
 
 model Chunk {

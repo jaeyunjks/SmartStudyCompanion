@@ -10,7 +10,6 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { StudySpaceService } from '../study-space/study-space.service';
 import { FileService } from '../file/file.service';
-import { ImageService } from '../image/image.service';
 import { StorageRepository } from '../file-storage/file-storage.repository';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -21,6 +20,7 @@ type StudySpaceSummary = {
 };
 
 type StudySpaceAsset = {
+    id: string;
     name: string;
     mimeType: string;
     size: number;
@@ -47,7 +47,6 @@ export class AiService {
         private readonly configService: ConfigService,
         private readonly studySpaceService: StudySpaceService,
         private readonly fileService: FileService,
-        private readonly imageService: ImageService,
         private readonly prisma: PrismaService,
         @Inject('STORAGE_REPOSITORY')
         private readonly storageRepo: StorageRepository,
@@ -66,29 +65,31 @@ export class AiService {
         return this.openai;
     }
 
-    async summarizeStudySpace(studySpaceId: string, userId: string) {
+    async summarizeStudySpace(studySpaceId: string, userId: string, fileIds: string[], title?: string) {
+        const uniqueFileIds = [...new Set(fileIds.map((fileId) => fileId.trim()).filter(Boolean))];
+
+        if (!uniqueFileIds.length) {
+            throw new BadRequestException('At least one fileId is required');
+        }
+
         const studySpace = await this.studySpaceService.getStudySpaceById(studySpaceId);
 
         if (studySpace.userId !== userId) {
             throw new ForbiddenException("You don't have access to summarize this study space");
         }
 
-        const [files, images] = await Promise.all([
-            this.fileService.getFilesBySpaceId(studySpaceId),
-            this.imageService.getImagesBySpaceId(studySpaceId),
-        ]);
+        const files = await this.fileService.getFilesBySpaceId(studySpaceId);
+        const selectedFiles = files.filter((item: any) => uniqueFileIds.includes(item.file.id));
 
-        const fileAssets = files.map((item: any) => ({
+        if (selectedFiles.length !== uniqueFileIds.length) {
+            throw new BadRequestException('One or more selected files do not belong to this study space');
+        }
+
+        const fileAssets = selectedFiles.map((item: any) => ({
+            id: item.file.id,
             name: item.file.name,
             mimeType: item.file.mimeType,
             size: item.file.size,
-            url: item.url,
-        }));
-
-        const imageAssets = images.map((item: any) => ({
-            name: item.image.name,
-            mimeType: item.image.mimeType,
-            size: item.image.size,
             url: item.url,
         }));
 
@@ -96,16 +97,11 @@ export class AiService {
             fileAssets.map((file) => this.readTextFileForPrompt(file)),
         );
 
-        const imageInputs = await Promise.all(
-            imageAssets.map((image) => this.createImageInput(image)),
-        );
-
         const userContent: any[] = [
             {
                 type: 'text',
-                text: this.buildStudySpacePrompt(studySpace.title, fileSummaries, imageAssets),
+                text: this.buildStudySpacePrompt(studySpace.title, fileSummaries),
             },
-            ...imageInputs.filter(Boolean),
         ];
 
         const completion = await this.getOpenAiClient().chat.completions.create({
@@ -116,7 +112,7 @@ export class AiService {
             messages: [
                 {
                     role: 'system',
-                    content: 'You are an expert study assistant. Summarize study materials accurately and only use the supplied files and images. Return valid JSON with exactly these keys: overview, keyConcepts, importantDetails. keyConcepts and importantDetails must be arrays of concise strings.',
+                    content: 'You are an expert study assistant. Summarize study materials accurately and only use the selected supplied files. Return valid JSON with exactly these keys: overview, keyConcepts, importantDetails. keyConcepts and importantDetails must be arrays of concise strings.',
                 },
                 {
                     role: 'user',
@@ -132,12 +128,80 @@ export class AiService {
         }
 
         const summary = this.parseSummary(rawSummary);
-        const updatedStudySpace = await this.studySpaceService.updateStudySpaceSummaryById(studySpaceId, userId, summary);
+        const createdSummary = await this.prisma.studySpaceSummary.create({
+            data: {
+                studySpaceId,
+                userId,
+                title: title?.trim() || this.createSummaryTitle(fileAssets),
+                content: summary,
+                files: {
+                    create: fileAssets.map((file) => ({
+                        fileId: file.id,
+                    })),
+                },
+            },
+            include: {
+                files: {
+                    include: {
+                        file: true,
+                    },
+                },
+            },
+        });
 
         return {
-            summary,
-            studySpace: updatedStudySpace,
+            summary: createdSummary,
         };
+    }
+
+    async getStudySpaceSummaries(studySpaceId: string, userId: string) {
+        const studySpace = await this.studySpaceService.getStudySpaceById(studySpaceId);
+
+        if (studySpace.userId !== userId) {
+            throw new ForbiddenException("You don't have access to this study space");
+        }
+
+        return this.prisma.studySpaceSummary.findMany({
+            where: {
+                studySpaceId,
+                userId,
+            },
+            include: {
+                files: {
+                    include: {
+                        file: true,
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+    }
+
+    async getStudySpaceSummary(summaryId: string, userId: string) {
+        const summary = await this.prisma.studySpaceSummary.findUnique({
+            where: {
+                id: summaryId,
+            },
+            include: {
+                files: {
+                    include: {
+                        file: true,
+                    },
+                },
+            },
+        });
+
+        if (!summary) {
+            throw new NotFoundException('Summary not found', 'Summary not found');
+        }
+
+        if (summary.userId !== userId) {
+            throw new ForbiddenException("You don't have access to this summary");
+        }
+
+        return summary;
     }
 
     async chatWithStudySpace(
@@ -436,33 +500,15 @@ export class AiService {
         };
     }
 
-    private async createImageInput(image: StudySpaceAsset) {
-        if (!image.mimeType.startsWith('image/')) {
-            return null;
-        }
-
-        const buffer = await this.storageRepo.readBuffer(image.url);
-
-        return {
-            type: 'image_url',
-            image_url: {
-                url: `data:${image.mimeType};base64,${buffer.toString('base64')}`,
-            },
-        };
-    }
-
-    private buildStudySpacePrompt(title: string, files: any[], images: StudySpaceAsset[]) {
+    private buildStudySpacePrompt(title: string, files: any[]) {
         return [
-            `Summarize the complete study space named "${title}".`,
+            `Summarize the selected files from the study space named "${title}".`,
             'Include an overview, key concepts, and important details.',
-            'Use all readable file contents. For unsupported files, still consider their names, mime types, and sizes. Analyze every attached image.',
+            'Use all readable selected file contents. For unsupported files, still consider their names, mime types, and sizes.',
             'Keep the overview as one useful paragraph. Return 5-12 key concepts and 5-15 important details when enough material exists.',
             '',
-            'Files:',
+            'Selected files:',
             JSON.stringify(files, null, 2),
-            '',
-            'Images:',
-            JSON.stringify(images.map(({ name, mimeType, size }) => ({ name, mimeType, size })), null, 2),
         ].join('\n');
     }
 
@@ -689,6 +735,14 @@ export class AiService {
 
     private createChatTitle(prompt: string) {
         return prompt.length > 60 ? `${prompt.slice(0, 57)}...` : prompt;
+    }
+
+    private createSummaryTitle(files: StudySpaceAsset[]) {
+        if (files.length === 1) {
+            return files[0].name;
+        }
+
+        return `${files[0].name} and ${files.length - 1} more`;
     }
 
     private getChatSummaryTokenLimit() {

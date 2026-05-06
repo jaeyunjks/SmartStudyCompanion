@@ -12,6 +12,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { AiService } from './ai.service';
 import { ChatWithStudySpaceDto } from './ai-dto/chat-with-study-space.dto';
+import { SummarizeStudySpaceDto } from './ai-dto/summarize-study-space.dto';
 
 @Controller('api/ai')
 export class AiController {
@@ -23,6 +24,7 @@ export class AiController {
     @Post('study-space/:id/summary')
     async summarizeStudySpace(
         @Param('id') id: string,
+        @Body() summarizeDto: SummarizeStudySpaceDto,
         @Request() req: any,
     ) {
         const user = req.user;
@@ -32,7 +34,39 @@ export class AiController {
             throw new NotFoundException("User not found", "User not found");
         }
 
-        return this.aiService.summarizeStudySpace(id, userId);
+        return this.aiService.summarizeStudySpace(id, userId, summarizeDto.fileIds, summarizeDto.title);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('study-space/:id/summaries')
+    async getStudySpaceSummaries(
+        @Param('id') id: string,
+        @Request() req: any,
+    ) {
+        const user = req.user;
+        const userId = user?.userId;
+
+        if (!userId) {
+            throw new NotFoundException("User not found", "User not found");
+        }
+
+        return this.aiService.getStudySpaceSummaries(id, userId);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('summary/:id')
+    async getStudySpaceSummary(
+        @Param('id') id: string,
+        @Request() req: any,
+    ) {
+        const user = req.user;
+        const userId = user?.userId;
+
+        if (!userId) {
+            throw new NotFoundException("User not found", "User not found");
+        }
+
+        return this.aiService.getStudySpaceSummary(id, userId);
     }
 
     @UseGuards(JwtAuthGuard)

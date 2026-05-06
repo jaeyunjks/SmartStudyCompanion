@@ -4,11 +4,13 @@ import { PrismaFileRepository } from 'src/database/prisma/prisma-file.repository
 import { FileController } from './file.controller';
 import { StudySpaceModule } from '../study-space/study-space.module';
 import { UserModule } from '../user/user.module';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
     imports: [
         forwardRef(() => StudySpaceModule),
         forwardRef(() => UserModule),
+        forwardRef(() => AiModule),
     ],
     providers: [
         FileService,

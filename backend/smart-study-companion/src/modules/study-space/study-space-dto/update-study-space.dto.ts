@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from "class-validator";
+import { IsHexColor, IsOptional, IsString } from "class-validator";
 
 export class UpdateStudySpaceDto {
     @IsString()
@@ -7,4 +7,12 @@ export class UpdateStudySpaceDto {
     @IsString()
     @IsOptional()
     title?: string;
+
+    @IsHexColor()
+    @IsOptional()
+    color?: string;
+
+    @IsString()
+    @IsOptional()
+    tag?: string;
 }

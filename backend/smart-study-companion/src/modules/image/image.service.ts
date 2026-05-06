@@ -6,9 +6,9 @@ import {
 } from '@nestjs/common';
 import { ImageRepository } from './image.repository';
 import { StudySpaceService } from '../study-space/study-space.service';
-import * as fs from 'fs/promises';
 import * as path from 'path';
 import { UserService } from '../user/user.service';
+import { StorageRepository } from '../file-storage/file-storage.repository';
 
 @Injectable()
 export class ImageService {
@@ -17,10 +17,9 @@ export class ImageService {
         private readonly imageRepo: ImageRepository,
         private readonly studySpaceService: StudySpaceService,
         private readonly userService: UserService,
+        @Inject('STORAGE_REPOSITORY')
+        private readonly storageRepo: StorageRepository,
     ) {}
-
-    private rootFolder = process.env.STORAGE_URL as string;
-    private imageFolder = process.env.IMAGE_STORAGE_URL as string;
 
     async createImage (uploadedImage: Express.Multer.File, userId: string, studySpaceId: string) {
         const { originalname, mimetype, size, buffer } = uploadedImage;
@@ -38,16 +37,13 @@ export class ImageService {
         // Add a image value into the database
         const image = await this.imageRepo.create(studySpaceId, originalname, mimetype, size, userId);
 
-        // Folder URL would be blob/username/spaceTitle
-        const folderUrl = path.join(this.rootFolder, owner.username, studySpace.title, this.imageFolder);
-        
-        // Create folders if not exists
-        await fs.mkdir(folderUrl, { recursive: true })
-
-        // Image URL would be blob/username/spaceTitle/imageName
-        const url = path.join(folderUrl, originalname);
-
-        await fs.writeFile(url, buffer);
+        const url = await this.storageRepo.upload({
+            ownerName: owner.username,
+            studySpaceTitle: studySpace.title,
+            folder: 'image',
+            fileName: originalname,
+            buffer,
+        });
 
         return {
             image,
@@ -73,9 +69,12 @@ export class ImageService {
             throw new NotFoundException("Study space not found", "Study space not found");
         }
 
-        const imagePath = path.join(this.rootFolder, owner.username, studySpace.title, this.imageFolder, image.name);
-        
-        await fs.rm(imagePath, { force: true });
+        await this.storageRepo.delete({
+            ownerName: owner.username,
+            studySpaceTitle: studySpace.title,
+            folder: 'image',
+            fileName: image.name,
+        });
 
         return image;
     }
@@ -104,12 +103,20 @@ export class ImageService {
             throw new NotFoundException("Study space not found", "Study space not found");
         }
 
-        const folderUrl = path.join(this.rootFolder, owner.username, studySpace.title, this.imageFolder);
-
-        const oldPath = path.join(folderUrl, oldImage.name);
-        const newPath = path.join(folderUrl, newImageName);
-
-        await fs.rename(oldPath, newPath);
+        const newPath = await this.storageRepo.move(
+            {
+                ownerName: owner.username,
+                studySpaceTitle: studySpace.title,
+                folder: 'image',
+                fileName: oldImage.name,
+            },
+            {
+                ownerName: owner.username,
+                studySpaceTitle: studySpace.title,
+                folder: 'image',
+                fileName: newImageName,
+            },
+        );
 
         return {
             image: updatedImage,
@@ -135,7 +142,12 @@ export class ImageService {
             throw new NotFoundException("Study space not found", "Study space not found");
         }
 
-        const url = path.join(this.rootFolder, owner.username, studySpace.title, this.imageFolder, image.name);
+        const url = this.storageRepo.getUrl({
+            ownerName: owner.username,
+            studySpaceTitle: studySpace.title,
+            folder: 'image',
+            fileName: image.name,
+        });
         
         return {
             image,
@@ -162,10 +174,13 @@ export class ImageService {
             throw new NotFoundException("User not found", "User not found");
         }  
 
-        const folderUrl = path.join(this.rootFolder, owner.username, studySpace.title, this.imageFolder);
-
         const response = images.map((image: any) => {
-            const url = path.join(folderUrl, image.name);
+            const url = this.storageRepo.getUrl({
+                ownerName: owner.username,
+                studySpaceTitle: studySpace.title,
+                folder: 'image',
+                fileName: image.name,
+            });
             return {
                 image,
                 url,

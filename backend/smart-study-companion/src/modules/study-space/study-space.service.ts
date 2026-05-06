@@ -8,8 +8,8 @@ export class StudySpaceService {
         private readonly studySpaceRepo: StudySpaceRepository,
     ) {}
 
-    async createStudySpace (title: string, userId: string) {
-        const studySpace = await this.studySpaceRepo.create(title, userId);
+    async createStudySpace (title: string, userId: string, color?: string, tag?: string) {
+        const studySpace = await this.studySpaceRepo.create(title, userId, color, tag);
 
         if (!studySpace) {
             throw new InternalServerErrorException("Couldn't create study space", "Couldn't create study space");
@@ -18,11 +18,21 @@ export class StudySpaceService {
         return studySpace;
     }
 
-    async updateStudySpaceById (id: string, userId: string, title?: string) {
-        const studySpace = await this.studySpaceRepo.updateById(id, userId, title);
+    async updateStudySpaceById (id: string, userId: string, title?: string, color?: string, tag?: string) {
+        const studySpace = await this.studySpaceRepo.updateById(id, userId, title, color, tag);
 
         if (!studySpace) {
             throw new InternalServerErrorException("Couldn't update this study space", "Couldn't update this study space");
+        }
+
+        return studySpace;
+    }
+
+    async updateStudySpaceSummaryById (id: string, userId: string, summary: any) {
+        const studySpace = await this.studySpaceRepo.updateSummaryById(id, userId, summary);
+
+        if (!studySpace) {
+            throw new InternalServerErrorException("Couldn't update this study space summary", "Couldn't update this study space summary");
         }
 
         return studySpace;

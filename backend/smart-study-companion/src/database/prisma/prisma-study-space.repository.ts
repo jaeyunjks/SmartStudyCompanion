@@ -6,16 +6,18 @@ import { StudySpaceRepository } from "src/modules/study-space/study-space.reposi
 export class PrismaStudySpaceRepository implements StudySpaceRepository {
     constructor(private readonly prisma: PrismaService){}
 
-    async create(title: string, userId: string): Promise<any> {
+    async create(title: string, userId: string, color?: string, tag?: string): Promise<any> {
         return this.prisma.studySpace.create({
             data: {
                 title,
                 userId,
+                color,
+                tag,
             },
         });
     }
 
-    async updateById(id: string, userId: string, title?: string): Promise<any> {
+    async updateById(id: string, userId: string, title?: string, color?: string, tag?: string): Promise<any> {
         return this.prisma.studySpace.update({
             where: {
                 id,
@@ -23,6 +25,20 @@ export class PrismaStudySpaceRepository implements StudySpaceRepository {
             },
             data: {
                 title,
+                color,
+                tag,
+            },
+        });
+    }
+
+    async updateSummaryById(id: string, userId: string, summary: any): Promise<any> {
+        return this.prisma.studySpace.update({
+            where: {
+                id,
+                userId,
+            },
+            data: {
+                summary,
             },
         });
     }

@@ -87,7 +87,12 @@ export class StudySpaceController {
             throw new NotFoundException("User not found", "User not found");
         }
 
-        const studySpace = await this.studySpaceService.createStudySpace(addStudySpaceDto.title, userId);
+        const studySpace = await this.studySpaceService.createStudySpace(
+            addStudySpaceDto.title,
+            userId,
+            addStudySpaceDto.color,
+            addStudySpaceDto.tag,
+        );
 
         if (!studySpace) {
             throw new InternalServerErrorException("Couldn't create study space", "Couldn't create study space");
@@ -109,7 +114,13 @@ export class StudySpaceController {
             throw new NotFoundException("User not found", "User not found");
         }
 
-        const studySpace = await this.studySpaceService.updateStudySpaceById(updateStudySpaceDto.id, userId, updateStudySpaceDto.title);
+        const studySpace = await this.studySpaceService.updateStudySpaceById(
+            updateStudySpaceDto.id,
+            userId,
+            updateStudySpaceDto.title,
+            updateStudySpaceDto.color,
+            updateStudySpaceDto.tag,
+        );
 
         if (!studySpace) {
             throw new InternalServerErrorException("Couldn't update study space", "Couldn't update study space");

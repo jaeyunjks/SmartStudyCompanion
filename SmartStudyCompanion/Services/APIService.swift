@@ -670,35 +670,42 @@ class APIService {
 
     private func resolveStudySpaceIDIfNeeded(
         preferredId: String,
-        fallbackWorkspaceTitle: String?
+        fallbackWorkspaceTitle: String?,
+        allowCreateIfMissingTitle: Bool = false
     ) async throws -> String {
         let trimmedPreferredId = preferredId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedPreferredId.isEmpty else {
-            if let fallbackWorkspaceTitle,
-               let resolved = try await resolveStudySpaceIdByTitle(fallbackWorkspaceTitle) {
-                return resolved
-            }
-            return trimmedPreferredId
-        }
-
-        guard let fallbackWorkspaceTitle else {
-            return trimmedPreferredId
-        }
-
-        let filesEndpoint = "/file/study-space/\(trimmedPreferredId)"
-        do {
-            let _: LegacyStudySpaceFilesResponse = try await performRequest(endpoint: filesEndpoint, method: .get)
-            return trimmedPreferredId
-        } catch let error as NetworkError {
-            switch error {
-            case .notFound, .serverError:
+        if trimmedPreferredId.isEmpty {
+            if let fallbackWorkspaceTitle {
                 if let resolved = try await resolveStudySpaceIdByTitle(fallbackWorkspaceTitle) {
                     return resolved
                 }
-                if let created = try await createWorkspaceFallbackIfMissing(title: fallbackWorkspaceTitle) {
+                if allowCreateIfMissingTitle,
+                   let created = try await createWorkspaceFallbackIfMissing(title: fallbackWorkspaceTitle) {
                     return created
                 }
-                return trimmedPreferredId
+            }
+            throw NetworkError.notFound
+        }
+
+        do {
+            let endpoint = "/study-space/\(trimmedPreferredId)"
+            let _: LegacyStudySpaceDetailResponse = try await performRequest(endpoint: endpoint, method: .get)
+            return trimmedPreferredId
+        } catch let error as NetworkError {
+            switch error {
+            case .notFound:
+                if let fallbackWorkspaceTitle,
+                   let resolved = try await resolveStudySpaceIdByTitle(fallbackWorkspaceTitle) {
+                    return resolved
+                }
+                if allowCreateIfMissingTitle,
+                   let fallbackWorkspaceTitle,
+                   let created = try await createWorkspaceFallbackIfMissing(title: fallbackWorkspaceTitle) {
+                    return created
+                }
+                throw error
+            case .unauthorized, .offline, .timeout:
+                throw error
             default:
                 return trimmedPreferredId
             }
@@ -712,15 +719,8 @@ class APIService {
         guard !normalizedTitle.isEmpty else { return nil }
 
         let workspaces = try await fetchWorkspaces()
-        if let exact = workspaces.first(where: {
-            normalizeWorkspaceTitle($0.title) == normalizedTitle
-        }) {
-            return exact.id
-        }
-
         return workspaces.first(where: {
-            normalizeWorkspaceTitle($0.title).contains(normalizedTitle) ||
-            normalizedTitle.contains(normalizeWorkspaceTitle($0.title))
+            normalizeWorkspaceTitle($0.title) == normalizedTitle
         })?.id
     }
 
@@ -966,6 +966,11 @@ struct LegacyUploadedStudySpaceFileResponse: Decodable {
 struct LegacyStudySpaceFilesResponse: Decodable {
     let isOwner: Bool?
     let files: [LegacyStudySpaceFileItem]
+}
+
+private struct LegacyStudySpaceDetailResponse: Decodable {
+    let isOwner: Bool?
+    let studySpace: RemoteStudySpace
 }
 
 struct LegacyStudySpaceFileItem: Decodable {

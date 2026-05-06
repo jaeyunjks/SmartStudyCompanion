@@ -21,17 +21,24 @@ struct RemoteStudySpace: Codable {
     let id: String
     let userId: String
     let title: String
-    let description: String
-    let iconName: String
-    let category: String
-    let status: String
-    let workspaceColorHex: String
-    let documentCount: Int
-    let noteCount: Int
-    let aiOutputCount: Int
-    let progress: Double
+    let description: String?
+    let iconName: String?
+    let category: String?
+    let status: String?
+    let workspaceColorHex: String?
+    let color: String?
+    let tag: String?
+    let documentCount: Int?
+    let noteCount: Int?
+    let aiOutputCount: Int?
+    let progress: Double?
     let createdAt: Date?
     let updatedAt: Date?
+    let summaries: [RemoteStudySpaceSummary]?
+}
+
+struct RemoteStudySpaceSummary: Codable {
+    let id: String?
 }
 
 struct CreateWorkspaceRequest: Codable {
@@ -142,20 +149,34 @@ extension StudySpace {
 
 extension StudySpace {
     static func fromRemote(_ remote: RemoteStudySpace) -> StudySpace {
-        StudySpace(
+        func firstNonEmpty(_ values: String?...) -> String? {
+            values
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .first { !$0.isEmpty }
+        }
+
+        let resolvedDescription = remote.description?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedIcon = remote.iconName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedCategory = remote.category?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedTag = remote.tag?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedStatus = remote.status?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedColor = remote.workspaceColorHex?.trimmingCharacters(in: .whitespacesAndNewlines)
+            ?? remote.color?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return StudySpace(
             id: UUID(uuidString: remote.id) ?? UUID(),
             title: remote.title,
-            description: remote.description,
-            iconName: remote.iconName,
-            category: remote.category,
-            status: remote.status,
-            workspaceColorHex: remote.workspaceColorHex,
-            documentCount: remote.documentCount,
-            noteCount: remote.noteCount,
-            lastUpdated: Self.relativeTimeLabel(from: remote.updatedAt),
+            description: firstNonEmpty(resolvedDescription) ?? "No description yet.",
+            iconName: firstNonEmpty(resolvedIcon) ?? "book.closed",
+            category: firstNonEmpty(resolvedCategory, resolvedTag) ?? "General",
+            status: firstNonEmpty(resolvedStatus) ?? "Active",
+            workspaceColorHex: firstNonEmpty(resolvedColor) ?? "#388767",
+            documentCount: remote.documentCount ?? 0,
+            noteCount: remote.noteCount ?? 0,
+            lastUpdated: Self.relativeTimeLabel(from: remote.updatedAt ?? remote.createdAt),
             lastOpened: "Opened just now",
-            aiOutputCount: remote.aiOutputCount,
-            progress: remote.progress
+            aiOutputCount: remote.aiOutputCount ?? remote.summaries?.count ?? 0,
+            progress: remote.progress ?? 0
         )
     }
 

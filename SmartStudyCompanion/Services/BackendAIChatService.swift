@@ -26,27 +26,32 @@ struct BackendAIChatService: AIChatServiceProtocol {
             .compactMap { $0 }
             .joined(separator: "\n\n")
 
-        let contextText = buildWorkspaceContextText(from: context, prompt: trimmed)
-        let historyPayload = conversationHistory
-            .filter { !$0.isTyping }
-            .dropLast()
-            .suffix(8)
-            .map {
-                WorkspaceContextChatHistoryMessage(
-                    role: $0.role == .user ? "user" : "assistant",
-                    content: capped($0.text, limit: 1_200)
-                )
-            }
+        guard let workspaceID = context.aiContextSource?.workspaceID.uuidString else {
+            throw AIChatServiceError.workspaceNotFound
+        }
 
-        let response = try await apiService.chatWithWorkspaceContext(
-            workspaceTitle: context.workspaceTitle,
-            prompt: composedPrompt,
-            workspaceContext: contextText,
-            conversationHistory: Array(historyPayload)
+        let promptWithContext = buildBackendPrompt(
+            composedPrompt: composedPrompt,
+            trimmedUserPrompt: trimmed,
+            context: context
         )
 
-        let finalText = response.assistantMessage
+        let response = try await apiService.chatWithStudySpace(
+            workspaceId: workspaceID,
+            workspaceTitle: context.workspaceTitle,
+            prompt: promptWithContext,
+            chatHistoryId: chatHistoryId,
+            title: conversationTitle
+        )
+
+        let assistantText = response.messages
+            .last(where: { $0.role.lowercased() == "assistant" })?
+            .content
+            ?? response.messages.last?.content
+
+        let finalText = assistantText?
             .trimmingCharacters(in: .whitespacesAndNewlines)
+            ?? ""
 
         guard !finalText.isEmpty else {
             throw AIChatServiceError.unavailable
@@ -55,8 +60,8 @@ struct BackendAIChatService: AIChatServiceProtocol {
         return AIChatResponse(
             assistantMessage: finalText,
             followUpQuestion: lastAssistantMessage == finalText ? "Would you like a more detailed breakdown?" : nil,
-            suggestedMode: response.suggestedMode,
-            chatHistoryId: chatHistoryId
+            suggestedMode: nil,
+            chatHistoryId: response.chatHistoryId
         )
     }
 
@@ -71,6 +76,38 @@ struct BackendAIChatService: AIChatServiceProtocol {
         case .explain:
             return "Explain in simple terms with one concrete example."
         }
+    }
+
+    private func buildBackendPrompt(
+        composedPrompt: String,
+        trimmedUserPrompt: String,
+        context: WorkspaceContext
+    ) -> String {
+        let mentions = mentionedSources(in: trimmedUserPrompt, from: context.sourceContents)
+        let selectedMaterials = context.referencedMaterials
+            .filter(\.isSelected)
+            .map(\.title)
+        let selectedSourceContents = context.sourceContents
+            .filter { $0.isSelected || mentions.contains($0.id) }
+            .map(\.title)
+
+        let prioritizedSources = Array(
+            Set((selectedMaterials + selectedSourceContents).map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines)
+            }.filter { !$0.isEmpty })
+        )
+        .prefix(10)
+
+        guard !prioritizedSources.isEmpty else {
+            return composedPrompt
+        }
+
+        return """
+        \(composedPrompt)
+
+        Prioritize relevant information from these workspace sources when possible:
+        \(prioritizedSources.joined(separator: ", "))
+        """
     }
 
     private func buildWorkspaceContextText(from context: WorkspaceContext, prompt: String) -> String {

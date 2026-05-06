@@ -191,10 +191,15 @@ final class SummaryDetailViewModel: ObservableObject {
             defer { isLoading = false }
 
             do {
+                let selectedFileNames = availableSources
+                    .filter { selectedSourceIDs.contains($0.id) && $0.kind == .file }
+                    .map(\.name)
+
                 let generated = try await apiService.generateWorkspaceSummary(
                     workspaceId: workspaceId,
                     workspaceTitle: workspaceTitle,
-                    workspaceContent: promptPrefix + contentToSend
+                    workspaceContent: promptPrefix + contentToSend,
+                    preferredFileNames: selectedFileNames
                 )
 
                 let normalized = normalize(generated)

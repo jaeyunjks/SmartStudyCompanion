@@ -33,6 +33,7 @@ final class ActiveWorkspaceViewModel: ObservableObject {
     private let storageService: WorkspaceMaterialStorageService
     private let noteStorageService: WorkspaceNoteStorageService
     private let summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService
+    private let apiService: APIService
     private var summaryVersions: [SummaryVersion] = []
     private var materialContentCache: [UUID: String] = [:]
     private var aiReadableContentTask: Task<Void, Never>?
@@ -43,19 +44,24 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         storageService: WorkspaceMaterialStorageService,
         noteStorageService: WorkspaceNoteStorageService,
         summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService = .shared,
-        store: StudySpaceStore
+        store: StudySpaceStore,
+        apiService: APIService = .shared
     ) {
         self.workspace = studySpace
         self.store = store
         self.storageService = storageService
         self.noteStorageService = noteStorageService
         self.summaryHistoryStorageService = summaryHistoryStorageService
+        self.apiService = apiService
         bindWorkspaceUpdates()
         loadMaterials()
         loadNotes()
         loadSummaryHistory()
         rebuildAIContentSnapshots()
         refreshAIReadableContent()
+        Task { [weak self] in
+            await self?.syncAllMaterialsToBackendBestEffort()
+        }
     }
 
     deinit {
@@ -315,6 +321,11 @@ final class ActiveWorkspaceViewModel: ObservableObject {
             materialContentCache[material.id] = material.previewText ?? ""
             rebuildAIContentSnapshots()
             try persistMaterials()
+            do {
+                try await syncMaterialToBackend(material)
+            } catch {
+                importErrorMessage = "Photo was saved locally but backend sync failed, so AI may not use it yet."
+            }
         } catch {
             importErrorMessage = "Photo import failed. Please try again."
         }
@@ -341,6 +352,11 @@ final class ActiveWorkspaceViewModel: ObservableObject {
             rebuildAIContentSnapshots()
             try persistMaterials()
             refreshAIReadableContent()
+            do {
+                try await syncMaterialToBackend(material)
+            } catch {
+                importErrorMessage = "File was saved locally but backend sync failed, so AI may not use it yet."
+            }
         } catch {
             importErrorMessage = "File import failed. Please try a different document."
         }
@@ -545,6 +561,39 @@ final class ActiveWorkspaceViewModel: ObservableObject {
             summaryVersions = snapshot.versions
         } catch {
             summaryVersions = []
+        }
+    }
+
+    private func syncMaterialToBackend(_ material: StudyMaterial) async throws {
+        let fileURL = URL(fileURLWithPath: material.storedPath)
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+
+        // Some backend versions return 500 when no files exist yet.
+        // Fall back to an empty list and proceed with upload.
+        let existing = (try? await apiService.fetchStudySpaceFiles(
+            studySpaceId: workspaceID.uuidString,
+            fallbackWorkspaceTitle: workspace.title
+        )) ?? []
+        let alreadySynced = existing.contains {
+            $0.file.name.caseInsensitiveCompare(fileURL.lastPathComponent) == .orderedSame
+        }
+        if alreadySynced {
+            return
+        }
+        _ = try await apiService.uploadStudySpaceFile(
+            fileURL: fileURL,
+            studySpaceId: workspaceID.uuidString,
+            fallbackWorkspaceTitle: workspace.title
+        )
+    }
+
+    private func syncAllMaterialsToBackendBestEffort() async {
+        for material in materials {
+            do {
+                try await syncMaterialToBackend(material)
+            } catch {
+                continue
+            }
         }
     }
 }

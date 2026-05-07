@@ -582,29 +582,79 @@ struct ProgressTrackingView: View {
                         .foregroundColor(.gray)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
-                
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Overall stats placeholder
+                .padding(.horizontal, 16)
+                .padding(.top, -24)
+                .padding(.bottom, 24)
+                Group {
+                    if progressViewModel.isLoading {
                         VStack(spacing: 16) {
-                            Text("Daily Statistics")
+                            Text("Loading your progress")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        .padding()
+                        
+                    } else if let errorMessage = progressViewModel.errorMessage {
+                        VStack(spacing: 16) {
+                            Text("Unable to load progress")
                                 .font(.headline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16)
                             
-                            HStack(spacing: 16) {
-                                StatCard(title: "Cards Studied", value: "0", icon: "square.and.pencil", color: .blue)
-                                StatCard(title: "Quizzes Done", value: "0", icon: "checkmark.circle", color: .green)
-                                StatCard(title: "Accuracy", value: "0%", icon: "chart.bar", color: .orange)
+                            Text(errorMessage)
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            
+                            Button("Retry") {
+                                Task {
+                                    await progressViewModel.loadProgress(for: "demo-pdf-id")
+                                    //Add let pdffield later
+                                }
                             }
-                            .padding(.horizontal, 16)
+                        }
+                        .padding()
+                        
+                    } else if progressViewModel.progress == nil && progressViewModel.dailyStatistics.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: "chart.bar.xaxis")
+                                .font(.system(size: 36))
+                                .foregroundColor(.gray)
+                            
+                            Text("No progress yet")
+                            .font(.headline)
+                            
+                            Text("Start to studying to see your learning statistics here.")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                        .padding()
+                } else {
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            // Overall stats placeholder
+                            VStack(spacing: 16) {
+                                Text("Daily Statistics")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 16)
+                                
+                                HStack(spacing: 16) {
+                                    StatCard(title: "Cards Studied", value: "0", icon: "square.and.pencil", color: .blue)
+                                    StatCard(title: "Quizzes Done", value: "0", icon: "checkmark.circle", color: .green)
+                                    StatCard(title: "Accuracy", value: "0%", icon: "chart.bar", color: .orange)
+                                }
+                                .padding(.horizontal, 16)
+                            }
                         }
                     }
                 }
+            }
+
                 .navigationTitle("Progress")
                 .onAppear {
                     Task {
+                        await progressViewModel.loadProgress(for: "demo-pdf-id")
                         await progressViewModel.fetchDailyStatistics()
                     }
                 }

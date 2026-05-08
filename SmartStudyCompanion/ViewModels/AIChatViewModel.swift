@@ -194,12 +194,13 @@ final class AIChatViewModel: ObservableObject {
 
                 removeTypingMessage(with: typingID)
 
-                let finalText: String
+                let rawFinalText: String
                 if let followUp = response.followUpQuestion {
-                    finalText = "\(response.assistantMessage)\n\n\(followUp)"
+                    rawFinalText = "\(response.assistantMessage)\n\n\(followUp)"
                 } else {
-                    finalText = response.assistantMessage
+                    rawFinalText = response.assistantMessage
                 }
+                let finalText = rawFinalText.removingAIChatMarkdownMarkers
 
                 if let suggestedMode = response.suggestedMode {
                     selectedMode = suggestedMode

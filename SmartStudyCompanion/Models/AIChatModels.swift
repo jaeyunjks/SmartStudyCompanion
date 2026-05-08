@@ -45,6 +45,13 @@ struct ChatMessage: Identifiable, Codable, Equatable {
     }
 }
 
+extension String {
+    var removingAIChatMarkdownMarkers: String {
+        replacingOccurrences(of: "**", with: "")
+            .replacingOccurrences(of: "__", with: "")
+    }
+}
+
 struct ChatConversation: Identifiable, Codable, Equatable {
     let id: UUID
     var title: String

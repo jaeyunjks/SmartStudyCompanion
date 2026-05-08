@@ -34,7 +34,13 @@ export class AiController {
             throw new NotFoundException("User not found", "User not found");
         }
 
-        return this.aiService.summarizeStudySpace(id, userId, summarizeDto.fileIds, summarizeDto.title);
+        return this.aiService.summarizeStudySpace(
+            id,
+            userId,
+            summarizeDto.fileIds ?? [],
+            summarizeDto.title,
+            summarizeDto.sourceContent,
+        );
     }
 
     @UseGuards(JwtAuthGuard)

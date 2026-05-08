@@ -253,29 +253,18 @@ final class SummaryDetailViewModel: ObservableObject {
         let selected = availableSources.filter { selectedSourceIDs.contains($0.id) && $0.isReadable }
         guard !selected.isEmpty else { return summary }
 
-        let notesCount = selected.filter { $0.kind == .note }.count
-        let filesCount = selected.filter { $0.kind == .file }.count
-        let photosCount = selected.filter { $0.kind == .photo }.count
-
-        let sourceLabel: String
-        if filesCount > 0 && notesCount == 0 && photosCount == 0 {
-            sourceLabel = filesCount == 1 ? "this document" : "these documents"
-        } else if photosCount > 0 && notesCount == 0 && filesCount == 0 {
-            sourceLabel = photosCount == 1 ? "this picture" : "these pictures"
-        } else if notesCount > 0 && filesCount == 0 && photosCount == 0 {
-            sourceLabel = notesCount == 1 ? "this note" : "these notes"
-        } else {
-            sourceLabel = "the combined materials"
-        }
-
+        let isSingleSource = selected.count == 1
+        let sourceLabel = isSingleSource ? selected[0].name : "combined materials"
         let names = selected.prefix(3).map(\.name).joined(separator: ", ")
         let sourceSuffix = selected.count > 3 ? ", and \(selected.count - 3) more" : ""
 
         let contextualTitle = summary.title.contains(workspaceTitle)
-            ? "\(workspaceTitle) Summary from \(sourceLabel.capitalized)"
-            : "\(summary.title) • \(sourceLabel.capitalized)"
+            ? "\(workspaceTitle) Summary from \(sourceLabel)"
+            : "\(summary.title) • \(sourceLabel)"
 
-        let contextualOverview = "This summary is generated from \(sourceLabel) (\(names)\(sourceSuffix)).\n\n\(summary.overview)"
+        let contextualOverview = isSingleSource
+            ? summary.overview
+            : "This summary is generated from combined materials (\(names)\(sourceSuffix)).\n\n\(summary.overview)"
 
         return StudySummary(
             id: summary.id,

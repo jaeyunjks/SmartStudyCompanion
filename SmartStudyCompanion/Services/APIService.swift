@@ -329,11 +329,35 @@ class APIService {
         workspaceContent: String,
         preferredFileNames: [String] = []
     ) async throws -> StudySummary {
-        _ = workspaceContent
         let resolvedWorkspaceId = try await resolveStudySpaceIDIfNeeded(
             preferredId: workspaceId,
             fallbackWorkspaceTitle: workspaceTitle
         )
+
+        let trimmedWorkspaceContent = workspaceContent.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedWorkspaceContent.isEmpty {
+            let endpoint = "/ai/study-space/\(resolvedWorkspaceId)/summary"
+            let request = SummarizeStudySpaceRequest(
+                fileIds: [],
+                title: workspaceTitle,
+                sourceContent: trimmedWorkspaceContent
+            )
+            let response: LegacyStudySpaceSummaryEnvelope = try await performRequest(
+                endpoint: endpoint,
+                method: .post,
+                body: request
+            )
+
+            let dto = WorkspaceAISummaryDTO(
+                overview: response.summary.overview,
+                keyConcepts: response.summary.keyConcepts,
+                importantDetails: response.summary.importantDetails,
+                quickTakeaways: response.summary.quickTakeaways,
+                suggestedNextActions: response.summary.suggestedNextActions
+            )
+            return dto.toStudySummary(workspaceTitle: workspaceTitle)
+        }
+
         let backendFiles: [LegacyStudySpaceFileItem]
         do {
             backendFiles = try await fetchStudySpaceFiles(
@@ -366,7 +390,8 @@ class APIService {
         let endpoint = "/ai/study-space/\(resolvedWorkspaceId)/summary"
         let request = SummarizeStudySpaceRequest(
             fileIds: fileIds,
-            title: workspaceTitle
+            title: workspaceTitle,
+            sourceContent: nil
         )
         let response: LegacyStudySpaceSummaryEnvelope = try await performRequest(
             endpoint: endpoint,
@@ -378,7 +403,8 @@ class APIService {
             overview: response.summary.overview,
             keyConcepts: response.summary.keyConcepts,
             importantDetails: response.summary.importantDetails,
-            reviewNext: Array(response.summary.importantDetails.prefix(5))
+            quickTakeaways: response.summary.quickTakeaways,
+            suggestedNextActions: response.summary.suggestedNextActions
         )
         return dto.toStudySummary(workspaceTitle: workspaceTitle)
     }
@@ -991,6 +1017,7 @@ struct LegacyFileRecord: Decodable {
 private struct SummarizeStudySpaceRequest: Encodable {
     let fileIds: [String]
     let title: String?
+    let sourceContent: String?
 }
 
 private struct LegacyStudySpaceSummaryEnvelope: Decodable {
@@ -1021,6 +1048,27 @@ private struct LegacyStudySpaceSummaryContent: Decodable {
     let overview: String
     let keyConcepts: [String]
     let importantDetails: [String]
+    let quickTakeaways: [String]
+    let suggestedNextActions: [String]
+
+    private enum CodingKeys: String, CodingKey {
+        case overview
+        case keyConcepts
+        case importantDetails
+        case quickTakeaways
+        case suggestedNextActions
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        overview = try container.decode(String.self, forKey: .overview)
+        keyConcepts = try container.decodeIfPresent([String].self, forKey: .keyConcepts) ?? []
+        importantDetails = try container.decodeIfPresent([String].self, forKey: .importantDetails) ?? []
+        quickTakeaways = try container.decodeIfPresent([String].self, forKey: .quickTakeaways)
+            ?? Array(importantDetails.prefix(5))
+        suggestedNextActions = try container.decodeIfPresent([String].self, forKey: .suggestedNextActions)
+            ?? []
+    }
 }
 
 // MARK: - HTTP Method Enum

@@ -47,7 +47,7 @@ struct ChatBubbleView: View {
                     }
                     .buttonStyle(.plain)
 
-                    Button(action: { UIPasteboard.general.string = message.text }) {
+                    Button(action: { UIPasteboard.general.string = displayText }) {
                         Image(systemName: "doc.on.doc")
                     }
                     .buttonStyle(.plain)
@@ -75,7 +75,7 @@ struct ChatBubbleView: View {
             .background(AIChatTheme.assistantBubble.opacity(0.6))
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         } else {
-            Text(message.text)
+            Text(displayText)
                 .font(.body)
                 .foregroundStyle(.primary)
                 .lineSpacing(3)
@@ -96,6 +96,12 @@ struct ChatBubbleView: View {
         case .user: return AIChatTheme.userBubble
         case .assistant: return AIChatTheme.assistantBubble
         }
+    }
+
+    private var displayText: String {
+        message.role == .assistant
+            ? message.text.removingAIChatMarkdownMarkers
+            : message.text
     }
 
     private var bubbleShape: UnevenRoundedRectangle {

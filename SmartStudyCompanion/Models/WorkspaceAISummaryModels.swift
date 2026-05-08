@@ -14,7 +14,8 @@ struct WorkspaceAISummaryDTO: Codable {
     let overview: String
     let keyConcepts: [String]
     let importantDetails: [String]
-    let reviewNext: [String]
+    let quickTakeaways: [String]
+    let suggestedNextActions: [String]
 
     func toStudySummary(workspaceTitle: String) -> StudySummary {
         let cleanedOverview = overview.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -38,7 +39,11 @@ struct WorkspaceAISummaryDTO: Codable {
             return KeyConcept(term: trimmed, definition: "Review this concept from your selected materials.")
         }
 
-        let takeaways = reviewNext
+        let takeaways = quickTakeaways
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let nextActions = suggestedNextActions
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
@@ -53,7 +58,7 @@ struct WorkspaceAISummaryDTO: Codable {
             importantPoints: keyPoints.map { ImportantPoint(text: $0, highlights: []) },
             examples: [],
             quickTakeaways: Array(takeaways.prefix(5)),
-            suggestedNextActions: Array(takeaways.prefix(5)),
+            suggestedNextActions: Array(nextActions.prefix(5)),
             isBookmarked: false
         )
     }

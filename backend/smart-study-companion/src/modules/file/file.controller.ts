@@ -69,7 +69,9 @@ export class FileController {
             throw new NotFoundException("File not found", "File not found");
         }
 
-        const isOwner = (userId === files[0].file.userId);
+        const isOwner = files.length > 0
+            ? userId === files[0]?.file?.userId
+            : false;
 
         return {
             isOwner,

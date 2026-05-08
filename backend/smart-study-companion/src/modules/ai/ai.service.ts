@@ -17,6 +17,8 @@ type StudySpaceSummary = {
     overview: string;
     keyConcepts: string[];
     importantDetails: string[];
+    quickTakeaways: string[];
+    suggestedNextActions: string[];
 };
 
 type StudySpaceAsset = {
@@ -65,11 +67,18 @@ export class AiService {
         return this.openai;
     }
 
-    async summarizeStudySpace(studySpaceId: string, userId: string, fileIds: string[], title?: string) {
+    async summarizeStudySpace(
+        studySpaceId: string,
+        userId: string,
+        fileIds: string[],
+        title?: string,
+        sourceContent?: string,
+    ) {
         const uniqueFileIds = [...new Set(fileIds.map((fileId) => fileId.trim()).filter(Boolean))];
+        const cleanSourceContent = sourceContent?.trim() ?? '';
 
-        if (!uniqueFileIds.length) {
-            throw new BadRequestException('At least one fileId is required');
+        if (!uniqueFileIds.length && !cleanSourceContent) {
+            throw new BadRequestException('At least one fileId or sourceContent is required');
         }
 
         const studySpace = await this.studySpaceService.getStudySpaceById(studySpaceId);
@@ -78,7 +87,9 @@ export class AiService {
             throw new ForbiddenException("You don't have access to summarize this study space");
         }
 
-        const files = await this.fileService.getFilesBySpaceId(studySpaceId);
+        const files = uniqueFileIds.length
+            ? await this.fileService.getFilesBySpaceId(studySpaceId)
+            : [];
         const selectedFiles = files.filter((item: any) => uniqueFileIds.includes(item.file.id));
 
         if (selectedFiles.length !== uniqueFileIds.length) {
@@ -97,12 +108,10 @@ export class AiService {
             fileAssets.map((file) => this.readTextFileForPrompt(file)),
         );
 
-        const userContent: any[] = [
-            {
-                type: 'text',
-                text: this.buildStudySpacePrompt(studySpace.title, fileSummaries),
-            },
-        ];
+        const userContent: any[] = [{
+            type: 'text',
+            text: this.buildStudySpacePrompt(studySpace.title, fileSummaries, cleanSourceContent),
+        }];
 
         const completion = await this.getOpenAiClient().chat.completions.create({
             model: this.configService.get<string>('GPT_MODEL') ?? 'gpt-4o-mini',
@@ -112,7 +121,7 @@ export class AiService {
             messages: [
                 {
                     role: 'system',
-                    content: 'You are an expert study assistant. Summarize study materials accurately and only use the selected supplied files. Return valid JSON with exactly these keys: overview, keyConcepts, importantDetails. keyConcepts and importantDetails must be arrays of concise strings.',
+                    content: 'You are an expert study assistant. Summarize study materials accurately and only use the selected supplied source content. Return valid JSON with exactly these keys: overview, keyConcepts, importantDetails, quickTakeaways, suggestedNextActions. keyConcepts must be concise "Term: definition" strings. All array items must be specific, useful, and grounded in the supplied content.',
                 },
                 {
                     role: 'user',
@@ -134,11 +143,15 @@ export class AiService {
                 userId,
                 title: title?.trim() || this.createSummaryTitle(fileAssets),
                 content: summary,
-                files: {
-                    create: fileAssets.map((file) => ({
-                        fileId: file.id,
-                    })),
-                },
+                ...(fileAssets.length
+                    ? {
+                        files: {
+                            create: fileAssets.map((file) => ({
+                                fileId: file.id,
+                            })),
+                        },
+                    }
+                    : {}),
             },
             include: {
                 files: {
@@ -500,12 +513,25 @@ export class AiService {
         };
     }
 
-    private buildStudySpacePrompt(title: string, files: any[]) {
+    private buildStudySpacePrompt(title: string, files: any[], sourceContent: string) {
+        const sourceContentBlock = sourceContent
+            ? [
+                'Selected source text:',
+                sourceContent.slice(0, this.maxTextFileChars),
+            ].join('\n')
+            : '';
+
         return [
-            `Summarize the selected files from the study space named "${title}".`,
-            'Include an overview, key concepts, and important details.',
-            'Use all readable selected file contents. For unsupported files, still consider their names, mime types, and sizes.',
-            'Keep the overview as one useful paragraph. Return 5-12 key concepts and 5-15 important details when enough material exists.',
+            `Summarize the selected study material from the study space named "${title}".`,
+            'Focus on what a student should understand, remember, and review next.',
+            'Use the selected source text as the primary source of truth. If file metadata is also supplied, use it only as context and never invent content from an unreadable file name.',
+            'Write one useful overview paragraph.',
+            'Return 4-8 key concepts as "Term: definition" strings.',
+            'Return 5-8 importantDetails as concrete learning points.',
+            'Return 3-5 quickTakeaways as short exam-review takeaways.',
+            'Return 3-5 suggestedNextActions as practical study actions, not repeated key points.',
+            '',
+            sourceContentBlock,
             '',
             'Selected files:',
             JSON.stringify(files, null, 2),
@@ -523,6 +549,12 @@ export class AiService {
                     : [],
                 importantDetails: Array.isArray(parsed.importantDetails)
                     ? parsed.importantDetails.map(String)
+                    : [],
+                quickTakeaways: Array.isArray(parsed.quickTakeaways)
+                    ? parsed.quickTakeaways.map(String)
+                    : [],
+                suggestedNextActions: Array.isArray(parsed.suggestedNextActions)
+                    ? parsed.suggestedNextActions.map(String)
                     : [],
             };
         } catch {
@@ -738,6 +770,10 @@ export class AiService {
     }
 
     private createSummaryTitle(files: StudySpaceAsset[]) {
+        if (!files.length) {
+            return 'Selected source summary';
+        }
+
         if (files.length === 1) {
             return files[0].name;
         }

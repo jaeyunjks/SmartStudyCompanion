@@ -1,12 +1,16 @@
-import { ArrayNotEmpty, IsArray, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 
 export class SummarizeStudySpaceDto {
+    @IsOptional()
     @IsArray()
-    @ArrayNotEmpty()
     @IsString({ each: true })
-    fileIds: string[];
+    fileIds?: string[];
 
     @IsOptional()
     @IsString()
     title?: string;
+
+    @IsOptional()
+    @IsString()
+    sourceContent?: string;
 }

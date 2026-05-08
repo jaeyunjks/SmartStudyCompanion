@@ -133,8 +133,7 @@ struct ActiveWorkspaceView: View {
                             WorkspaceOverviewCardView(
                                 studySpace: viewModel.workspace,
                                 materialCount: viewModel.materialCount,
-                                noteCount: viewModel.noteCount,
-                                aiOutputCount: viewModel.aiOutputCount
+                                noteCount: viewModel.noteCount
                             )
 
                             WorkspaceStudyToolsSectionView(
@@ -149,11 +148,6 @@ struct ActiveWorkspaceView: View {
                                 onCreateNote: { activeNoteDraft = viewModel.makeDraftNote() },
                                 onSelectNote: { note in activeNoteDraft = note },
                                 onViewAllNotes: { showAllNotes = true }
-                            )
-
-                            WorkspaceAIOutputsSectionView(
-                                versions: viewModel.latestSummaryVersions(limit: 3),
-                                onOpenHistory: { openSummaryFlow() }
                             )
 
                             WorkspaceSectionLabel(title: "Materials")
@@ -412,9 +406,7 @@ struct ActiveWorkspaceView: View {
             )
         }
 
-        let summaryItems = viewModel.summaryActivityRecords(limit: 3)
-
-        let merged = (noteItems + materialItems + summaryItems)
+        let merged = (noteItems + materialItems)
             .sorted { $0.occurredAt > $1.occurredAt }
             .prefix(5)
 

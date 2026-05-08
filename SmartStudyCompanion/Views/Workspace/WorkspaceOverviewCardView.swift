@@ -5,7 +5,6 @@ struct WorkspaceOverviewCardView: View {
     let studySpace: StudySpace
     let materialCount: Int
     let noteCount: Int
-    let aiOutputCount: Int
 
     private var statusAccent: Color {
         studySpace.statusForegroundColor
@@ -51,7 +50,6 @@ struct WorkspaceOverviewCardView: View {
             HStack(spacing: 10) {
                 metadataChip(title: "Materials", value: "\(materialCount)")
                 metadataChip(title: "Notes", value: "\(noteCount)")
-                metadataChip(title: "AI Outputs", value: "\(aiOutputCount)")
             }
         }
         .padding(18)
@@ -79,6 +77,6 @@ struct WorkspaceOverviewCardView: View {
 }
 
 #Preview {
-    WorkspaceOverviewCardView(studySpace: StudySpace.sampleData[0], materialCount: 4, noteCount: 2, aiOutputCount: 3)
+    WorkspaceOverviewCardView(studySpace: StudySpace.sampleData[0], materialCount: 4, noteCount: 2)
         .padding()
 }

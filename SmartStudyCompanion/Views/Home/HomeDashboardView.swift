@@ -40,7 +40,6 @@ struct HomeDashboardView: View {
                             VStack(spacing: 0) {
                                 HomeTopBarView(
                                     appName: "Lumora",
-                                    userInitials: "Y",
                                     animateGreeting: animateGreeting
                                 )
                                 .padding(.top, 8)

@@ -32,6 +32,7 @@ struct WorkspaceNoteEditorView: View {
     @State private var showDeleteConfirmation = false
     @State private var autoSaveTask: Task<Void, Never>?
     @State private var hasLoaded = false
+    @State private var isDeletingNote = false
 
     init(
         note: WorkspaceNote,
@@ -83,6 +84,8 @@ struct WorkspaceNoteEditorView: View {
         }
         .alert("Delete Note?", isPresented: $showDeleteConfirmation) {
             Button("Delete", role: .destructive) {
+                isDeletingNote = true
+                autoSaveTask?.cancel()
                 onDelete?(note)
                 dismiss()
             }
@@ -150,7 +153,9 @@ struct WorkspaceNoteEditorView: View {
         }
         .onDisappear {
             autoSaveTask?.cancel()
-            saveNoteSilently()
+            if !isDeletingNote {
+                saveNoteSilently()
+            }
         }
     }
 
@@ -778,16 +783,17 @@ struct WorkspaceNoteEditorView: View {
     }
 
     private func scheduleAutoSave() {
-        guard hasLoaded else { return }
+        guard hasLoaded, !isDeletingNote else { return }
         autoSaveTask?.cancel()
         autoSaveTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 450_000_000)
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, !isDeletingNote else { return }
             saveNoteSilently()
         }
     }
 
     private func saveNoteSilently() {
+        guard !isDeletingNote else { return }
         onSave(buildUpdatedNote())
     }
 

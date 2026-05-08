@@ -2,7 +2,6 @@ import SwiftUI
 
 struct HomeTopBarView: View {
     let appName: String
-    let userInitials: String
     let animateGreeting: Bool
 
     var body: some View {
@@ -26,14 +25,16 @@ struct HomeTopBarView: View {
 
             Spacer()
 
-            Circle()
-                .fill(HomeTheme.accentSoft)
+            Image("LumoraHomeIcon")
+                .resizable()
+                .scaledToFill()
                 .frame(width: 36, height: 36)
+                .clipShape(Circle())
                 .overlay(
-                    Text(userInitials)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(HomeTheme.accent)
+                    Circle()
+                        .stroke(HomeTheme.accent.opacity(0.12), lineWidth: 1)
                 )
+                .shadow(color: HomeTheme.glassShadow.opacity(0.9), radius: 6, x: 0, y: 3)
         }
         .padding(.horizontal, HomeTheme.horizontalPadding)
         .padding(.vertical, 10)
@@ -43,7 +44,6 @@ struct HomeTopBarView: View {
 #Preview {
     HomeTopBarView(
         appName: "Lumora",
-        userInitials: "Y",
         animateGreeting: true
     )
 }

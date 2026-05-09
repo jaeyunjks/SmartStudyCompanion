@@ -571,6 +571,9 @@ struct StudyView: View {
 struct ProgressTrackingView: View {
     @StateObject private var progressViewModel = ProgressViewModel()
     
+    // Replace this with a real pdfFileId when wiring with actual selected document/user flow
+    private let samplePdfFileId = "sample-pdf-id"
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
@@ -584,32 +587,197 @@ struct ProgressTrackingView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
                 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Overall stats placeholder
-                        VStack(spacing: 16) {
-                            Text("Daily Statistics")
-                                .font(.headline)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16)
+                Group {
+                    if progressViewModel.isLoading {
+                        VStack(spacing: 12) {
+                            ProgressView()
+                            Text("Loading progress...")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let errorMessage = progressViewModel.errorMessage,
+                              progressViewModel.progress == nil &&
+                              progressViewModel.dailyStatistics.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .font(.system(size: 28))
+                                .foregroundColor(.orange)
                             
-                            HStack(spacing: 16) {
-                                StatCard(title: "Cards Studied", value: "0", icon: "square.and.pencil", color: .blue)
-                                StatCard(title: "Quizzes Done", value: "0", icon: "checkmark.circle", color: .green)
-                                StatCard(title: "Accuracy", value: "0%", icon: "chart.bar", color: .orange)
+                            Text("Unable to load progress")
+                                .font(.headline)
+                            
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                            
+                            Button("Retry") {
+                                Task {
+                                    await progressViewModel.fetchProgress(for: samplePdfFileId)
+                                    await progressViewModel.fetchDailyStatistics()
+                                }
                             }
-                            .padding(.horizontal, 16)
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if progressViewModel.progress == nil && progressViewModel.dailyStatistics.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "chart.bar.xaxis")
+                                .font(.system(size: 28))
+                                .foregroundColor(.gray)
+                            
+                            Text("No progress yet")
+                                .font(.headline)
+                            
+                            Text("Start studying to see your learning progress here.")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        ScrollView {
+                            VStack(spacing: 20) {
+                                if progressViewModel.isUsingCachedData,
+                                   let cachedMessage = progressViewModel.cachedFallbackMessage {
+                                    HStack(alignment: .top, spacing: 8) {
+                                        Image(systemName: "clock.arrow.circlepath")
+                                            .foregroundColor(.orange)
+                                        Text(cachedMessage)
+                                            .font(.caption)
+                                            .foregroundColor(.orange)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(12)
+                                    .background(Color.orange.opacity(0.12))
+                                    .cornerRadius(12)
+                                    .padding(.horizontal, 16)
+                                }
+                                
+                                if let progress = progressViewModel.progress {
+                                    VStack(spacing: 16) {
+                                        Text("Overall Progress")
+                                            .font(.headline)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .padding(.horizontal, 16)
+                                        
+                                        HStack(spacing: 16) {
+                                            StatCard(
+                                                title: "Study Time",
+                                                value: progressViewModel.formattedTimeSpent,
+                                                icon: "clock",
+                                                color: .blue
+                                            )
+                                            StatCard(
+                                                title: "Streak",
+                                                value: "\(progress.studyStreak)",
+                                                icon: "flame",
+                                                color: .orange
+                                            )
+                                            StatCard(
+                                                title: "Mastered",
+                                                value: "\(progress.masteredCards)/\(progress.totalCards)",
+                                                icon: "checkmark.seal",
+                                                color: .green
+                                            )
+                                        }
+                                        .padding(.horizontal, 16)
+                                    }
+                                }
+                                
+                                VStack(spacing: 16) {
+                                    Text("Daily Statistics")
+                                        .font(.headline)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 16)
+                                    
+                                    HStack(spacing: 16) {
+                                        StatCard(
+                                            title: "Cards Studied",
+                                            value: progressViewModel.progress.map { "\($0.cardsStudied)" } ?? "0",
+                                            icon: "square.and.pencil",
+                                            color: .blue
+                                        )
+                                        StatCard(
+                                            title: "Quizzes Done",
+                                            value: progressViewModel.progress.map { "\($0.quizzesCompleted)" } ?? "0",
+                                            icon: "checkmark.circle",
+                                            color: .green
+                                        )
+                                        StatCard(
+                                            title: "Accuracy",
+                                            value: progressViewModel.progress.map { "\(Int($0.averageScore))%" } ?? "0%",
+                                            icon: "chart.bar",
+                                            color: .orange
+                                        )
+                                    }
+                                    .padding(.horizontal, 16)
+                                }
+                                
+                                VStack(spacing: 16) {
+                                    Text("Achievements")
+                                        .font(.headline)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 16)
+                                    
+                                    HStack(spacing: 12) {
+                                        AchievementBadgeView(
+                                            title: "First Session",
+                                            isUnlocked: (progressViewModel.progress?.totalTimeSpent ?? 0) > 0,
+                                            icon: "play.circle.fill"
+                                        )
+                                        AchievementBadgeView(
+                                            title: "3-Day Streak",
+                                            isUnlocked: (progressViewModel.progress?.studyStreak ?? 0) >= 3,
+                                            icon: "flame.fill"
+                                        )
+                                        AchievementBadgeView(
+                                            title: "10 Cards",
+                                            isUnlocked: (progressViewModel.progress?.cardsStudied ?? 0) >= 10,
+                                            icon: "rectangle.stack.fill"
+                                        )
+                                    }
+                                    .padding(.horizontal, 16)
+                                }
+                            }
+                            .padding(.bottom, 24)
                         }
                     }
                 }
                 .navigationTitle("Progress")
-                .onAppear {
-                    Task {
-                        await progressViewModel.fetchDailyStatistics()
-                    }
+                .task {
+                    await progressViewModel.fetchProgress(for: samplePdfFileId)
+                    await progressViewModel.fetchDailyStatistics()
                 }
             }
         }
+    }
+}
+
+//MARK: -Badge View
+struct AchievementBadgeView: View {
+    let title: String
+    let isUnlocked: Bool
+    let icon: String
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(isUnlocked ? .yellow : .gray)
+            
+            Text(title)
+                .font(.caption)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.primary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(isUnlocked ? Color.yellow.opacity(0.15) : Color.gray.opacity(0.12))
+        .cornerRadius(12)
     }
 }
 

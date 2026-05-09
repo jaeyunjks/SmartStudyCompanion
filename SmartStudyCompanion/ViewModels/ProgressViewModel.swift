@@ -14,6 +14,8 @@ class ProgressViewModel: ObservableObject {
     @Published var dailyStatistics: [DailyStatistics] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var isUsingCachedData = false
+    @Published var cachedFallbackMessage: String?
     
     private let apiService = APIService.shared
     private let coreDataManager = CoreDataManager.shared
@@ -25,23 +27,36 @@ class ProgressViewModel: ObservableObject {
     func fetchProgress(for pdfFileId: String) async {
         isLoading = true
         errorMessage = nil
-        
+        isUsingCachedData = false
+        cachedFallbackMessage = nil
+    
         do {
             let fetchedProgress = try await apiService.fetchProgress(for: pdfFileId)
             self.progress = fetchedProgress
-            
-            // Cache to CoreData
-            try coreDataManager.saveProgress(fetchedProgress)
+        
+        // Cache to CoreData
+        try coreDataManager.saveProgress(fetchedProgress)
         } catch let error as NetworkError {
-            self.errorMessage = error.localizedDescription
-            // Try loading from cache
+        // Try loading from cache first
             if let cached = coreDataManager.fetchProgress(for: pdfFileId) {
                 self.progress = cached
+                self.isUsingCachedData = true
+                self.cachedFallbackMessage = "Showing cached progress because the latest data could not be loaded."
+                self.errorMessage = nil
+            } else {
+                self.errorMessage = error.localizedDescription
             }
         } catch {
-            self.errorMessage = "Failed to fetch progress"
+            if let cached = coreDataManager.fetchProgress(for: pdfFileId) {
+                self.progress = cached
+                self.isUsingCachedData = true
+                self.cachedFallbackMessage = "Showing cached progress because the latest data could not be loaded."
+                self.errorMessage = nil
+            } else {
+                self.errorMessage = "Failed to fetch progress"
+            }
         }
-        
+    
         isLoading = false
     }
     
@@ -81,7 +96,7 @@ class ProgressViewModel: ObservableObject {
     func fetchDailyStatistics(days: Int = 7) async {
         isLoading = true
         errorMessage = nil
-        
+    
         do {
             let stats = try await apiService.fetchDailyStatistics(days: days)
             self.dailyStatistics = stats
@@ -90,9 +105,9 @@ class ProgressViewModel: ObservableObject {
         } catch {
             self.errorMessage = "Failed to fetch statistics"
         }
-        
+    
         isLoading = false
-    }
+        }
     
     // MARK: - Progress Helpers
     

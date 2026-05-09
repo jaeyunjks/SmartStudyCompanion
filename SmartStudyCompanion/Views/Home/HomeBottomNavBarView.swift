@@ -3,6 +3,7 @@ import SwiftUI
 enum HomeNavItem: String, CaseIterable, Identifiable {
     case home = "Home"
     case library = "Library"
+    case progress = "Progress"
     case profile = "Profile"
 
     var id: String { rawValue }
@@ -13,6 +14,8 @@ enum HomeNavItem: String, CaseIterable, Identifiable {
             return "house.fill"
         case .library:
             return "books.vertical"
+        case .progress:
+            return "chart.bar.fill"
         case .profile:
             return "person.crop.circle"
         }
@@ -24,7 +27,7 @@ struct HomeBottomNavBarView: View {
     let onSelect: (HomeNavItem) -> Void
 
     var body: some View {
-        HStack(spacing: 18) {
+        HStack(spacing: 10) {
             ForEach(HomeNavItem.allCases) { item in
                 Button(action: { onSelect(item) }) {
                     VStack(spacing: 4) {
@@ -32,9 +35,11 @@ struct HomeBottomNavBarView: View {
                             .font(.system(size: 17, weight: .semibold))
                         Text(item.rawValue)
                             .font(.caption2.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .foregroundStyle(selected == item ? HomeTheme.accent : HomeTheme.accent.opacity(0.45))
-                    .padding(.horizontal, 13)
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 7)
                     .background(
                         selected == item ? HomeTheme.accentSoft.opacity(0.9) : Color.clear

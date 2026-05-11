@@ -2,7 +2,7 @@
 
 ## 1. Product Overview
 
-SmartStudyCompanion is a study workflow app that combines workspace organization, note taking, file uploads, AI summaries, and AI chat in one SwiftUI iOS experience.
+SmartStudyCompanion is a study workflow app that combines workspace organisation, note taking, file uploads, AI summaries, and AI chat in one SwiftUI iOS experience.
 
 ## 2. Background and Motivation
 
@@ -12,7 +12,7 @@ Students frequently switch between note apps, cloud storage, and AI tools. This 
 
 - University and college students
 - Self-directed learners
-- Anyone organizing study materials into focused workspaces
+- Anyone organising study materials into focused workspaces
 
 ## 4. User Problems
 
@@ -27,13 +27,13 @@ Students frequently switch between note apps, cloud storage, and AI tools. This 
 - Support notes, uploads, summaries, and chat in one flow
 - Keep the UI calm and easy to navigate
 - Preserve study data locally so the app remains useful across sessions
-- Use AI to reduce manual summarizing work
+- Use AI to reduce manual summarising work
 
 ## 6. Non-Goals
 
 - Full learning-management-system feature parity
 - Social collaboration or shared workspaces
-- Complex offline-first synchronization architecture
+- Complex offline-first synchronisation architecture
 - A generic AI chat product unrelated to study content
 - Overly technical user-facing messaging
 
@@ -105,7 +105,7 @@ These future tools should remain clearly separated from the completed MVP until 
 ## 13. UX Principles
 
 - Keep the main study path obvious
-- Minimize technical language
+- Minimise technical language
 - Show honest states for loading, empty, and future features
 - Keep action surfaces easy to scan
 - Do not overwhelm the user with too many simultaneous choices
@@ -138,7 +138,7 @@ These future tools should remain clearly separated from the completed MVP until 
 ## 17. Testing Requirements
 
 - View models should be covered by focused unit tests
-- Mapping and normalization logic should be tested
+- Mapping and normalisation logic should be tested
 - Backend controller/service behavior should have unit coverage
 - Manual smoke testing should cover auth, workspace creation, uploads, summary, chat, and future-tool modals
 

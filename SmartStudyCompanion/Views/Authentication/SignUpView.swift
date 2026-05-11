@@ -316,7 +316,7 @@ struct SignUpView: View {
 }
 
 #Preview {
-    @State var isShowingSignUp = true
+    @Previewable @State var isShowingSignUp = true
     return SignUpView(isShowingSignUp: $isShowingSignUp)
         .environmentObject(AuthViewModel())
 }

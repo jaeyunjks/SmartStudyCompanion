@@ -24,13 +24,13 @@ final class AIChatViewModel: ObservableObject {
         selectedContext: WorkspaceContext,
         selectedMode: ChatMode,
         suggestedPrompts: [SuggestedPrompt],
-        chatHistoryStorageService: WorkspaceChatHistoryStorageService = .shared
+        chatHistoryStorageService: WorkspaceChatHistoryStorageService? = nil
     ) {
         self.service = service
         self.selectedContext = selectedContext
         self.selectedMode = selectedMode
         self.suggestedPrompts = suggestedPrompts
-        self.chatHistoryStorageService = chatHistoryStorageService
+        self.chatHistoryStorageService = chatHistoryStorageService ?? Self.makeDefaultChatHistoryStorageService()
         let initialConversation = ChatConversation(
             title: "New conversation",
             messages: []
@@ -55,7 +55,7 @@ final class AIChatViewModel: ObservableObject {
 
     convenience init() {
         self.init(
-            service: BackendAIChatService(),
+            service: BackendAIChatService(apiService: Self.makeDefaultAPIService()),
             selectedContext: .mockCloudContext,
             selectedMode: .guide,
             suggestedPrompts: SuggestedPrompt.defaultPrompts
@@ -64,7 +64,7 @@ final class AIChatViewModel: ObservableObject {
 
     convenience init(selectedContext: WorkspaceContext) {
         self.init(
-            service: BackendAIChatService(),
+            service: BackendAIChatService(apiService: Self.makeDefaultAPIService()),
             selectedContext: selectedContext,
             selectedMode: .guide,
             suggestedPrompts: SuggestedPrompt.defaultPrompts
@@ -316,5 +316,13 @@ final class AIChatViewModel: ObservableObject {
             activeConversationID: activeConversationID
         )
         try? chatHistoryStorageService.saveHistory(snapshot, workspaceID: workspaceID)
+    }
+
+    private static func makeDefaultChatHistoryStorageService() -> WorkspaceChatHistoryStorageService {
+        WorkspaceChatHistoryStorageService.shared
+    }
+
+    private static func makeDefaultAPIService() -> APIService {
+        APIService.shared
     }
 }

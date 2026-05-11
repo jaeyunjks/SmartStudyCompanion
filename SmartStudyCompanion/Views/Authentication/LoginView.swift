@@ -329,7 +329,7 @@ struct LoginView: View {
 }
 
 #Preview {
-    @State var isShowingSignUp = false
+    @Previewable @State var isShowingSignUp = false
     return LoginView(isShowingSignUp: $isShowingSignUp)
         .environmentObject(AuthViewModel())
 }

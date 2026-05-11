@@ -4,11 +4,12 @@ import Combine
 final class StudySpaceStore: ObservableObject {
     static let shared = StudySpaceStore()
     private static let storageKey = "studyspaces.saved.v1"
-    private let apiService = APIService.shared
+    private let apiService: APIService
 
     @Published private(set) var studySpaces: [StudySpace]
 
-    init(seed: [StudySpace] = []) {
+    init(seed: [StudySpace] = [], apiService: APIService? = nil) {
+        self.apiService = apiService ?? Self.makeDefaultAPIService()
         let persisted = Self.loadPersistedStudySpaces()
         studySpaces = persisted.isEmpty ? seed : persisted
         Task {
@@ -21,7 +22,7 @@ final class StudySpaceStore: ObservableObject {
         iconName: String,
         category: String,
         description: String,
-        status: String = "Active",
+        status: StudySpaceStatus = .active,
         workspaceColorHex: String = "#388767"
     ) {
         let newSpace = StudySpace(
@@ -30,7 +31,7 @@ final class StudySpaceStore: ObservableObject {
             description: description.isEmpty ? "No description yet." : description,
             iconName: iconName,
             category: category,
-            status: "Active",
+            status: status,
             workspaceColorHex: workspaceColorHex,
             documentCount: 0,
             noteCount: 0,
@@ -54,7 +55,7 @@ final class StudySpaceStore: ObservableObject {
         iconName: String,
         category: String,
         description: String,
-        status: String,
+        status: StudySpaceStatus,
         workspaceColorHex: String
     ) {
         guard let index = studySpaces.firstIndex(where: { $0.id == id }) else { return }
@@ -82,7 +83,7 @@ final class StudySpaceStore: ObservableObject {
         }
     }
 
-    func updateStatus(for id: UUID, status: String) {
+    func updateStatus(for id: UUID, status: StudySpaceStatus) {
         guard let index = studySpaces.firstIndex(where: { $0.id == id }) else { return }
         let existing = studySpaces[index]
         studySpaces[index] = StudySpace(
@@ -149,7 +150,7 @@ final class StudySpaceStore: ObservableObject {
         do {
             let remote = try await apiService.fetchWorkspaces()
             await MainActor.run {
-                self.studySpaces = remote.map(StudySpace.fromRemote(_:))
+                self.studySpaces = remote.compactMap(StudySpace.fromRemote(_:))
                 self.persistStudySpaces()
             }
         } catch {
@@ -177,10 +178,14 @@ final class StudySpaceStore: ObservableObject {
         return decoded
     }
 
+    private static func makeDefaultAPIService() -> APIService {
+        APIService.shared
+    }
+
     private func createWorkspaceOnBackend(localId: UUID, workspace: StudySpace) async {
         do {
             let remote = try await apiService.createWorkspace(request: workspace.createRequest)
-            let mapped = StudySpace.fromRemote(remote)
+            guard let mapped = StudySpace.fromRemote(remote) else { return }
             await MainActor.run {
                 guard let index = self.studySpaces.firstIndex(where: { $0.id == localId }) else { return }
                 self.studySpaces[index] = mapped

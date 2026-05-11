@@ -41,18 +41,18 @@ final class ActiveWorkspaceViewModel: ObservableObject {
 
     init(
         studySpace: StudySpace,
-        storageService: WorkspaceMaterialStorageService,
-        noteStorageService: WorkspaceNoteStorageService,
-        summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService = .shared,
-        store: StudySpaceStore,
-        apiService: APIService = .shared
+        storageService: WorkspaceMaterialStorageService? = nil,
+        noteStorageService: WorkspaceNoteStorageService? = nil,
+        summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService? = nil,
+        store: StudySpaceStore? = nil,
+        apiService: APIService? = nil
     ) {
         self.workspace = studySpace
-        self.store = store
-        self.storageService = storageService
-        self.noteStorageService = noteStorageService
-        self.summaryHistoryStorageService = summaryHistoryStorageService
-        self.apiService = apiService
+        self.store = store ?? Self.makeDefaultStudySpaceStore()
+        self.storageService = storageService ?? Self.makeDefaultMaterialStorageService()
+        self.noteStorageService = noteStorageService ?? Self.makeDefaultNoteStorageService()
+        self.summaryHistoryStorageService = summaryHistoryStorageService ?? .shared
+        self.apiService = apiService ?? .shared
         bindWorkspaceUpdates()
         loadMaterials()
         loadNotes()
@@ -187,22 +187,14 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         }
 
         let storageService = storageService
-        aiReadableContentTask = Task.detached(priority: .utility) {
-            var extractedContent: [UUID: String] = [:]
+        aiReadableContentTask = Task.detached(priority: .utility) { [materialsSnapshot, storageService, weak self] in
+            let extractedContent = Self.buildReadableContentSnapshot(
+                materials: materialsSnapshot,
+                storageService: storageService
+            )
 
-            for material in materialsSnapshot {
-                guard !Task.isCancelled else { return }
-                let extracted = storageService.extractSummaryContent(for: material)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                let fallback = material.previewText?
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                let content = [extracted, fallback]
-                    .compactMap { $0 }
-                    .first { !$0.isEmpty } ?? ""
-                extractedContent[material.id] = content
-            }
-
-            await MainActor.run {
+            await MainActor.run { [weak self, extractedContent] in
+                guard let self else { return }
                 guard !Task.isCancelled else { return }
                 let currentIDs = Set(self.materials.map(\.id))
                 self.materialContentCache = extractedContent.filter { currentIDs.contains($0.key) }
@@ -221,12 +213,24 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         }
     }
 
+    private static func makeDefaultMaterialStorageService() -> WorkspaceMaterialStorageService {
+        WorkspaceMaterialStorageService.shared
+    }
+
+    private static func makeDefaultNoteStorageService() -> WorkspaceNoteStorageService {
+        WorkspaceNoteStorageService.shared
+    }
+
+    private static func makeDefaultStudySpaceStore() -> StudySpaceStore {
+        StudySpaceStore.shared
+    }
+
     func editWorkspace(
         title: String,
         iconName: String,
         category: String,
         description: String,
-        status: String,
+        status: StudySpaceStatus,
         workspaceColorHex: String
     ) {
         store.updateStudyWorkspace(
@@ -240,7 +244,7 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         )
     }
 
-    func updateWorkspaceStatus(_ status: String) {
+    func updateWorkspaceStatus(_ status: StudySpaceStatus) {
         store.updateStatus(for: workspace.id, status: status)
     }
 
@@ -315,7 +319,12 @@ final class ActiveWorkspaceViewModel: ObservableObject {
             let storageService = storageService
             let workspaceID = workspaceID
             let material = try await Task.detached(priority: .userInitiated) {
-                try storageService.persistPhotoData(data, workspaceID: workspaceID, suggestedFileName: fileName)
+                try Self.persistPhotoMaterial(
+                    data: data,
+                    workspaceID: workspaceID,
+                    suggestedFileName: fileName,
+                    using: storageService
+                )
             }.value
             materials.insert(material, at: 0)
             materialContentCache[material.id] = material.previewText ?? ""
@@ -344,7 +353,11 @@ final class ActiveWorkspaceViewModel: ObservableObject {
             let storageService = storageService
             let workspaceID = workspaceID
             let material = try await Task.detached(priority: .userInitiated) {
-                try storageService.persistDocument(at: sourceURL, workspaceID: workspaceID)
+                try Self.persistDocumentMaterial(
+                    at: sourceURL,
+                    workspaceID: workspaceID,
+                    using: storageService
+                )
             }.value
 
             materials.insert(material, at: 0)
@@ -485,6 +498,43 @@ final class ActiveWorkspaceViewModel: ObservableObject {
         try storageService.saveMaterials(materials, workspaceID: workspaceID)
     }
 
+    private nonisolated static func buildReadableContentSnapshot(
+        materials: [StudyMaterial],
+        storageService: WorkspaceMaterialStorageService
+    ) -> [UUID: String] {
+        materials.reduce(into: [UUID: String]()) { result, material in
+            let extracted = storageService.extractSummaryContent(for: material)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let fallback = material.previewText?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let content = [extracted, fallback]
+                .compactMap { $0 }
+                .first { !$0.isEmpty } ?? ""
+            result[material.id] = content
+        }
+    }
+
+    private nonisolated static func persistPhotoMaterial(
+        data: Data,
+        workspaceID: UUID,
+        suggestedFileName: String?,
+        using storageService: WorkspaceMaterialStorageService
+    ) throws -> StudyMaterial {
+        try storageService.persistPhotoData(
+            data,
+            workspaceID: workspaceID,
+            suggestedFileName: suggestedFileName
+        )
+    }
+
+    private nonisolated static func persistDocumentMaterial(
+        at sourceURL: URL,
+        workspaceID: UUID,
+        using storageService: WorkspaceMaterialStorageService
+    ) throws -> StudyMaterial {
+        try storageService.persistDocument(at: sourceURL, workspaceID: workspaceID)
+    }
+
     private func bindWorkspaceUpdates() {
         store.$studySpaces
             .receive(on: DispatchQueue.main)
@@ -596,4 +646,5 @@ final class ActiveWorkspaceViewModel: ObservableObject {
             }
         }
     }
+
 }

@@ -1,9 +1,7 @@
 import SwiftUI
 
 struct StudySpaceStatusPickerView: View {
-    @Binding var selectedStatus: String
-
-    private let options = ["Active", "Inactive"]
+    @Binding var selectedStatus: StudySpaceStatus
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -13,20 +11,17 @@ struct StudySpaceStatusPickerView: View {
                 .foregroundStyle(CreateStudySpaceTheme.mutedText)
 
             HStack(spacing: 8) {
-                ForEach(options, id: \.self) { option in
+                ForEach(StudySpaceStatus.allCases) { option in
                     let isSelected = selectedStatus == option
-                    let optionTint = option == "Inactive"
-                        ? Color(red: 0.76, green: 0.25, blue: 0.30)
-                        : Color(red: 0.22, green: 0.58, blue: 0.38)
                     Button {
                         selectedStatus = option
                     } label: {
-                        Text(option)
+                        Text(option.displayName)
                             .font(.footnote.weight(.semibold))
-                            .foregroundStyle(isSelected ? .white : optionTint)
+                            .foregroundStyle(isSelected ? .white : option.foregroundColor)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
-                            .background(isSelected ? optionTint : optionTint.opacity(0.14))
+                            .background(isSelected ? option.foregroundColor : option.backgroundColor)
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -39,6 +34,6 @@ struct StudySpaceStatusPickerView: View {
 }
 
 #Preview {
-    StudySpaceStatusPickerView(selectedStatus: .constant("Active"))
+    StudySpaceStatusPickerView(selectedStatus: .constant(.active))
         .padding()
 }

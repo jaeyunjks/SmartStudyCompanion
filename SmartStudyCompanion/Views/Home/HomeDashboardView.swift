@@ -47,6 +47,7 @@ struct HomeDashboardView: View {
                                 ScrollView {
                                     LazyVStack(alignment: .leading, spacing: HomeTheme.sectionSpacing) {
                                         HomeGreetingSectionView(animateGreeting: animateGreeting)
+                                            .environmentObject(authViewModel)
                                         HeroSectionView(
                                             onCreateStudySpace: {
                                                 showCreateStudySpaceSheet = true
@@ -118,10 +119,11 @@ struct HomeDashboardView: View {
 
 private struct HomeGreetingSectionView: View {
     let animateGreeting: Bool
+    @EnvironmentObject var authViewModel: AuthViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Welcome back, Yafie!")
+            Text(authViewModel.welcomeBackText)
                 .font(.system(size: 32, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
             Text("Ready to pick up where you left off?")
@@ -427,7 +429,7 @@ private struct EditProfileSheet: View {
                 username = authViewModel.username
                 pendingImageData = authViewModel.profileImageData
             }
-            .onChange(of: selectedPhotoItem) { newItem in
+            .onChange(of: selectedPhotoItem) { _, newItem in
                 guard let newItem else { return }
                 Task {
                     if let data = try? await newItem.loadTransferable(type: Data.self) {

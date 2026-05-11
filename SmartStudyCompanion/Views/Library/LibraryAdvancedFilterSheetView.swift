@@ -3,20 +3,35 @@ import SwiftUI
 struct LibraryAdvancedFilterSheetView: View {
     @Environment(\.dismiss) private var dismiss
 
-    @Binding var selectedStatus: String
-    @Binding var selectedSort: String
+    @Binding var selectedStatus: StudySpaceFilterStatus
+    @Binding var selectedSort: LibrarySortOption
     @Binding var selectedCategory: String
 
-    let statuses: [String]
-    let sorts: [String]
+    let statuses: [StudySpaceFilterStatus]
+    let sorts: [LibrarySortOption]
     let categories: [String]
 
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
-                filterSection(title: "Status", options: statuses, selection: $selectedStatus)
-                filterSection(title: "Sort", options: sorts, selection: $selectedSort)
-                filterSection(title: "Category", options: categories, selection: $selectedCategory)
+                filterSection(
+                    title: "Status",
+                    options: statuses,
+                    selection: $selectedStatus,
+                    displayText: { $0.displayName }
+                )
+                filterSection(
+                    title: "Sort",
+                    options: sorts,
+                    selection: $selectedSort,
+                    displayText: { $0.displayName }
+                )
+                filterSection(
+                    title: "Category",
+                    options: categories,
+                    selection: $selectedCategory,
+                    displayText: { $0 }
+                )
                 Spacer()
             }
             .padding(20)
@@ -25,8 +40,8 @@ struct LibraryAdvancedFilterSheetView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Reset") {
-                        selectedStatus = "All"
-                        selectedSort = "Recently Updated"
+                        selectedStatus = .all
+                        selectedSort = .recentlyUpdated
                         selectedCategory = "All"
                     }
                 }
@@ -39,7 +54,12 @@ struct LibraryAdvancedFilterSheetView: View {
     }
 
     @ViewBuilder
-    private func filterSection(title: String, options: [String], selection: Binding<String>) -> some View {
+    private func filterSection<Value: Hashable>(
+        title: String,
+        options: [Value],
+        selection: Binding<Value>,
+        displayText: @escaping (Value) -> String
+    ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.subheadline.weight(.bold))
@@ -49,7 +69,7 @@ struct LibraryAdvancedFilterSheetView: View {
                 HStack(spacing: 8) {
                     ForEach(options, id: \.self) { option in
                         Button(action: { selection.wrappedValue = option }) {
-                            Text(option)
+                            Text(displayText(option))
                                 .font(.footnote.weight(.semibold))
                                 .foregroundStyle(selection.wrappedValue == option ? .white : LibraryTheme.accent)
                                 .padding(.horizontal, 14)
@@ -69,11 +89,11 @@ struct LibraryAdvancedFilterSheetView: View {
 
 #Preview {
     LibraryAdvancedFilterSheetView(
-        selectedStatus: .constant("All"),
-        selectedSort: .constant("Recently Updated"),
+        selectedStatus: .constant(.all),
+        selectedSort: .constant(.recentlyUpdated),
         selectedCategory: .constant("All"),
-        statuses: ["All", "Active", "Review", "Completed"],
-        sorts: ["Recently Updated", "Alphabetical"],
+        statuses: StudySpaceFilterStatus.allCases,
+        sorts: LibrarySortOption.allCases,
         categories: ["All", "Cloud", "AI", "Data"]
     )
 }

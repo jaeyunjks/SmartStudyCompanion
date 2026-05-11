@@ -20,17 +20,17 @@ struct StudySummary: Identifiable, Equatable, Codable {
             category: category,
             estimatedReadTime: "Quick read",
             title: "\(title) (Simplified)",
-            overview: overview.shortened(maxWords: 45),
-            mainIdeas: mainIdeas.prefix(4).map { SummaryMainIdea(text: $0.text.shortened(maxWords: 14)) },
-            keyConcepts: keyConcepts.prefix(4).map {
-                KeyConcept(term: $0.term, definition: $0.definition.shortened(maxWords: 14))
+            overview: overview.shortened(maxWords: 30),
+            mainIdeas: mainIdeas.prefix(3).map { SummaryMainIdea(text: $0.text.shortened(maxWords: 12)) },
+            keyConcepts: keyConcepts.prefix(3).map {
+                KeyConcept(term: $0.term, definition: $0.definition.shortened(maxWords: 12))
             },
-            importantPoints: importantPoints.prefix(5).map {
-                ImportantPoint(text: $0.text.shortened(maxWords: 16), highlights: [])
+            importantPoints: importantPoints.prefix(4).map {
+                ImportantPoint(text: $0.text.shortened(maxWords: 12), highlights: [])
             },
-            examples: examples.prefix(2).map { $0.shortened(maxWords: 18) },
-            quickTakeaways: quickTakeaways.prefix(5).map { $0.shortened(maxWords: 12) },
-            suggestedNextActions: suggestedNextActions.prefix(5).map { $0.shortened(maxWords: 12) },
+            examples: examples.prefix(1).map { $0.shortened(maxWords: 14) },
+            quickTakeaways: quickTakeaways.prefix(3).map { $0.shortened(maxWords: 10) },
+            suggestedNextActions: suggestedNextActions.prefix(3).map { $0.shortened(maxWords: 10) },
             isBookmarked: isBookmarked
         )
     }

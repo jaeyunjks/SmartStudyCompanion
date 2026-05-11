@@ -7,7 +7,7 @@ struct StudySpace: Identifiable, Hashable, Codable {
     let description: String
     let iconName: String
     let category: String
-    let status: String
+    let status: StudySpaceStatus
     let workspaceColorHex: String
     let documentCount: Int
     let noteCount: Int
@@ -46,7 +46,7 @@ struct CreateWorkspaceRequest: Codable {
     let description: String
     let iconName: String
     let category: String
-    let status: String
+    let status: StudySpaceStatus
     let workspaceColorHex: String
     let documentCount: Int
     let noteCount: Int
@@ -59,7 +59,7 @@ struct UpdateWorkspaceRequest: Codable {
     let description: String
     let iconName: String
     let category: String
-    let status: String
+    let status: StudySpaceStatus
     let workspaceColorHex: String
     let documentCount: Int
     let noteCount: Int
@@ -75,7 +75,7 @@ extension StudySpace {
             description: "Infrastructure as service, virtualization techniques, and distributed systems architecture.",
             iconName: "cloud",
             category: "IT",
-            status: "Active",
+            status: .active,
             workspaceColorHex: "#388767",
             documentCount: 3,
             noteCount: 2,
@@ -90,7 +90,7 @@ extension StudySpace {
             description: "Exploring neural mechanisms of thought, memory, and spatial navigation.",
             iconName: "brain.head.profile",
             category: "Science",
-            status: "Inactive",
+            status: .inactive,
             workspaceColorHex: "#4B85E5",
             documentCount: 12,
             noteCount: 8,
@@ -105,7 +105,7 @@ extension StudySpace {
             description: "Algorithmic bias, regulatory frameworks, and future safety.",
             iconName: "sparkles",
             category: "AI",
-            status: "Active",
+            status: .active,
             workspaceColorHex: "#8E68D8",
             documentCount: 5,
             noteCount: 6,
@@ -120,7 +120,7 @@ extension StudySpace {
             description: "B-Trees, graph theory, and complexity analysis for final prep.",
             iconName: "tray.full",
             category: "IT",
-            status: "Active",
+            status: .active,
             workspaceColorHex: "#E58A39",
             documentCount: 5,
             noteCount: 14,
@@ -135,7 +135,7 @@ extension StudySpace {
             description: "Readings on utilitarianism, deontology, and virtual ethics frameworks.",
             iconName: "book.closed",
             category: "Humanities",
-            status: "Inactive",
+            status: .inactive,
             workspaceColorHex: "#D7669D",
             documentCount: 2,
             noteCount: 1,
@@ -148,28 +148,31 @@ extension StudySpace {
 }
 
 extension StudySpace {
-    static func fromRemote(_ remote: RemoteStudySpace) -> StudySpace {
+    static func fromRemote(_ remote: RemoteStudySpace) -> StudySpace? {
         func firstNonEmpty(_ values: String?...) -> String? {
             values
                 .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .first { !$0.isEmpty }
         }
 
+        guard let id = UUID(uuidString: remote.id.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            return nil
+        }
+
         let resolvedDescription = remote.description?.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedIcon = remote.iconName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedCategory = remote.category?.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTag = remote.tag?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedStatus = remote.status?.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedColor = remote.workspaceColorHex?.trimmingCharacters(in: .whitespacesAndNewlines)
             ?? remote.color?.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return StudySpace(
-            id: UUID(uuidString: remote.id) ?? UUID(),
+            id: id,
             title: remote.title,
             description: firstNonEmpty(resolvedDescription) ?? "No description yet.",
             iconName: firstNonEmpty(resolvedIcon) ?? "book.closed",
             category: firstNonEmpty(resolvedCategory, resolvedTag) ?? "General",
-            status: firstNonEmpty(resolvedStatus) ?? "Active",
+            status: .init(normalizing: remote.status),
             workspaceColorHex: firstNonEmpty(resolvedColor) ?? "#388767",
             documentCount: remote.documentCount ?? 0,
             noteCount: remote.noteCount ?? 0,
@@ -186,7 +189,7 @@ extension StudySpace {
             description: description,
             iconName: iconName,
             category: category,
-            status: normalizedStatus,
+            status: status,
             workspaceColorHex: workspaceColorHex,
             documentCount: documentCount,
             noteCount: noteCount,
@@ -201,7 +204,7 @@ extension StudySpace {
             description: description,
             iconName: iconName,
             category: category,
-            status: normalizedStatus,
+            status: status,
             workspaceColorHex: workspaceColorHex,
             documentCount: documentCount,
             noteCount: noteCount,
@@ -228,16 +231,14 @@ extension StudySpace {
     }
 
     var normalizedStatus: String {
-        status.caseInsensitiveCompare("inactive") == .orderedSame ? "Inactive" : "Active"
+        status.displayName
     }
 
     var statusForegroundColor: Color {
-        normalizedStatus == "Inactive"
-            ? Color(red: 0.76, green: 0.25, blue: 0.30)
-            : Color(red: 0.22, green: 0.58, blue: 0.38)
+        status.foregroundColor
     }
 
     var statusBackgroundColor: Color {
-        statusForegroundColor.opacity(0.14)
+        status.backgroundColor
     }
 }

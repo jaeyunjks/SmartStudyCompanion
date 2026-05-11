@@ -102,18 +102,18 @@ struct LibraryView: View {
             }
             .ignoresSafeArea(edges: .bottom)
         }
-        .sheet(isPresented: $showFilterSheet) {
-            LibraryAdvancedFilterSheetView(
-                selectedStatus: $viewModel.selectedStatus,
-                selectedSort: $viewModel.selectedSort,
-                selectedCategory: $viewModel.selectedCategory,
-                statuses: ["All", "Active", "Inactive"],
-                sorts: ["Recently Updated", "Alphabetical"],
-                categories: ["All", "Cloud", "AI", "Data", "Ethics", "Neuroscience"]
-            )
-            .presentationDetents([.fraction(0.45), .medium])
-        }
-        .sheet(isPresented: $showCreateStudySpaceSheet) {
+            .sheet(isPresented: $showFilterSheet) {
+                LibraryAdvancedFilterSheetView(
+                    selectedStatus: $viewModel.selectedStatus,
+                    selectedSort: $viewModel.selectedSort,
+                    selectedCategory: $viewModel.selectedCategory,
+                    statuses: StudySpaceFilterStatus.allCases,
+                    sorts: LibrarySortOption.allCases,
+                    categories: ["All", "Cloud", "AI", "Data", "Ethics", "Neuroscience"]
+                )
+                .presentationDetents([.fraction(0.45), .medium])
+            }
+            .sheet(isPresented: $showCreateStudySpaceSheet) {
             CreateStudySpaceView(onCreate: { title, icon, category, description, status, workspaceColorHex in
                 viewModel.addStudyWorkspace(
                     title: title,

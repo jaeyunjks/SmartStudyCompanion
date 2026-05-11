@@ -1,6 +1,6 @@
 # SmartStudyCompanion
 
-SmartStudyCompanion is a SwiftUI + MVVM iOS study companion app with a NestJS backend. It helps users create study spaces, write and manage notes, upload files and photos, generate AI summaries, and chat with study content.
+SmartStudyCompanion(Lumora) is a SwiftUI + MVVM iOS study companion app with a NestJS backend. It helps users create study spaces, write and manage notes, upload files and photos, generate AI summaries, and chat with study content.
 
 ## Problem Statement
 

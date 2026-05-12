@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct LibraryFilterChipsView: View {
-    @Binding var selectedSort: String
+    @Binding var selectedSort: LibrarySortOption
     let hasActiveAdvancedFilters: Bool
     let onFilterTap: () -> Void
 
@@ -10,16 +10,16 @@ struct LibraryFilterChipsView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     FilterChipView(
-                        title: "Recently Updated",
-                        isSelected: selectedSort == "Recently Updated"
+                        title: LibrarySortOption.recentlyUpdated.displayName,
+                        isSelected: selectedSort == .recentlyUpdated
                     )
-                    .onTapGesture { selectedSort = "Recently Updated" }
+                    .onTapGesture { selectedSort = .recentlyUpdated }
 
                     FilterChipView(
-                        title: "Alphabetical",
-                        isSelected: selectedSort == "Alphabetical"
+                        title: LibrarySortOption.alphabetical.displayName,
+                        isSelected: selectedSort == .alphabetical
                     )
-                    .onTapGesture { selectedSort = "Alphabetical" }
+                    .onTapGesture { selectedSort = .alphabetical }
                 }
                 .padding(.vertical, 2)
             }
@@ -57,7 +57,7 @@ private struct FilterChipView: View {
 
 #Preview {
     LibraryFilterChipsView(
-        selectedSort: .constant("Recently Updated"),
+        selectedSort: .constant(.recentlyUpdated),
         hasActiveAdvancedFilters: true,
         onFilterTap: {}
     )

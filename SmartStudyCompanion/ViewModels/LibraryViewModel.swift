@@ -4,22 +4,22 @@ import Combine
 final class LibraryViewModel: ObservableObject {
     @Published var studySpaces: [StudySpace]
     @Published var searchText: String
-    @Published var selectedSort: String
-    @Published var selectedStatus: String
+    @Published var selectedSort: LibrarySortOption
+    @Published var selectedStatus: StudySpaceFilterStatus
     @Published var selectedCategory: String
 
     private let store: StudySpaceStore
     private var cancellables = Set<AnyCancellable>()
 
-    init(store: StudySpaceStore = .shared) {
-        self.store = store
-        studySpaces = store.studySpaces
+    init(store: StudySpaceStore? = nil) {
+        self.store = store ?? Self.makeDefaultStore()
+        studySpaces = self.store.studySpaces
         searchText = ""
-        selectedSort = "Recently Updated"
-        selectedStatus = "All"
+        selectedSort = .recentlyUpdated
+        selectedStatus = .all
         selectedCategory = "All"
 
-        store.$studySpaces
+        self.store.$studySpaces
             .sink { [weak self] spaces in
                 self?.studySpaces = spaces
             }
@@ -35,9 +35,9 @@ final class LibraryViewModel: ObservableObject {
                 $0.description.localizedCaseInsensitiveContains(query)
             }
 
-        let statusFiltered = selectedStatus == "All"
+        let statusFiltered = selectedStatus == .all
             ? queryFiltered
-            : queryFiltered.filter { $0.status == selectedStatus }
+            : queryFiltered.filter { selectedStatus.matches($0.status) }
 
         let categoryFiltered = selectedCategory == "All"
             ? statusFiltered
@@ -46,7 +46,7 @@ final class LibraryViewModel: ObservableObject {
                 space.description.localizedCaseInsensitiveContains(selectedCategory)
             }
 
-        if selectedSort == "Alphabetical" {
+        if selectedSort == .alphabetical {
             return categoryFiltered.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         }
 
@@ -58,7 +58,7 @@ final class LibraryViewModel: ObservableObject {
         iconName: String,
         category: String,
         description: String,
-        status: String,
+        status: StudySpaceStatus,
         workspaceColorHex: String
     ) {
         store.addStudyWorkspace(
@@ -72,6 +72,10 @@ final class LibraryViewModel: ObservableObject {
     }
 
     var hasActiveAdvancedFilters: Bool {
-        selectedStatus != "All" || selectedCategory != "All"
+        selectedStatus != .all || selectedCategory != "All"
+    }
+
+    private static func makeDefaultStore() -> StudySpaceStore {
+        StudySpaceStore.shared
     }
 }

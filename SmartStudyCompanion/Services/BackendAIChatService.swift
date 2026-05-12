@@ -3,7 +3,7 @@ import Foundation
 struct BackendAIChatService: AIChatServiceProtocol {
     private let apiService: APIService
 
-    init(apiService: APIService = .shared) {
+    init(apiService: APIService) {
         self.apiService = apiService
     }
 

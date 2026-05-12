@@ -65,62 +65,70 @@ struct SummaryDetailView: View {
 #endif
 
     var body: some View {
-        ZStack {
-            palette.background.ignoresSafeArea()
+        ScrollViewReader { proxy in
+            ZStack {
+                palette.background.ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    controlBar
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 28) {
+                        controlBar
+                            .id("summary-top")
 
-                    if let summary = viewModel.summary {
-                        summaryContent(summary)
-                    } else {
-                        emptyState
+                        if let summary = viewModel.summary {
+                            summaryContent(summary)
+                        } else {
+                            emptyState
+                        }
+
+                        if !viewModel.versions.isEmpty {
+                            historySection
+                        }
+
+                        if let errorMessage = viewModel.errorMessage {
+                            Text(errorMessage)
+                                .font(.footnote.weight(.medium))
+                                .foregroundStyle(.red)
+                        }
                     }
-
-                    if !viewModel.versions.isEmpty {
-                        historySection
-                    }
-
-                    if let errorMessage = viewModel.errorMessage {
-                        Text(errorMessage)
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(.red)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 120)
-            }
-            .safeAreaInset(edge: .top) {
-                SummaryTopBar(
-                    shareText: viewModel.shareSummaryText(),
-                    onBack: { dismiss() },
-                    onFallbackShare: { showFallbackShareSheet = true }
-                )
-            }
-            .safeAreaInset(edge: .bottom) {
-                if viewModel.summary != nil {
-                    SummaryActionButtons(
-                        isLoading: viewModel.isLoading,
-                        onRegenerate: viewModel.regenerateSummary,
-                        onSimplify: viewModel.simplifySummary
-                    )
                     .padding(.horizontal, 20)
-                    .padding(.top, 10)
-                    .padding(.bottom, 8)
-                    .background(
-                        LinearGradient(
-                            colors: [palette.background.opacity(0), palette.background],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
+                    .padding(.top, 20)
+                    .padding(.bottom, 120)
+                }
+                .safeAreaInset(edge: .top) {
+                    SummaryTopBar(
+                        shareText: viewModel.shareSummaryText(),
+                        onBack: { dismiss() },
+                        onFallbackShare: { showFallbackShareSheet = true }
                     )
                 }
-            }
+                .safeAreaInset(edge: .bottom) {
+                    if viewModel.summary != nil {
+                        SummaryActionButtons(
+                            isLoading: viewModel.isLoading,
+                            onRegenerate: viewModel.regenerateSummary,
+                            onSimplify: {
+                                viewModel.simplifySummary()
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    proxy.scrollTo("summary-top", anchor: .top)
+                                }
+                            }
+                        )
+                        .padding(.horizontal, 20)
+                        .padding(.top, 10)
+                        .padding(.bottom, 8)
+                        .background(
+                            LinearGradient(
+                                colors: [palette.background.opacity(0), palette.background],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                    }
+                }
 
-            if viewModel.isLoading {
-                loadingOverlay
+                if viewModel.isLoading {
+                    loadingOverlay
+                }
             }
         }
         .sheet(isPresented: $showFallbackShareSheet) {

@@ -67,6 +67,14 @@ private struct WorkspaceSummaryRoute: Identifiable, Hashable {
     let sourceItems: [SummarySourceItem]
 }
 
+private enum ComingSoonFeature: String, Identifiable {
+    case quiz
+    case flashcards
+    case studyPlan
+
+    var id: String { rawValue }
+}
+
 struct ActiveWorkspaceView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
@@ -84,21 +92,14 @@ struct ActiveWorkspaceView: View {
     @State private var showKnowledgeQuiz = false
     @State private var showFlashcardSession = false
     @State private var showStudyPlan = false
+    @State private var comingSoonFeature: ComingSoonFeature?
     @State private var showImportOptions = false
     @State private var showPhotoPicker = false
     @State private var showFileImporter = false
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
 
     init(studySpace: StudySpace) {
-        _viewModel = StateObject(
-            wrappedValue: ActiveWorkspaceViewModel(
-                studySpace: studySpace,
-                storageService: .shared,
-                noteStorageService: .shared,
-                summaryHistoryStorageService: .shared,
-                store: .shared
-            )
-        )
+        _viewModel = StateObject(wrappedValue: ActiveWorkspaceViewModel(studySpace: studySpace))
     }
 
     var body: some View {
@@ -136,11 +137,11 @@ struct ActiveWorkspaceView: View {
                                 noteCount: viewModel.noteCount
                             )
 
-                            WorkspaceStudyToolsSectionView(
-                                onCreateNote: { activeNoteDraft = viewModel.makeDraftNote() },
-                                onPrimaryAction: { handleAction("Summarise Knowledge") },
-                                onSecondaryAction: { handleAction($0) }
-                            )
+                                WorkspaceStudyToolsSectionView(
+                                    onCreateNote: { activeNoteDraft = viewModel.makeDraftNote() },
+                                    onPrimaryAction: { handleAction("Summarise Knowledge") },
+                                    onSecondaryAction: { handleAction($0) }
+                                )
 
                             WorkspaceSectionLabel(title: "Notes")
                             WorkspaceNotesSectionView(
@@ -237,10 +238,10 @@ struct ActiveWorkspaceView: View {
                 showEditWorkspaceSheet = true
             }
             Button("Set as Active") {
-                viewModel.updateWorkspaceStatus("Active")
+                viewModel.updateWorkspaceStatus(.active)
             }
             Button("Set as Inactive") {
-                viewModel.updateWorkspaceStatus("Inactive")
+                viewModel.updateWorkspaceStatus(.inactive)
             }
             Button("Delete Workspace", role: .destructive) {
                 showDeleteWorkspaceConfirmation = true
@@ -351,6 +352,11 @@ struct ActiveWorkspaceView: View {
         .navigationDestination(isPresented: $showStudyPlan) {
             StudyPlanView(workspaceTitle: viewModel.workspace.title)
         }
+        .sheet(item: $comingSoonFeature) { _ in
+            ComingSoonFeatureSheet()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
         .overlay {
             if viewModel.isImporting {
                 ZStack {
@@ -450,15 +456,15 @@ struct ActiveWorkspaceView: View {
             return
         }
         if title == "Quiz" {
-            showKnowledgeQuiz = true
+            comingSoonFeature = .quiz
             return
         }
         if title == "Flashcards" {
-            showFlashcardSession = true
+            comingSoonFeature = .flashcards
             return
         }
         if title == "Action Plan" {
-            showStudyPlan = true
+            comingSoonFeature = .studyPlan
             return
         }
     }
@@ -470,6 +476,81 @@ struct ActiveWorkspaceView: View {
             workspaceColorHex: viewModel.workspace.workspaceColorHex,
             sourceItems: sources
         )
+    }
+}
+
+private struct ComingSoonFeatureSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.97, green: 0.97, blue: 0.96),
+                    Color(red: 0.94, green: 0.94, blue: 0.93),
+                    Color(red: 0.90, green: 0.90, blue: 0.89)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                Capsule()
+                    .fill(Color.primary.opacity(0.10))
+                    .frame(width: 44, height: 5)
+                    .padding(.top, 6)
+
+                Circle()
+                    .fill(Color.white.opacity(0.78))
+                    .frame(width: 92, height: 92)
+                    .overlay(
+                        Image(systemName: "bookmark.fill")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.48, green: 0.48, blue: 0.48))
+                    )
+                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 6)
+                    .padding(.top, 6)
+
+                VStack(spacing: 10) {
+                    Text("Coming Soon")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+
+                    Text("This study tool is planned for a future update. For now, you can continue using notes, uploads, AI summaries, and chat.")
+                        .font(.system(size: 16, weight: .medium, design: .default))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+
+                Button(action: { dismiss() }) {
+                    Text("Got it")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.52, green: 0.52, blue: 0.52),
+                                    Color(red: 0.38, green: 0.38, blue: 0.38)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+
+                Spacer(minLength: 8)
+            }
+            .padding(.bottom, 22)
+        }
     }
 }
 

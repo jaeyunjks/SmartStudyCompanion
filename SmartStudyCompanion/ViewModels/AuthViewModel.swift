@@ -50,14 +50,17 @@ class AuthViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var rememberMeEnabled = UserDefaults.standard.bool(forKey: "auth.rememberMe")
     
-    private let apiService = APIService.shared
+    private let apiService: APIService
+    private let studySpaceStore: StudySpaceStore
     private static let loggedInKey = "auth.loggedIn"
     private static let profileDataKey = "auth.profileData"
     private static let rememberedEmailKey = "auth.remembered.email"
     private static let rememberedPasswordKey = "auth.remembered.password"
     private static let rememberMeKey = "auth.rememberMe"
 
-    init() {
+    init(apiService: APIService? = nil, studySpaceStore: StudySpaceStore? = nil) {
+        self.apiService = apiService ?? Self.makeDefaultAPIService()
+        self.studySpaceStore = studySpaceStore ?? Self.makeDefaultStudySpaceStore()
         restorePersistedSession()
     }
 
@@ -211,28 +214,12 @@ class AuthViewModel: ObservableObject {
 
     @MainActor
     func loginWithGooglePlaceholder() async {
-        // TODO: Replace with official Google Sign-In SDK flow and backend token verification.
-        completeAuthentication(
-            displayName: "Google User",
-            username: "google_user",
-            email: "google_user@placeholder.smartstudy",
-            rememberMe: true,
-            passwordForBiometrics: nil,
-            profileImageData: nil
-        )
+        errorMessage = "This sign-in option is planned for a future update."
     }
 
     @MainActor
     func loginWithApplePlaceholder() async {
-        // TODO: Replace with Sign in with Apple + backend identity token validation.
-        completeAuthentication(
-            displayName: "Apple User",
-            username: "apple_user",
-            email: "apple_user@placeholder.smartstudy",
-            rememberMe: true,
-            passwordForBiometrics: nil,
-            profileImageData: nil
-        )
+        errorMessage = "This sign-in option is planned for a future update."
     }
     
     // MARK: - Logout
@@ -245,7 +232,7 @@ class AuthViewModel: ObservableObject {
         isAuthenticated = false
         errorMessage = nil
         rememberMeEnabled = false
-        StudySpaceStore.shared.clearLocalCache()
+        studySpaceStore.clearLocalCache()
 
         UserDefaults.standard.removeObject(forKey: Self.loggedInKey)
         UserDefaults.standard.removeObject(forKey: Self.profileDataKey)
@@ -290,7 +277,7 @@ class AuthViewModel: ObservableObject {
         }
 
         Task {
-            await StudySpaceStore.shared.refreshFromBackend()
+            await studySpaceStore.refreshFromBackend()
         }
     }
 
@@ -346,6 +333,14 @@ class AuthViewModel: ObservableObject {
             return
         }
         sessionProfile = decoded
+    }
+
+    private static func makeDefaultAPIService() -> APIService {
+        APIService.shared
+    }
+
+    private static func makeDefaultStudySpaceStore() -> StudySpaceStore {
+        StudySpaceStore.shared
     }
 
     private func deriveDisplayName(from email: String) -> String {

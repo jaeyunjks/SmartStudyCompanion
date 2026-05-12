@@ -10,14 +10,14 @@ final class HomeDashboardViewModel: ObservableObject {
     private let store: StudySpaceStore
     private var cancellables = Set<AnyCancellable>()
 
-    init(store: StudySpaceStore = .shared) {
-        self.store = store
-        featuredStudySpaces = Array(store.studySpaces.prefix(2))
-        recentStudySpaces = Array(store.studySpaces.prefix(3))
+    init(store: StudySpaceStore? = nil) {
+        self.store = store ?? Self.makeDefaultStore()
+        featuredStudySpaces = Array(self.store.studySpaces.prefix(2))
+        recentStudySpaces = Array(self.store.studySpaces.prefix(3))
         quickActions = []
         currentUser = nil
 
-        store.$studySpaces
+        self.store.$studySpaces
             .sink { [weak self] spaces in
                 self?.featuredStudySpaces = Array(spaces.prefix(2))
                 self?.recentStudySpaces = Array(spaces.prefix(3))
@@ -25,12 +25,16 @@ final class HomeDashboardViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
+    private static func makeDefaultStore() -> StudySpaceStore {
+        StudySpaceStore.shared
+    }
+
     func addStudyWorkspace(
         title: String,
         iconName: String,
         category: String,
         description: String,
-        status: String,
+        status: StudySpaceStatus,
         workspaceColorHex: String
     ) {
         store.addStudyWorkspace(

@@ -55,7 +55,7 @@ final class SummaryDetailViewModel: ObservableObject {
         workspaceContent: String,
         sourceItems: [SummarySourceItem] = [],
         apiService: APIService? = nil,
-        summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService = .shared,
+        summaryHistoryStorageService: WorkspaceSummaryHistoryStorageService? = nil,
         initialSummary: StudySummary? = nil,
         shouldAutoRequestOnLoad: Bool = true,
         onSummarySaved: @escaping () -> Void = {}
@@ -65,8 +65,8 @@ final class SummaryDetailViewModel: ObservableObject {
         self.workspaceTitle = workspaceTitle
         self.workspaceContent = workspaceContent
         self.availableSources = sourceItems
-        self.apiService = apiService ?? APIService.shared
-        self.summaryHistoryStorageService = summaryHistoryStorageService
+        self.apiService = apiService ?? Self.makeDefaultAPIService()
+        self.summaryHistoryStorageService = summaryHistoryStorageService ?? Self.makeDefaultSummaryHistoryStorageService()
         self.shouldAutoRequestOnLoad = shouldAutoRequestOnLoad
         self.onSummarySaved = onSummarySaved
 
@@ -216,6 +216,14 @@ final class SummaryDetailViewModel: ObservableObject {
                 errorMessage = "Unable to generate a summary right now. Please try again."
             }
         }
+    }
+
+    private static func makeDefaultAPIService() -> APIService {
+        APIService.shared
+    }
+
+    private static func makeDefaultSummaryHistoryStorageService() -> WorkspaceSummaryHistoryStorageService {
+        WorkspaceSummaryHistoryStorageService.shared
     }
 
     private func normalize(_ summary: StudySummary) -> StudySummary {

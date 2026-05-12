@@ -20,7 +20,7 @@ struct CreateStudySpaceView: View {
     @State private var selectedIconName = "cloud"
     @State private var selectedCategory = "IT"
     @State private var descriptionText = ""
-    @State private var selectedStatus = "Active"
+    @State private var selectedStatus: StudySpaceStatus = .active
 
     @State private var customIcons: [String] = []
     @State private var customCategories: [String] = []
@@ -48,9 +48,9 @@ struct CreateStudySpaceView: View {
     private let builtInCategories = ["IT", "AI", "Math", "Design"]
 
     let initialSpace: StudySpace?
-    let onCreate: ((String, String, String, String, String, String) -> Void)?
+    let onCreate: ((String, String, String, String, StudySpaceStatus, String) -> Void)?
 
-    init(initialSpace: StudySpace? = nil, onCreate: ((String, String, String, String, String, String) -> Void)? = nil) {
+    init(initialSpace: StudySpace? = nil, onCreate: ((String, String, String, String, StudySpaceStatus, String) -> Void)? = nil) {
         self.initialSpace = initialSpace
         self.onCreate = onCreate
     }
@@ -73,7 +73,7 @@ struct CreateStudySpaceView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: CreateStudySpaceTheme.sectionSpacing) {
+            VStack(alignment: .leading, spacing: CreateStudySpaceTheme.sectionSpacing) {
                 CreateStudySpaceHeaderView(
                     title: initialSpace == nil ? "Create Study Workspace" : "Edit Study Workspace",
                     subtitle: initialSpace == nil
@@ -112,6 +112,16 @@ struct CreateStudySpaceView: View {
                 StudySpaceStatusPickerView(selectedStatus: $selectedStatus)
 
                 StudySpaceDescriptionInputView(text: $descriptionText)
+            }
+            .padding(CreateStudySpaceTheme.cardPadding)
+            .padding(.bottom, 24)
+            .frame(maxWidth: CreateStudySpaceTheme.cardMaxWidth)
+            .frame(maxWidth: .infinity, alignment: .top)
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 0) {
+                Divider()
+                    .opacity(0.08)
 
                 Button(action: handleCreate) {
                     Text(initialSpace == nil ? "Create Workspace" : "Save Changes")
@@ -125,11 +135,13 @@ struct CreateStudySpaceView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(!canCreate)
-                .padding(.top, 2)
+                .padding(.horizontal, CreateStudySpaceTheme.cardPadding)
+                .padding(.top, 14)
+                .padding(.bottom, 14)
+                .frame(maxWidth: CreateStudySpaceTheme.cardMaxWidth)
+                .frame(maxWidth: .infinity)
+                .background(.ultraThinMaterial)
             }
-            .padding(CreateStudySpaceTheme.cardPadding)
-            .frame(maxWidth: CreateStudySpaceTheme.cardMaxWidth)
-            .frame(maxWidth: .infinity)
         }
         .sheet(isPresented: $showAddIconSheet) {
             AddCustomIconSheet(
@@ -249,7 +261,7 @@ struct CreateStudySpaceView: View {
 
     private func handleCreate() {
         let colorHex = colorOptions.first(where: { $0.id == selectedColorID })?.color.hexString ?? "#388767"
-        let statusToSave = initialSpace == nil ? "Active" : selectedStatus
+        let statusToSave = initialSpace == nil ? .active : selectedStatus
         onCreate?(workspaceName, selectedIconName, selectedCategory, descriptionText, statusToSave, colorHex)
         dismiss()
     }

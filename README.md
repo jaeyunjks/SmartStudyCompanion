@@ -142,3 +142,7 @@ The core MVP is in place and the codebase is organized for submission:
 - planned study tools are clearly marked as future scope
 
 For the design and implementation plan, see `PRD.md`. For system structure, see `ARCHITECTURE.md`. For testing coverage and verification notes, see `TESTING.md`.
+
+
+
+Github Repo Link: https://github.com/jaeyunjks/SmartStudyCompanion
